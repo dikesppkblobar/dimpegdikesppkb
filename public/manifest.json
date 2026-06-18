@@ -1,0 +1,30 @@
+{
+  "name": "SIMPEG Dinkes PPKB Lombok Barat",
+  "short_name": "SIMPEG Lombok Barat",
+  "comment": "Sistem Informasi Manajemen Kepegawaian terintegrasi PWA dengan notifikasi real-time",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#16161a",
+  "theme_color": "#115e59",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
