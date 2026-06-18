@@ -529,13 +529,9 @@ export default function App() {
   const [excelImportMessage, setExcelImportMessage] = useState('');
 
   // Dynamic role-based branding configurations
-  const activeLogoUrl = currentRole === 'admin_dinkes'
-    ? '/logo_lombok_barat.png'
-    : 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhI2_4JTuV0cBDUDNkV-yt2ya_CWY-c3E9FfqlPWwJ0wtVq6mW2vDTtspPFY86kk2GCjWPjitjQzf1KFnt4pAI5nuEvePYAEqYA0BW_N4mq07nYiP1T1cyzdJFancz8puIMzq7ZBs9UArM/s1600/Logo+Puskesmas+Tanpa+Background.png';
+  const activeLogoUrl = dbState.logoUrl || '/logo_lombok_barat.png';
 
-  const activeFaviconUrl = currentRole === 'admin_dinkes'
-    ? '/logo_lombok_barat.png'
-    : 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhI2_4JTuV0cBDUDNkV-yt2ya_CWY-c3E9FfqlPWwJ0wtVq6mW2vDTtspPFY86kk2GCjWPjitjQzf1KFnt4pAI5nuEvePYAEqYA0BW_N4mq07nYiP1T1cyzdJFancz8puIMzq7ZBs9UArM/s1600/Logo+Puskesmas+Tanpa+Background.png';
+  const activeFaviconUrl = dbState.faviconUrl || '/logo_lombok_barat.png';
 
   // Dynamically synchronize favicon url on body changes
   useEffect(() => {
@@ -1296,13 +1292,8 @@ export default function App() {
               <img 
                 src={activeLogoUrl} 
                 alt="Brand logo" 
-                className="h-10 w-10 object-contain"
+                className="h-10 w-10 object-contain select-none"
                 referrerPolicy="no-referrer"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.onerror = null; // Prevent infinite error handler loops
-                  target.src = '/logo_lombok_barat.png';
-                }}
               />
             </div>
             <div>
