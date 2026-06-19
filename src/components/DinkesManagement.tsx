@@ -603,9 +603,9 @@ export default function DinkesManagement({
       } catch (e) {}
     }
     return [
-      { id: 1, name: "Dinas Kesehatan Utama (Default)", logo: "/logo_lombok_barat.png", favicon: "/logo_lombok_barat.png", is_active: true },
-      { id: 2, name: "Lombok Barat Sehat Segar Theme", logo: "/logo_lombok_barat.png", favicon: "/logo_lombok_barat.png", is_active: false },
-      { id: 3, name: "SIMPEG Lobar Digital Green Theme", logo: "/logo_lombok_barat.png", favicon: "/logo_lombok_barat.png", is_active: false }
+      { id: 1, name: "Dinas Kesehatan Utama (Default)", logo: "/logo_lombok_barat.jpg", favicon: "/logo_lombok_barat.jpg", is_active: true },
+      { id: 2, name: "Lombok Barat Sehat Segar Theme", logo: "/logo_lombok_barat.jpg", favicon: "/logo_lombok_barat.jpg", is_active: false },
+      { id: 3, name: "SIMPEG Lobar Digital Green Theme", logo: "/logo_lombok_barat.jpg", favicon: "/logo_lombok_barat.jpg", is_active: false }
     ];
   });
 
@@ -1831,7 +1831,6 @@ export default function DinkesManagement({
 
         </div>
       )}
-
 
       {/* ======================= MODAL: CUSTOM CONFIRMATION DIALOG ======================= */}
       {confirmDialog && confirmDialog.isOpen && (

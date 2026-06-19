@@ -4,7 +4,7 @@ const ASSETS_TO_CACHE = [
   '/index.html',
   '/icon.svg',
   '/manifest.json',
-  '/logo_lombok_barat.png'
+  '/logo_lombok_barat.jpg'
 ];
 
 // Install Event

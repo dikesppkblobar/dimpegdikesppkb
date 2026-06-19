@@ -26,7 +26,7 @@ import {
   X
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { getDB, saveDB, initializeDB } from './mockData';
+import { getDB, saveDB, initializeDB, getFallbackProfesiId } from './mockData';
 import { 
   Puskesmas, 
   ASNProfile, 
@@ -67,6 +67,17 @@ const GOLONGAN_TO_PANGKAT: Record<string, string> = {
   "IV/c": "Pembina Utama Muda",
   "IV/d": "Pembina Utama Madya",
   "IV/e": "Pembina Utama"
+};
+
+export const SUB_JENIS_JABATAN_MAP: Record<string, { label: string; ids: number[] }> = {
+  'TENAGA_MEDIS': { label: 'Tenaga Medis (Dokter/drg)', ids: [2, 3] },
+  'TENAGA_KEPERAWATAN': { label: 'Tenaga Keperawatan (Perawat)', ids: [1] },
+  'TENAGA_KEBIDANAN': { label: 'Tenaga Kebidanan (Bidan)', ids: [4] },
+  'TENAGA_KEFARMASIAN': { label: 'Tenaga Kefarmasian', ids: [5, 6] },
+  'TENAGA_KESLING_PROMKES': { label: 'Tenaga Kes. Masyarakat & Sanitasi', ids: [7, 8] },
+  'TENAGA_GIZI': { label: 'Tenaga Gizi', ids: [9] },
+  'TENAGA_KETEKNISAN_MEDIS': { label: 'Tenaga Keteknisan Medis & Biomedis', ids: [10, 11, 12] },
+  'TENAGA_ADMINISTRASI': { label: 'Tenaga Administrasi & Pendukung', ids: [13, 14, 15] },
 };
 
 const LIST_GOLONGAN_PNS = [
@@ -331,6 +342,7 @@ export default function App() {
   const [rosterSearch, setRosterSearch] = useState('');
   const [rosterUnitFilter, setRosterUnitFilter] = useState<number | string>('ALL'); // 'ALL' or specific ID
   const [rosterStatusFilter, setRosterStatusFilter] = useState<string>('ALL'); // 'ALL', 'PNS', etc.
+  const [rosterSubJenisJabatanFilter, setRosterSubJenisJabatanFilter] = useState<string>('ALL');
 
   // Navigation parameters for deep links
   const [navAsnId, setNavAsnId] = useState<number | null>(null);
@@ -529,9 +541,13 @@ export default function App() {
   const [excelImportMessage, setExcelImportMessage] = useState('');
 
   // Dynamic role-based branding configurations
-  const activeLogoUrl = dbState.logoUrl || '/logo_lombok_barat.png';
+  const activeLogoUrl = currentRole === 'admin_dinkes'
+    ? '/logo_lombok_barat.jpg'
+    : 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhI2_4JTuV0cBDUDNkV-yt2ya_CWY-c3E9FfqlPWwJ0wtVq6mW2vDTtspPFY86kk2GCjWPjitjQzf1KFnt4pAI5nuEvePYAEqYA0BW_N4mq07nYiP1T1cyzdJFancz8puIMzq7ZBs9UArM/s1600/Logo+Puskesmas+Tanpa+Background.png';
 
-  const activeFaviconUrl = dbState.faviconUrl || '/logo_lombok_barat.png';
+  const activeFaviconUrl = currentRole === 'admin_dinkes'
+    ? '/logo_lombok_barat.jpg'
+    : 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhI2_4JTuV0cBDUDNkV-yt2ya_CWY-c3E9FfqlPWwJ0wtVq6mW2vDTtspPFY86kk2GCjWPjitjQzf1KFnt4pAI5nuEvePYAEqYA0BW_N4mq07nYiP1T1cyzdJFancz8puIMzq7ZBs9UArM/s1600/Logo+Puskesmas+Tanpa+Background.png';
 
   // Dynamically synchronize favicon url on body changes
   useEffect(() => {
@@ -821,6 +837,15 @@ export default function App() {
     // 3) Employee Status filter
     if (rosterStatusFilter !== 'ALL') {
       if (p.status_pegawai_detail !== rosterStatusFilter) return false;
+    }
+
+    // 4) Sub-Jenis Jabatan SDMK Filter
+    if (rosterSubJenisJabatanFilter !== 'ALL') {
+      const profId = p.id_profesi || getFallbackProfesiId(p.nama_lengkap, p.gelar_belakang);
+      const mappedGroup = SUB_JENIS_JABATAN_MAP[rosterSubJenisJabatanFilter];
+      if (mappedGroup && !mappedGroup.ids.includes(profId)) {
+        return false;
+      }
     }
 
     return true;
@@ -1292,8 +1317,13 @@ export default function App() {
               <img 
                 src={activeLogoUrl} 
                 alt="Brand logo" 
-                className="h-10 w-10 object-contain select-none"
+                className="h-10 w-10 object-contain"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null; // Prevent infinite error handler loops
+                  target.src = '/logo_lombok_barat.jpg';
+                }}
               />
             </div>
             <div>
@@ -2754,6 +2784,26 @@ export default function App() {
                       <option value="PPPK_Penuh_Waktu">PPPK Penuh Waktu</option>
                       <option value="PPPK_Paruh_Waktu">PPPK Paruh Waktu</option>
                       <option value="Non_ASN">PKWT / Non-ASN</option>
+                    </select>
+                  </div>
+
+                  {/* Sub-Jenis Jabatan (SDMK) Filter */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 uppercase font-bold block">Sub-Jenis Jabatan (SDMK)</label>
+                    <select
+                      value={rosterSubJenisJabatanFilter}
+                      onChange={(e) => setRosterSubJenisJabatanFilter(e.target.value)}
+                      className="p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:outline-none text-emerald-400 font-semibold"
+                    >
+                      <option value="ALL">Semua Sub-Jenis Jabatan</option>
+                      <option value="TENAGA_MEDIS">Tenaga Medis (Dokter/drg)</option>
+                      <option value="TENAGA_KEPERAWATAN">Tenaga Keperawatan (Perawat)</option>
+                      <option value="TENAGA_KEBIDANAN">Tenaga Kebidanan (Bidan)</option>
+                      <option value="TENAGA_KEFARMASIAN">Tenaga Kefarmasian (Apoteker/TTK)</option>
+                      <option value="TENAGA_KESLING_PROMKES">Tenaga Kes. Masyarakat &amp; Sanitasi</option>
+                      <option value="TENAGA_GIZI">Tenaga Gizi</option>
+                      <option value="TENAGA_KETEKNISAN_MEDIS">Tenaga Keteknisan Medis &amp; Biomedis</option>
+                      <option value="TENAGA_ADMINISTRASI">Tenaga Administrasi &amp; Pendukung</option>
                     </select>
                   </div>
 

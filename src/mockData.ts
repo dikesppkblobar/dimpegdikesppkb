@@ -513,8 +513,8 @@ export const initializeDB = () => {
   checkAndSet('simpeg_arsip_kepegawaian', SEED_ARSIP_KEPEGAWAIAN);
   checkAndSet('simpeg_notifications', SEED_NOTIFICATIONS);
 
-  checkAndSet('simpeg_logo_url', '/logo_lombok_barat.png');
-  checkAndSet('simpeg_favicon_url', '/logo_lombok_barat.png');
+  checkAndSet('simpeg_logo_url', '/logo_lombok_barat.jpg');
+  checkAndSet('simpeg_favicon_url', '/logo_lombok_barat.jpg');
   
   // also track uploaded document logs
   if (!localStorage.getItem('simpeg_usulan_dokumen_file')) {
@@ -547,13 +547,28 @@ export function getFallbackProfesiId(nama: string, gelar: string | null): number
 
 export const getDB = () => {
   initializeDB();
-  const rawProfiles = JSON.parse(localStorage.getItem('simpeg_asn_profiles') || '[]') as ASNProfile[];
-  const healedProfiles: ASNProfile[] = rawProfiles.map(p => {
+
+  const safeParse = <T>(key: string, fallback: T): T => {
+    try {
+      const item = localStorage.getItem(key);
+      if (!item) return fallback;
+      const parsed = JSON.parse(item);
+      return parsed as T;
+    } catch (e) {
+      console.warn(`Error parsing key "${key}" from localStorage, using fallback.`, e);
+      return fallback;
+    }
+  };
+
+  const rawProfiles = safeParse<ASNProfile[]>('simpeg_asn_profiles', []);
+  const safeProfilesList = Array.isArray(rawProfiles) ? rawProfiles : [];
+
+  const healedProfiles: ASNProfile[] = safeProfilesList.map(p => {
     const updated = { ...p };
     updated.id_profesi = updated.id_profesi || getFallbackProfesiId(updated.nama_lengkap, updated.gelar_belakang);
     
     // Auto-heal Hj. Baiq Sumiati (id: 2) or anyone named Baiq Sumiati
-    if (updated.nama_lengkap.includes("Baiq Sumiati")) {
+    if (updated.nama_lengkap && updated.nama_lengkap.includes("Baiq Sumiati")) {
       updated.no_str = updated.no_str || "STR-19681125-199103-2-001";
       updated.tanggal_terbit_str = updated.tanggal_terbit_str || "2021-08-01";
       // To ensure exactly 45 days remaining from 2026-06-16, set exp date to 2026-07-31
@@ -565,7 +580,7 @@ export const getDB = () => {
     }
     
     // Auto-heal dr. Wahyu Darizki (id: 1)
-    if (updated.nama_lengkap.includes("Wahyu Darizki")) {
+    if (updated.nama_lengkap && updated.nama_lengkap.includes("Wahyu Darizki")) {
       updated.no_str = updated.no_str || "STR-19800412-200501-1-003";
       updated.tanggal_terbit_str = updated.tanggal_terbit_str || "2015-05-12";
       updated.tanggal_akhir_str = updated.tanggal_akhir_str || "Seumur Hidup";
@@ -577,14 +592,15 @@ export const getDB = () => {
 
     // Give remaining Jafung Kesehatan basic STR / SIP if missing
     if (updated.jenis_pegawai === 'Jafung_Kesehatan') {
+      const safeNip = String(updated.nip || `GEN-${updated.id}`);
       if (!updated.no_str) {
-        updated.no_str = `STR-${updated.nip.slice(0, 8)}-${updated.id}`;
+        updated.no_str = `STR-${safeNip.slice(0, 8)}-${updated.id}`;
         updated.tanggal_terbit_str = "2022-01-10";
         updated.tanggal_akhir_str = "Seumur Hidup";
         updated.is_str_seumur_hidup = true;
       }
       if (!updated.no_sip) {
-        updated.no_sip = `SIP-${updated.nip.slice(0, 8)}-${updated.id}`;
+        updated.no_sip = `SIP-${safeNip.slice(0, 8)}-${updated.id}`;
         updated.tanggal_terbit_sip = "2022-01-20";
         updated.tanggal_akhir_sip = "2027-12-15";
       }
@@ -592,22 +608,35 @@ export const getDB = () => {
     return updated;
   });
 
+  const psk = safeParse<Puskesmas[]>('simpeg_puskesmas', []);
+  const ftr = safeParse<MasterFitur[]>('simpeg_fitur', []);
+  const doc = safeParse<MasterDokumen[]>('simpeg_dokumen', []);
+  const map = safeParse<Record<string, number[]>>('simpeg_syarat_fitur_map', {});
+  const usul = safeParse<UsulanLayanan[]>('simpeg_usulan_layanan', []);
+  const ak = safeParse<RiwayatAngkaKredit[]>('simpeg_riwayat_ak', []);
+  const lpr = safeParse<LaporanSDMKBulanan[]>('simpeg_laporan_sdmk', []);
+  const prof = safeParse<MasterProfesiSDMK[]>('simpeg_profesi_sdmk', []);
+  const udoc = safeParse<any[]>('simpeg_usulan_dokumen_file', []);
+  const ars = safeParse<ArsipKepegawaian[]>('simpeg_arsip_kepegawaian', []);
+  const usr = safeParse<User[]>('simpeg_users', []);
+  const ntf = safeParse<InAppNotification[]>('simpeg_notifications', []);
+
   return {
-    puskesmas: JSON.parse(localStorage.getItem('simpeg_puskesmas') || '[]') as Puskesmas[],
-    fitur: JSON.parse(localStorage.getItem('simpeg_fitur') || '[]') as MasterFitur[],
-    dokumen: JSON.parse(localStorage.getItem('simpeg_dokumen') || '[]') as MasterDokumen[],
-    syaratFiturMap: JSON.parse(localStorage.getItem('simpeg_syarat_fitur_map') || '{}') as Record<string, number[]>,
+    puskesmas: Array.isArray(psk) ? psk : [],
+    fitur: Array.isArray(ftr) ? ftr : [],
+    dokumen: Array.isArray(doc) ? doc : [],
+    syaratFiturMap: (map && typeof map === 'object') ? map : {},
     asnProfiles: healedProfiles,
-    usulanLayanan: JSON.parse(localStorage.getItem('simpeg_usulan_layanan') || '[]') as UsulanLayanan[],
-    riwayatAk: JSON.parse(localStorage.getItem('simpeg_riwayat_ak') || '[]') as RiwayatAngkaKredit[],
-    laporanSdmk: JSON.parse(localStorage.getItem('simpeg_laporan_sdmk') || '[]') as LaporanSDMKBulanan[],
-    profesiSdmk: JSON.parse(localStorage.getItem('simpeg_profesi_sdmk') || '[]') as MasterProfesiSDMK[],
-    usulanDokumenFile: JSON.parse(localStorage.getItem('simpeg_usulan_dokumen_file') || '[]') as any[],
-    arsipKepegawaian: JSON.parse(localStorage.getItem('simpeg_arsip_kepegawaian') || '[]') as ArsipKepegawaian[],
-    users: JSON.parse(localStorage.getItem('simpeg_users') || '[]') as User[],
-    notifications: JSON.parse(localStorage.getItem('simpeg_notifications') || '[]') as InAppNotification[],
-    logoUrl: localStorage.getItem('simpeg_logo_url') || '/logo_lombok_barat.png',
-    faviconUrl: localStorage.getItem('simpeg_favicon_url') || '/logo_lombok_barat.png'
+    usulanLayanan: Array.isArray(usul) ? usul : [],
+    riwayatAk: Array.isArray(ak) ? ak : [],
+    laporanSdmk: Array.isArray(lpr) ? lpr : [],
+    profesiSdmk: Array.isArray(prof) ? prof : [],
+    usulanDokumenFile: Array.isArray(udoc) ? udoc : [],
+    arsipKepegawaian: Array.isArray(ars) ? ars : [],
+    users: Array.isArray(usr) ? usr : [],
+    notifications: Array.isArray(ntf) ? ntf : [],
+    logoUrl: localStorage.getItem('simpeg_logo_url') || '/logo_lombok_barat.jpg',
+    faviconUrl: localStorage.getItem('simpeg_favicon_url') || '/logo_lombok_barat.jpg'
   };
 };
 

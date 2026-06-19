@@ -280,25 +280,51 @@ export default function LayananKepegawaian({
 
   // Dynamic Options for Pangkat & Jafung CRUD
   const [pangkatOptions, setPangkatOptions] = useState<string[]>(() => {
-    const stored = localStorage.getItem('simpeg_pangkat_options');
-    return stored ? JSON.parse(stored) : ["III/b - Penata Muda Tk. I", "III/c - Penata", "III/d - Penata Tk. I", "IV/a - Pembina", "IV/b - Pembina Tk. I"];
+    try {
+      const stored = localStorage.getItem('simpeg_pangkat_options');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.warn("pangkat_options load error", e);
+    }
+    return ["III/b - Penata Muda Tk. I", "III/c - Penata", "III/d - Penata Tk. I", "IV/a - Pembina", "IV/b - Pembina Tk. I"];
   });
 
   const [jafungOptions, setJafungOptions] = useState<string[]>(() => {
-    const stored = localStorage.getItem('simpeg_jafung_options');
-    return stored ? JSON.parse(stored) : ["Ahli Pertama", "Ahli Muda", "Ahli Madya"];
+    try {
+      const stored = localStorage.getItem('simpeg_jafung_options');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.warn("jafung_options load error", e);
+    }
+    return ["Ahli Pertama", "Ahli Muda", "Ahli Madya"];
   });
 
   const [pangkatBaru, setPangkatBaru] = useState<string>(() => {
-    const stored = localStorage.getItem('simpeg_pangkat_options');
-    const parsed = stored ? JSON.parse(stored) : null;
-    return parsed && parsed.length > 0 ? parsed[0] : 'III/b - Penata Muda Tk. I';
+    try {
+      const stored = localStorage.getItem('simpeg_pangkat_options');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
+      }
+    } catch {}
+    return 'III/b - Penata Muda Tk. I';
   });
 
   const [jafungBaruLevel, setJafungBaruLevel] = useState<string>(() => {
-    const stored = localStorage.getItem('simpeg_jafung_options');
-    const parsed = stored ? JSON.parse(stored) : null;
-    return parsed && parsed.length > 0 ? parsed[0] : 'Ahli Pertama';
+    try {
+      const stored = localStorage.getItem('simpeg_jafung_options');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
+      }
+    } catch {}
+    return 'Ahli Pertama';
   });
 
   const [managingOptionsType, setManagingOptionsType] = useState<'pangkat' | 'jafung' | null>(null);

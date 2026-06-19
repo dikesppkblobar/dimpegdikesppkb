@@ -27,10 +27,14 @@ import {
   Heart,
   Home,
   MapPin,
-  Calculator
+  Calculator,
+  Stethoscope,
+  Pill,
+  Zap
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ASNProfile, UsulanLayanan, Puskesmas, InAppNotification, ArsipKepegawaian } from '../types';
+import { getFallbackProfesiId } from '../mockData';
 import { EarlyWarningAlert, getEarlyWarningAlerts, formatDate } from '../utils';
 
 const PROFESSION_COLORS: Record<string, string> = {
@@ -46,6 +50,31 @@ const PROFESSION_COLORS: Record<string, string> = {
   'TERAPIS GIGI DAN MULUT': '#eab308', // yellow
   'PROMOSI KESEHATAN DAN ILMU PERILAKU': '#8b5cf6', // violet
   'PENGADMINISTRASI PERKANTORAN': '#64748b' // slate
+};
+
+const getProfesiIconAndColor = (name: string) => {
+  const n = name.toLowerCase();
+  if (n.includes('perawat')) return { icon: Heart, color: 'indigo' };
+  if (n.includes('dokter gigi')) return { icon: Stethoscope, color: 'cyan' };
+  if (n.includes('dokter')) return { icon: Stethoscope, color: 'rose' };
+  if (n.includes('bidan')) return { icon: Activity, color: 'emerald' };
+  if (n.includes('apoteker') || n.includes('kefarmasian') || n.includes('teknik kefarmasian')) return { icon: Pill, color: 'pink' };
+  if (n.includes('promkes') || n.includes('sanitarian') || n.includes('kesling') || n.includes('perilaku')) return { icon: ShieldCheck, color: 'green' };
+  if (n.includes('gizi') || n.includes('nutrisionis')) return { icon: Award, color: 'amber' };
+  if (n.includes('medis') || n.includes('lab') || n.includes('teknologi')) return { icon: Calculator, color: 'cyan' };
+  if (n.includes('keuangan') || n.includes('administrasi') || n.includes('umum') || n.includes('kepeg') || n.includes('informasi') || n.includes('sistem')) return { icon: FileText, color: 'slate' };
+  return { icon: Users, color: 'indigo' };
+};
+
+const SUB_JENIS_JABATAN_MAP: Record<string, { label: string; ids: number[] }> = {
+  'TENAGA_MEDIS': { label: 'Tenaga Medis (Dokter/drg)', ids: [2, 3] },
+  'TENAGA_KEPERAWATAN': { label: 'Tenaga Keperawatan (Perawat)', ids: [1] },
+  'TENAGA_KEBIDANAN': { label: 'Tenaga Kebidanan (Bidan)', ids: [4] },
+  'TENAGA_KEFARMASIAN': { label: 'Tenaga Kefarmasian (Apoteker/TTK)', ids: [5, 6] },
+  'TENAGA_KESLING_PROMKES': { label: 'Tenaga Kes. Masyarakat & Sanitasi', ids: [7, 8] },
+  'TENAGA_GIZI': { label: 'Tenaga Gizi', ids: [9] },
+  'TENAGA_KETEKNISAN_MEDIS': { label: 'Tenaga Keteknisan Medis & Biomedis', ids: [10, 11, 12] },
+  'TENAGA_ADMINISTRASI': { label: 'Tenaga Administrasi & Pendukung', ids: [13, 14, 15] },
 };
 
 interface DashboardOverviewProps {
@@ -168,6 +197,46 @@ export default function DashboardOverview({
   // State for editing population
   const [editedPopulationInput, setEditedPopulationInput] = useState<string>('');
   const [saveStatusMsg, setSaveStatusMsg] = useState<string>('');
+
+  // Filter Pegawai states
+  const [filterStatusAsn, setFilterStatusAsn] = useState<string>('ALL');
+  const [filterJenisJabatan, setFilterJenisJabatan] = useState<string>('ALL');
+  const [filterSubJenisJabatan, setFilterSubJenisJabatan] = useState<string>('ALL');
+  const [filterPuskesmasUnit, setFilterPuskesmasUnit] = useState<string>('ALL');
+  const [filterAsnSearchQuery, setFilterAsnSearchQuery] = useState<string>('');
+  const [filterAsnPage, setFilterAsnPage] = useState<number>(1);
+
+  // Jabatan Fungsional Classification filters
+  const [filterJafungCategory, setFilterJafungCategory] = useState<'ALL' | 'KEAHLIAN' | 'KETERAMPILAN'>('ALL');
+  const [filterJafungPage, setFilterJafungPage] = useState<number>(1);
+
+  // Load standard professions list dynamically
+  const [profesiSdmkList] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('simpeg_profesi_sdmk');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [
+      { id: 1, nama_profesi: "Perawat" },
+      { id: 2, nama_profesi: "Dokter" },
+      { id: 3, nama_profesi: "Dokter Gigi" },
+      { id: 4, nama_profesi: "Bidan" },
+      { id: 5, nama_profesi: "Apoteker" },
+      { id: 6, nama_profesi: "Tenaga Teknik Kefarmasian" },
+      { id: 7, nama_profesi: "Promkes & Ilmu Perilaku" },
+      { id: 8, nama_profesi: "Sanitarian" },
+      { id: 9, nama_profesi: "Nutrisionis" },
+      { id: 10, nama_profesi: "Ahli Teknologi Lab Medik" },
+      { id: 11, nama_profesi: "Rekam Medis" },
+      { id: 12, nama_profesi: "Terapis Gigi & Mulut" },
+      { id: 13, nama_profesi: "Umum & Kepeg" },
+      { id: 14, nama_profesi: "Tenaga Adm. Keuangan" },
+      { id: 15, nama_profesi: "Tenaga Sistem Informasi Kes." }
+    ];
+  });
 
   // States for ABK Workload Calculator
   const [abkProfession, setAbkProfession] = useState<string>('dokter');
@@ -2325,229 +2394,943 @@ export default function DashboardOverview({
 
           </div>
 
-            {/* Parameter Sebaran (Geospatial & Unit Kerja) Interaktif card in Right Column */}
+            {/* Filter and Analyze ASN & Position Panel */}
             <div className="lg:col-span-8 flex flex-col gap-6">
               {(() => {
-                const activeId = currentRole === 'admin_puskesmas' ? (selectedPuskesmasId || 1) : (selectedMapPuskesmasId || 1);
-                const stats = getPuskesmasStaffStats(activeId);
-                const unitDetails = puskesmasList.find(u => u.id === activeId) || { nama_puskesmas: "Puskesmas Gerung", alamat: "" };
+                // Determine base set of profiles which are accessible to the current role
+                const roleFilteredProfiles = currentRole === 'admin_puskesmas'
+                  ? asnProfiles.filter(p => p.id_puskesmas === selectedPuskesmasId)
+                  : asnProfiles;
+
+                // Apply current active filters
+                const filteredProfiles = roleFilteredProfiles.filter((p) => {
+                  // 1. Puskesmas filter (Dinkes Selective Dropdown)
+                  if (currentRole === 'admin_dinkes' && filterPuskesmasUnit !== 'ALL') {
+                    if (p.id_puskesmas !== Number(filterPuskesmasUnit)) return false;
+                  }
+
+                  // 2. Status ASN Filter
+                  if (filterStatusAsn !== 'ALL') {
+                    if (filterStatusAsn === 'PNS' && p.status_pegawai_detail !== 'PNS') return false;
+                    if (filterStatusAsn === 'PPPK_PN' && p.status_pegawai_detail !== 'PPPK_Penuh_Waktu') return false;
+                    if (filterStatusAsn === 'PPPK_PW' && p.status_pegawai_detail !== 'PPPK_Paruh_Waktu') return false;
+                    if (filterStatusAsn === 'PKWT' && p.status_pegawai_detail !== 'Non_ASN') return false;
+                  }
+
+                  // 3. Jenis Jabatan Filter
+                  if (filterJenisJabatan !== 'ALL') {
+                    const isJafung = p.jenis_pegawai === 'Jafung_Kesehatan';
+                    if (filterJenisJabatan === 'FUNGSIONAL' && !isJafung) return false;
+                    if (filterJenisJabatan === 'ADMINISTRASI' && isJafung) return false;
+                  }
+
+                  // 3b. Sub-Jenis Jabatan (SDMK) Filter
+                  if (filterSubJenisJabatan !== 'ALL') {
+                    const profId = p.id_profesi || getFallbackProfesiId(p.nama_lengkap, p.gelar_belakang);
+                    const isNumeric = /^\d+$/.test(filterSubJenisJabatan);
+                    if (isNumeric) {
+                      if (profId !== Number(filterSubJenisJabatan)) {
+                        return false;
+                      }
+                    } else {
+                      const mappedGroup = SUB_JENIS_JABATAN_MAP[filterSubJenisJabatan];
+                      if (mappedGroup && !mappedGroup.ids.includes(profId)) {
+                        return false;
+                      }
+                    }
+                  }
+
+                  // 4. Search Query Match
+                  if (filterAsnSearchQuery.trim() !== '') {
+                    const s = filterAsnSearchQuery.toLowerCase();
+                    const matchesName = p.nama_lengkap.toLowerCase().includes(s);
+                    const matchesNip = p.nip?.toLowerCase().includes(s);
+                    const matchesNik = p.nik?.toLowerCase().includes(s);
+                    const matchesNi = p.pppk_ni?.toLowerCase().includes(s);
+                    const matchesJabatan = (p.pns_nama_jabatan || p.pppk_jabatan || p.pkwt_jabatan || '').toLowerCase().includes(s);
+                    if (!matchesName && !matchesNip && !matchesNik && !matchesNi && !matchesJabatan) return false;
+                  }
+
+                  return true;
+                });
+
+                // Compute counts over current filtered list
+                const totalFiltered = filteredProfiles.length;
+                const countPNS = filteredProfiles.filter(p => p.status_pegawai_detail === 'PNS').length;
+                const countPPPK_PN = filteredProfiles.filter(p => p.status_pegawai_detail === 'PPPK_Penuh_Waktu').length;
+                const countPPPK_PW = filteredProfiles.filter(p => p.status_pegawai_detail === 'PPPK_Paruh_Waktu').length;
+                const countPKWT = filteredProfiles.filter(p => p.status_pegawai_detail === 'Non_ASN').length;
+                const countFungsional = filteredProfiles.filter(p => p.jenis_pegawai === 'Jafung_Kesehatan').length;
+                const countAdministrasi = filteredProfiles.filter(p => p.jenis_pegawai !== 'Jafung_Kesehatan').length;
+
+                // Direct pagination logic
+                const itemsPerPage = 6;
+                const totalPages = Math.max(1, Math.ceil(totalFiltered / itemsPerPage));
+                const activePage = Math.min(filterAsnPage, totalPages);
+                const startIndex = (activePage - 1) * itemsPerPage;
+                const paginatedProfiles = filteredProfiles.slice(startIndex, startIndex + itemsPerPage);
+
+                const getJabatanName = (p: ASNProfile) => {
+                  if (p.jenis_pegawai === 'Jafung_Kesehatan') {
+                    return p.pns_nama_jabatan || p.pppk_jabatan || p.pkwt_jabatan || 'Tenaga Kesehatan Fungsional';
+                  } else if (p.jenis_pegawai === 'Struktural') {
+                    return p.pns_nama_jabatan || p.pppk_jabatan || 'Pejabat Struktural';
+                  } else {
+                    return p.pns_nama_jabatan || p.pppk_jabatan || p.pkwt_jabatan || 'Staf Administrasi';
+                  }
+                };
+
+                const unitLabel = (unitId: number) => {
+                  return puskesmasList.find(u => u.id === unitId)?.nama_puskesmas || 'Dinkes Lobar';
+                };
 
                 return (
                   <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 text-left space-y-6 shadow-3xs transition duration-250 hover:shadow-2xs">
-                    {/* Header */}
+                    {/* Card Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                       <div className="flex items-center space-x-3">
-                        <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-100 text-indigo-600 shrink-0">
-                          <Activity size={18} />
+                        <div className="p-2.5 bg-teal-50 rounded-xl border border-teal-100 text-teal-600 shrink-0">
+                          <Filter size={18} />
                         </div>
                         <div>
                           <h3 className="text-xs font-black font-display uppercase tracking-wider text-slate-800 leading-tight">
-                            Parameter &amp; Analisa Sebaran SDM Nakes Lombok Barat
+                            Filter &amp; Analisis Distribusi Pegawai Lombok Barat
                           </h3>
                           <span className="text-[10px] text-slate-400 font-bold block mt-0.5">
-                            Rasio Dokter, Perawat &amp; Tenaga Medis per 10.000 Penduduk. Pilih unit kerja untuk rincian data.
+                            Pencarian realtime berdasarkan Status ASN dan rumpun Jenis Jabatan (Fungsional vs Administrasi).
                           </span>
                         </div>
                       </div>
                       
-                      <span className={`text-[9.5px] font-bold px-2.5 py-1 rounded-full border self-start sm:self-center shrink-0 ${
-                        stats.isShortage ? 'bg-red-55 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-250'
-                      }`}>
-                        {stats.isShortage ? '🔴 Kekurangan SDM Nakes' : '🟢 SDM Tercukupi'}
-                      </span>
+                      <div className="bg-teal-55 text-teal-800 text-[10px] font-extrabold px-3 py-1 rounded-full border border-teal-200 uppercase tracking-wider">
+                        {totalFiltered} Pegawai Cocok
+                      </div>
                     </div>
 
-                    {/* Unit Selection Row & Metadata */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-150">
+                    {/* Filters Controls Row */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-150 transition">
+                      {/* Status ASN Filter */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[8.5px] font-black uppercase tracking-wider text-slate-400 font-mono">
+                          Status ASN
+                        </label>
+                        <select
+                          value={filterStatusAsn}
+                          onChange={(e) => {
+                            setFilterStatusAsn(e.target.value);
+                            setFilterAsnPage(1);
+                          }}
+                          className="text-xs bg-white text-slate-800 border border-slate-300 font-bold px-2.5 py-1.5 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none cursor-pointer transition w-full"
+                        >
+                          <option value="ALL">Semua Status ASN</option>
+                          <option value="PNS">PNS (Aparatur Sipil Negara)</option>
+                          <option value="PPPK_PN">PPPK PN (Penuh Waktu)</option>
+                          <option value="PPPK_PW">PPPK PW (Paruh Waktu)</option>
+                          <option value="PKWT">PKWT (Non-ASN / Kontrak)</option>
+                        </select>
+                      </div>
+
+                      {/* Jenis Jabatan Filter */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[8.5px] font-black uppercase tracking-wider text-slate-400 font-mono">
+                          Jenis Jabatan
+                        </label>
+                        <select
+                          value={filterJenisJabatan}
+                          onChange={(e) => {
+                            setFilterJenisJabatan(e.target.value);
+                            setFilterAsnPage(1);
+                          }}
+                          className="text-xs bg-white text-slate-800 border border-slate-300 font-bold px-2.5 py-1.5 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none cursor-pointer transition w-full"
+                        >
+                          <option value="ALL">Semua Jenis Jabatan</option>
+                          <option value="FUNGSIONAL">Fungsional (Jafung Kes)</option>
+                          <option value="ADMINISTRASI">Administrasi (Staf / Struktur)</option>
+                        </select>
+                      </div>
+
+                      {/* Sub-Jenis Jabatan (SDMK) Filter */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[8.5px] font-black uppercase tracking-wider text-teal-600 font-mono">
+                          Sub-Jenis Jabatan SDMK
+                        </label>
+                        <select
+                          value={filterSubJenisJabatan}
+                          onChange={(e) => {
+                            setFilterSubJenisJabatan(e.target.value);
+                            setFilterJafungCategory('ALL');
+                            setFilterAsnPage(1);
+                          }}
+                          className="text-xs bg-white text-teal-600 border border-slate-300 font-bold px-2.5 py-1.5 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none cursor-pointer transition w-full font-extrabold font-sans"
+                        >
+                          <option value="ALL">Semua Sub-Jenis Jabatan</option>
+                          {profesiSdmkList.map((prof) => (
+                            <option key={prof.id} value={String(prof.id)}>
+                              {prof.nama_profesi}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Unit Kerja select helper for admin_dinkes */}
                       {currentRole === 'admin_dinkes' ? (
-                        <div className="flex items-center gap-2 flex-grow">
-                          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider font-sans shrink-0">
-                            Pilih Unit Kerja:
-                          </span>
-                          <select 
-                            value={activeId}
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[8.5px] font-black uppercase tracking-wider text-slate-400 font-mono">
+                            Unit Kerja (Puskesmas)
+                          </label>
+                          <select
+                            value={filterPuskesmasUnit}
                             onChange={(e) => {
-                              setSelectedMapPuskesmasId(Number(e.target.value));
-                              setEditedPopulationInput('');
+                              setFilterPuskesmasUnit(e.target.value);
+                              setFilterAsnPage(1);
                             }}
-                            className="text-xs bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-sans font-extrabold px-3 py-2 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer flex-grow md:flex-grow-0 md:max-w-xs transition"
+                            className="text-xs bg-white text-slate-800 border border-slate-300 font-bold px-2.5 py-1.5 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none cursor-pointer transition w-full"
                           >
+                            <option value="ALL">Semua Unit Kerja</option>
                             {puskesmasList.filter(u => u.id !== 100).map(u => (
-                              <option key={u.id} value={u.id}>
+                              <option key={u.id} value={u.id.toString()}>
                                 {u.nama_puskesmas}
                               </option>
                             ))}
                           </select>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <Home size={14} className="text-emerald-600" />
-                          <span className="text-xs font-bold text-slate-700">
-                            Unit Kerja Anda: <span className="text-emerald-700 font-black underline">{unitDetails.nama_puskesmas}</span>
-                          </span>
+                        <div className="flex flex-col justify-center gap-0.5">
+                          <label className="text-[8.5px] font-black uppercase tracking-wider text-slate-400 font-mono leading-none">
+                            Unit Kerja Anda
+                          </label>
+                          <div className="text-xs font-black text-slate-700 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 h-8">
+                            <Home size={12} className="text-teal-600 shrink-0" />
+                            <span className="truncate">{unitLabel(selectedPuskesmasId || 1)}</span>
+                          </div>
                         </div>
                       )}
-                      
-                      <div className="text-[10.5px] text-slate-500 font-sans flex items-center gap-1">
-                        <MapPin size={12} className="text-slate-400 shrink-0" />
-                        <span className="truncate max-w-[280px]">{unitDetails.alamat}</span>
-                      </div>
-                    </div>
 
-                    {/* Bento Grid Metrics */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {/* Population */}
-                      <div className="bg-slate-50/40 p-4 rounded-xl border border-slate-100 space-y-1 hover:bg-slate-50/80 transition shadow-3xs">
-                        <div className="flex justify-between items-center text-slate-400">
-                          <span className="text-[9px] font-bold uppercase tracking-wider">Jumlah Penduduk</span>
-                          <Users size={13} className="text-indigo-500" />
-                        </div>
-                        <p className="text-lg font-black text-slate-800 font-mono leading-none pt-1">
-                          {stats.penduduk.toLocaleString('id-ID')}
-                        </p>
-                        <p className="text-[9.5px] text-slate-400 font-sans pt-0.5">
-                          Jiwa terlayani
-                        </p>
-                      </div>
-
-                      {/* SDM Fulfillment / Pemenuhan */}
-                      <div className="bg-slate-50/40 p-4 rounded-xl border border-slate-100 space-y-1.5 hover:bg-slate-50/80 transition shadow-3xs">
-                        <div className="flex justify-between items-center text-slate-400">
-                          <span className="text-[9px] font-bold uppercase tracking-wider">Pemenuhan SDM</span>
-                          <Award size={13} className={stats.isShortage ? 'text-amber-500' : 'text-emerald-500'} />
-                        </div>
-                        <div className="flex items-baseline space-x-1">
-                          <p className={`text-lg font-black font-mono leading-none ${stats.isShortage ? 'text-amber-600' : 'text-emerald-650'}`}>
-                            {stats.balancePercentage}%
-                          </p>
-                          <span className="text-[9px] text-slate-400 font-bold font-mono">
-                            ({stats.jafung}/{stats.target_nakes})
-                          </span>
-                        </div>
-                        {/* Progress bar */}
-                        <div className="h-1 w-full bg-slate-200/65 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              stats.isShortage ? 'bg-amber-500' : 'bg-emerald-500'
-                            }`} 
-                            style={{ width: `${Math.min(100, stats.balancePercentage)}%` }}
+                      {/* Realtime Search Input */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[8.5px] font-black uppercase tracking-wider text-slate-400 font-mono">
+                          Pencarian Kata Kunci
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={filterAsnSearchQuery}
+                            onChange={(e) => {
+                              setFilterAsnSearchQuery(e.target.value);
+                              setFilterAsnPage(1);
+                            }}
+                            placeholder="Cari nama, NIP, atau jabatan..."
+                            className="w-full text-xs bg-white text-slate-850 border border-slate-300 rounded-lg pl-8 pr-3 py-1.5 font-sans focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all placeholder:text-slate-405"
                           />
+                          <Search size={13} className="text-slate-400 absolute left-2.5 top-2.5" />
                         </div>
-                      </div>
-
-                      {/* Rasio Terdaftar */}
-                      <div className="bg-slate-50/40 p-4 rounded-xl border border-slate-100 space-y-1 hover:bg-slate-50/80 transition shadow-3xs">
-                        <div className="flex justify-between items-center text-slate-400">
-                          <span className="text-[9px] font-bold uppercase tracking-wider font-sans text-slate-500">Rasio Terdaftar</span>
-                          <Heart size={13} className="text-rose-500" />
-                        </div>
-                        <p className="text-lg font-black text-slate-800 font-mono leading-none pt-1">
-                          {stats.ratioActual}
-                        </p>
-                        <p className="text-[9.5px] text-slate-400 font-sans pt-0.5">
-                          Per 10.000 Penduduk
-                        </p>
-                      </div>
-
-                      {/* Rasio Standar Kemenkes */}
-                      <div className="bg-slate-50/40 p-4 rounded-xl border border-slate-100 space-y-1 hover:bg-slate-50/80 transition shadow-3xs">
-                        <div className="flex justify-between items-center text-slate-400">
-                          <span className="text-[9px] font-bold uppercase tracking-wider">Target Kemenkes</span>
-                          <ShieldCheck size={13} className="text-emerald-500" />
-                        </div>
-                        <p className="text-lg font-black text-slate-800 font-mono leading-none pt-1">
-                          {stats.ratioTarget}
-                        </p>
-                        <p className="text-[9.5px] text-slate-400 font-sans pt-0.5">
-                          Rasio acuan target
-                        </p>
                       </div>
                     </div>
 
-                    {/* Classification Breakdown & Population Updates Grid Block */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pt-1">
-                      {/* Classification Detail (8 columns on lg) */}
-                      <div className="lg:col-span-8 bg-slate-50/30 p-4 border border-slate-150 rounded-xl space-y-3 flex flex-col justify-between">
-                        <span className="text-[9.5px] font-black text-slate-500 uppercase tracking-wider block font-sans">
-                          Sebaran Jenis Kepegawaian Internal Unit Kerja
-                        </span>
-                        
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 transition duration-150 hover:border-indigo-105 shadow-3xs hover:-translate-y-0.5">
-                            <span className="text-[8.5px] text-slate-400 font-bold uppercase block font-sans">PNS</span>
-                            <span className="font-extrabold text-indigo-700 text-base block mt-0.5 font-mono">{stats.pns}</span>
-                            <span className="text-[7.5px] text-slate-400 block font-sans">Aparatur Sipil</span>
-                          </div>
-                          
-                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 transition duration-150 hover:border-emerald-150 shadow-3xs hover:-translate-y-0.5">
-                            <span className="text-[8.5px] text-slate-400 font-bold uppercase block font-sans">PPPK Penuh</span>
-                            <span className="font-extrabold text-emerald-600 text-base block mt-0.5 font-mono">{stats.pppkPenuh}</span>
-                            <span className="text-[7.5px] text-slate-400 block font-sans">Penuh Waktu</span>
-                          </div>
-
-                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 transition duration-150 hover:border-teal-150 shadow-3xs hover:-translate-y-0.5">
-                            <span className="text-[8.5px] text-slate-400 font-bold uppercase block font-sans">PPPK Paruh</span>
-                            <span className="font-extrabold text-teal-600 text-base block mt-0.5 font-mono">{stats.pppkParuh}</span>
-                            <span className="text-[7.5px] text-slate-400 block font-sans">Paruh Waktu</span>
-                          </div>
-
-                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 transition duration-150 hover:border-amber-150 shadow-3xs hover:-translate-y-0.5">
-                            <span className="text-[8.5px] text-slate-400 font-bold uppercase block font-sans">Non-ASN</span>
-                            <span className="font-extrabold text-amber-600 text-base block mt-0.5 font-mono">{stats.nonAsn}</span>
-                            <span className="text-[7.5px] text-slate-400 block font-sans">Tenaga Kontrak</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Custom Input (4 columns on lg) */}
-                      <div className="lg:col-span-4 bg-slate-50/30 p-4 border border-slate-150 rounded-xl flex flex-col justify-between">
-                        <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            const activeId = currentRole === 'admin_puskesmas' ? (selectedPuskesmasId || 1) : (selectedMapPuskesmasId || 1);
-                            const parsed = Number(editedPopulationInput.replace(/\D/g, ''));
-                            if (!isNaN(parsed) && parsed > 0) {
-                              handleUpdatePopulation(activeId, parsed);
-                            }
+                    {/* Mini Bento Analysis Stats */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block">
+                        Quick Filter Status &amp; Rumpun
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {/* PNS Status */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFilterStatusAsn(filterStatusAsn === 'PNS' ? 'ALL' : 'PNS');
+                            setFilterAsnPage(1);
                           }}
-                          className="space-y-3 flex flex-col justify-between h-full text-left"
+                          className={`w-full text-left p-3 rounded-lg border transition duration-200 cursor-pointer ${
+                            filterStatusAsn === 'PNS'
+                              ? 'bg-teal-50/70 border-teal-400 ring-2 ring-teal-500/20 shadow-xs'
+                              : 'bg-slate-50/50 border-slate-200 hover:border-teal-300 hover:bg-slate-50'
+                          }`}
                         >
-                          <div>
-                            <label className="text-[9.5px] font-black text-slate-500 uppercase tracking-wider block font-sans leading-none">
-                              Pembaruan Jumlah Penduduk
-                            </label>
-                            <p className="text-[9.5px] text-slate-400 mt-1 leading-snug">
-                              Ubah untuk memicu rekalkulasi otomatis target sebaran nakes terbaru.
-                            </p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Total PNS</span>
+                            {filterStatusAsn === 'PNS' && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0"></span>
+                            )}
                           </div>
+                          <div className="flex items-baseline space-x-1.5 mt-0.5">
+                            <p className="text-base font-black text-slate-800 font-mono">{countPNS}</p>
+                            <span className="text-[8px] text-slate-400 font-bold">Aparatur Sipil</span>
+                          </div>
+                        </button>
 
-                          <div className="space-y-2 mt-1">
-                            <div className="relative">
-                              <input 
-                                type="text"
-                                value={editedPopulationInput}
-                                onChange={(e) => setEditedPopulationInput(e.target.value)}
-                                placeholder={stats.penduduk.toLocaleString('id-ID')}
-                                className="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg px-2.5 py-1.5 w-full font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all placeholder:font-sans placeholder:font-normal placeholder:text-slate-400"
-                              />
-                              <span className="absolute right-2.5 top-2 text-[9px] font-extrabold text-slate-400 select-none font-mono">
-                                JIWA
-                              </span>
+                        {/* PPPK Status */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFilterStatusAsn(filterStatusAsn === 'PPPK_PN' ? 'ALL' : 'PPPK_PN');
+                            setFilterAsnPage(1);
+                          }}
+                          className={`w-full text-left p-3 rounded-lg border transition duration-200 cursor-pointer ${
+                            filterStatusAsn === 'PPPK_PN'
+                              ? 'bg-teal-50/70 border-teal-400 ring-2 ring-teal-500/20 shadow-xs'
+                              : 'bg-slate-50/50 border-slate-200 hover:border-teal-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 font-sans">Total PPPK</span>
+                            {filterStatusAsn === 'PPPK_PN' && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0"></span>
+                            )}
+                          </div>
+                          <div className="flex items-baseline space-x-1.5 mt-0.5">
+                            <p className="text-base font-black text-slate-800 font-mono">{countPPPK_PN + countPPPK_PW}</p>
+                            <span className="text-[8px] text-slate-400 font-bold">
+                              ({countPPPK_PN} PN / {countPPPK_PW} PW)
+                            </span>
+                          </div>
+                        </button>
+
+                        {/* PKWT Status */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFilterStatusAsn(filterStatusAsn === 'PKWT' ? 'ALL' : 'PKWT');
+                            setFilterAsnPage(1);
+                          }}
+                          className={`w-full text-left p-3 rounded-lg border transition duration-200 cursor-pointer ${
+                            filterStatusAsn === 'PKWT'
+                              ? 'bg-teal-50/70 border-teal-400 ring-2 ring-teal-500/20 shadow-xs'
+                              : 'bg-slate-50/50 border-slate-200 hover:border-teal-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Total PKWT</span>
+                            {filterStatusAsn === 'PKWT' && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0"></span>
+                            )}
+                          </div>
+                          <div className="flex items-baseline space-x-1.5 mt-0.5">
+                            <p className="text-base font-black text-slate-800 font-mono">{countPKWT}</p>
+                            <span className="text-[8px] text-slate-400 font-bold">Non-ASN Kontrak</span>
+                          </div>
+                        </button>
+
+                        {/* Fungsional vs Administrasi */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFilterJenisJabatan(filterJenisJabatan === 'FUNGSIONAL' ? 'ALL' : 'FUNGSIONAL');
+                            setFilterAsnPage(1);
+                          }}
+                          className={`w-full text-left p-3 rounded-lg border transition duration-200 cursor-pointer ${
+                            filterJenisJabatan === 'FUNGSIONAL'
+                              ? 'bg-teal-50/70 border-teal-400 ring-2 ring-teal-500/20 shadow-xs'
+                              : 'bg-slate-50/50 border-slate-200 hover:border-teal-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Jenis Jabatan</span>
+                            {filterJenisJabatan === 'FUNGSIONAL' && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0"></span>
+                            )}
+                          </div>
+                          <div className="flex items-baseline space-x-1.5 mt-0.5">
+                            <p className="text-base font-black text-teal-750 font-mono">{countFungsional}</p>
+                            <span className="text-[8px] text-slate-400 font-bold">
+                              Fungsional / {countAdministrasi} Admin
+                            </span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Sub-Jenis Jabatan SDMK Interactive Grid */}
+                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-teal-700 font-mono flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
+                          Sub-Jenis Jabatan SDMK (Sumber Daya Manusia Kesehatan)
+                        </label>
+                        {filterSubJenisJabatan !== 'ALL' && (
+                          <button 
+                            type="button" 
+                            onClick={() => { setFilterSubJenisJabatan('ALL'); setFilterAsnPage(1); }}
+                            className="text-[9px] text-teal-600 hover:text-teal-800 font-bold font-mono uppercase bg-teal-50 px-2 py-0.5 rounded border border-teal-100 transition cursor-pointer"
+                          >
+                            Reset Filter SDMK
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+                        {(() => {
+                          const getColorClasses = (color: string, isActive: boolean) => {
+                            if (isActive) {
+                              switch(color) {
+                                case 'rose': return 'border-rose-500 bg-rose-50/70 text-rose-900 ring-2 ring-rose-500/20';
+                                case 'indigo': return 'border-indigo-500 bg-indigo-50/70 text-indigo-900 ring-2 ring-indigo-500/20';
+                                case 'emerald': return 'border-emerald-500 bg-emerald-50/70 text-emerald-950 ring-2 ring-emerald-500/20';
+                                case 'pink': return 'border-pink-500 bg-pink-50/70 text-pink-900 ring-2 ring-pink-500/20';
+                                case 'green': return 'border-green-500 bg-green-50/70 text-green-900 ring-2 ring-green-500/20';
+                                case 'amber': return 'border-amber-500 bg-amber-50/70 text-amber-900 ring-2 ring-amber-500/20';
+                                case 'cyan': return 'border-cyan-500 bg-cyan-50/70 text-cyan-900 ring-2 ring-cyan-500/20';
+                                default: return 'border-slate-500 bg-slate-100 text-slate-900 ring-2 ring-slate-505/20';
+                              }
+                            } else {
+                              switch(color) {
+                                case 'rose': return 'border-slate-200 bg-white hover:border-rose-300 hover:bg-rose-50/15 text-slate-800';
+                                case 'indigo': return 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/15 text-slate-800';
+                                case 'emerald': return 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/15 text-slate-800';
+                                case 'pink': return 'border-slate-200 bg-white hover:border-pink-300 hover:bg-pink-50/15 text-slate-800';
+                                case 'green': return 'border-slate-200 bg-white hover:border-green-300 hover:bg-green-50/15 text-slate-800';
+                                case 'amber': return 'border-slate-200 bg-white hover:border-amber-300 hover:bg-amber-50/15 text-slate-800';
+                                case 'cyan': return 'border-slate-200 bg-white hover:border-cyan-300 hover:bg-cyan-50/15 text-slate-800';
+                                default: return 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-850';
+                              }
+                            }
+                          };
+
+                          const getIconColorClasses = (color: string) => {
+                            switch(color) {
+                              case 'rose': return 'text-rose-600 bg-rose-50';
+                              case 'indigo': return 'text-indigo-600 bg-indigo-50';
+                              case 'emerald': return 'text-emerald-700 bg-emerald-50';
+                              case 'pink': return 'text-pink-600 bg-pink-50';
+                              case 'green': return 'text-green-600 bg-green-50';
+                              case 'amber': return 'text-amber-600 bg-amber-50';
+                              case 'cyan': return 'text-cyan-600 bg-cyan-50';
+                              default: return 'text-slate-650 bg-slate-100';
+                            }
+                          };
+
+                          const countSubJenis = (profIdVal: number) => {
+                            return roleFilteredProfiles.filter(p => {
+                              if (p.status_kepegawaian !== 'Aktif') return false;
+                              if (currentRole === 'admin_dinkes' && filterPuskesmasUnit !== 'ALL') {
+                                if (p.id_puskesmas !== Number(filterPuskesmasUnit)) return false;
+                              }
+                              if (filterStatusAsn !== 'ALL') {
+                                if (filterStatusAsn === 'PNS' && p.status_pegawai_detail !== 'PNS') return false;
+                                if (filterStatusAsn === 'PPPK_PN' && p.status_pegawai_detail !== 'PPPK_Penuh_Waktu') return false;
+                                if (filterStatusAsn === 'PPPK_PW' && p.status_pegawai_detail !== 'PPPK_Paruh_Waktu') return false;
+                                if (filterStatusAsn === 'PKWT' && p.status_pegawai_detail !== 'Non_ASN') return false;
+                              }
+                              if (filterJenisJabatan !== 'ALL') {
+                                const isJafung = p.jenis_pegawai === 'Jafung_Kesehatan';
+                                if (filterJenisJabatan === 'FUNGSIONAL' && !isJafung) return false;
+                                if (filterJenisJabatan === 'ADMINISTRASI' && isJafung) return false;
+                              }
+                              if (filterAsnSearchQuery.trim() !== '') {
+                                const s = filterAsnSearchQuery.toLowerCase();
+                                const matchesName = p.nama_lengkap.toLowerCase().includes(s);
+                                const matchesNip = p.nip?.toLowerCase().includes(s);
+                                const matchesNik = p.nik?.toLowerCase().includes(s);
+                                const matchesNi = p.pppk_ni?.toLowerCase().includes(s);
+                                const matchesJabatan = (p.pns_nama_jabatan || p.pppk_jabatan || p.pkwt_jabatan || '').toLowerCase().includes(s);
+                                if (!matchesName && !matchesNip && !matchesNik && !matchesNi && !matchesJabatan) return false;
+                              }
+
+                              const profId = p.id_profesi || getFallbackProfesiId(p.nama_lengkap, p.gelar_belakang);
+                              return profId === profIdVal;
+                            }).length;
+                          };
+
+                          return profesiSdmkList.map((prof) => {
+                            const { icon: IconComponent, color } = getProfesiIconAndColor(prof.nama_profesi);
+                            const isActive = filterSubJenisJabatan === String(prof.id);
+                            const countVal = countSubJenis(prof.id);
+
+                            return (
+                              <button
+                                key={prof.id}
+                                type="button"
+                                onClick={() => {
+                                  setFilterSubJenisJabatan(isActive ? 'ALL' : String(prof.id));
+                                  setFilterJafungCategory('ALL'); // reset Jafung selection to avoid collision
+                                  setFilterAsnPage(1);
+                                }}
+                                className={`group p-3 rounded-xl border text-left flex flex-col justify-between transition duration-200 cursor-pointer shadow-3xs hover:shadow-2xs h-[92px] ${getColorClasses(color, isActive)}`}
+                              >
+                                <div className="flex items-start justify-between w-full font-sans">
+                                  <div className={`p-1.5 rounded-lg border border-white/10 shrink-0 ${getIconColorClasses(color)}`}>
+                                    <IconComponent size={14} />
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-base font-black font-mono leading-none">{countVal}</span>
+                                    <span className="text-[8px] text-slate-400 font-bold block">Pegawai</span>
+                                  </div>
+                                </div>
+                                <div className="mt-2 text-left w-full">
+                                  <h4 className="text-[10px] font-extrabold leading-tight tracking-tight uppercase line-clamp-1">
+                                    {prof.nama_profesi}
+                                  </h4>
+                                  <p className="text-[8px] text-slate-450 font-semibold truncate leading-none mt-0.5">
+                                    Rumpun SDMK
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Detailed Data List */}
+                    {filterSubJenisJabatan !== 'ALL' && (
+                      <div className="space-y-4">
+                        <div className="w-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-4xs">
+                          {totalFiltered === 0 ? (
+                            <div className="p-8 text-center space-y-3">
+                              <div className="mx-auto w-10 h-10 bg-slate-50 text-slate-400 rounded-full border border-slate-150 flex items-center justify-center">
+                                <Users size={16} />
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-black text-slate-850">Tidak Ada Pegawai Cocok</p>
+                                <p className="text-[10px] text-slate-400 max-w-sm mx-auto leading-normal">
+                                  Tidak ada data pegawai yang memenuhi kriteria filter aktif saat ini. Coba bersihkan atau setel ulang pencarian Anda.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFilterStatusAsn('ALL');
+                                  setFilterJenisJabatan('ALL');
+                                  setFilterSubJenisJabatan('ALL');
+                                  setFilterPuskesmasUnit('ALL');
+                                  setFilterAsnSearchQuery('');
+                                  setFilterAsnPage(1);
+                                }}
+                                className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[10px] py-1.5 px-4 rounded-lg uppercase tracking-wider transition-all cursor-pointer shadow-3xs"
+                              >
+                                Setel Ulang Filter
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 border-b border-slate-150 text-[9.5px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                                    <th className="py-2.5 px-4 font-black">Nama Pegawai / NIP</th>
+                                    <th className="py-2.5 px-4 font-black">Unit Kerja</th>
+                                    <th className="py-2.5 px-4 font-black font-sans">Jenis Jabatan</th>
+                                    <th className="py-2.5 px-4 font-black">Status ASN</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-xs">
+                                  {paginatedProfiles.map((p) => {
+                                    const isFungsional = p.jenis_pegawai === 'Jafung_Kesehatan';
+                                    return (
+                                      <tr key={p.id} className="hover:bg-slate-50/50 transition">
+                                        {/* Name & Identities */}
+                                        <td className="py-3 px-4">
+                                          <div className="font-extrabold text-slate-800 leading-tight">
+                                            {p.nama_lengkap}
+                                            {p.gelar_belakang && `, ${p.gelar_belakang}`}
+                                          </div>
+                                          <div className="text-[9.5px] text-slate-400 mt-0.5 font-mono">
+                                            {p.status_pegawai_detail === 'PNS' && `NIP: ${p.nip || '-'}`}
+                                            {p.status_pegawai_detail === 'PPPK_Penuh_Waktu' && `NI PPPK: ${p.pppk_ni || '-'}`}
+                                            {p.status_pegawai_detail === 'PPPK_Paruh_Waktu' && `NI PPPW: ${p.pppk_ni || '-'}`}
+                                            {p.status_pegawai_detail === 'Non_ASN' && `NIK: ${p.nik || '-'}`}
+                                          </div>
+                                        </td>
+
+                                        {/* Work Unit */}
+                                        <td className="py-3 px-4">
+                                          <div className="font-bold text-slate-600 truncate max-w-[170px]">
+                                            {unitLabel(p.id_puskesmas)}
+                                          </div>
+                                        </td>
+
+                                        {/* Position Title & Category */}
+                                        <td className="py-3 px-4">
+                                          <div className="font-bold text-slate-700 truncate max-w-[180px]">
+                                            {getJabatanName(p)}
+                                          </div>
+                                          <div className="mt-0.5">
+                                            {isFungsional ? (
+                                              <span className="text-[8.5px] text-purple-600 bg-purple-50 border border-purple-150 rounded px-1.5 py-0.2 font-black leading-none uppercase tracking-wider block w-max">
+                                                Fungsional
+                                              </span>
+                                            ) : (
+                                              <span className="text-[8.5px] text-indigo-600 bg-indigo-50 border border-indigo-150 rounded px-1.5 py-0.2 font-black leading-none uppercase tracking-wider block w-max">
+                                                Administrasi
+                                              </span>
+                                            )}
+                                          </div>
+                                        </td>
+
+                                        {/* ASN Status details */}
+                                        <td className="py-3 px-4">
+                                          {p.status_pegawai_detail === 'PNS' && (
+                                            <span className="inline-flex text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                              PNS
+                                            </span>
+                                          )}
+                                          {p.status_pegawai_detail === 'PPPK_Penuh_Waktu' && (
+                                            <span className="inline-flex text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-250">
+                                              PPPK PN
+                                            </span>
+                                          )}
+                                          {p.status_pegawai_detail === 'PPPK_Paruh_Waktu' && (
+                                            <span className="inline-flex text-[9px] font-black px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                                              PPPK PW
+                                            </span>
+                                          )}
+                                          {p.status_pegawai_detail === 'Non_ASN' && (
+                                            <span className="inline-flex text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-250">
+                                              PKWT
+                                            </span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Pagination Bar */}
+                        {totalFiltered > 0 && (
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100 pt-3">
+                            <span className="text-[10px] text-slate-400 font-bold font-mono">
+                              Menampilkan {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalFiltered)} dari {totalFiltered} pegawai
+                            </span>
+
+                            <div className="flex items-center space-x-1">
+                              <button
+                                type="button"
+                                disabled={activePage === 1}
+                                onClick={() => setFilterAsnPage(activePage - 1)}
+                                className="bg-white hover:bg-slate-50 disabled:bg-slate-50 disabled:text-slate-350 disabled:border-slate-150 disabled:cursor-not-allowed text-slate-700 border border-slate-300 font-extrabold text-[10px] px-3 py-1 rounded-lg uppercase tracking-wider transition cursor-pointer"
+                              >
+                                Sebelumnya
+                              </button>
+                              
+                              <div className="flex items-center space-x-0.5">
+                                {Array.from({ length: totalPages }).map((_, i) => {
+                                  const pageNum = i + 1;
+                                  const isCurrent = pageNum === activePage;
+                                  return (
+                                    <button
+                                      key={pageNum}
+                                      type="button"
+                                      onClick={() => setFilterAsnPage(pageNum)}
+                                      className={`text-[10px] font-bold font-mono w-6 h-6 rounded flex items-center justify-center cursor-pointer transition ${
+                                        isCurrent 
+                                          ? 'bg-teal-600 text-white font-extrabold' 
+                                          : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200'
+                                      }`}
+                                    >
+                                      {pageNum}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              <button
+                                type="button"
+                                disabled={activePage === totalPages}
+                                onClick={() => setFilterAsnPage(activePage + 1)}
+                                className="bg-white hover:bg-slate-50 disabled:bg-slate-50 disabled:text-slate-300 disabled:border-slate-150 disabled:cursor-not-allowed text-slate-700 border border-slate-305 font-extrabold text-[10px] px-3 py-1 rounded-lg uppercase tracking-wider transition cursor-pointer"
+                              >
+                                Berikutnya
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Jabatan Fungsional ASN (Jenjang Jafung) Section */}
+                    <div className="space-y-4 pt-6 mt-4 border-t border-slate-150">
+                      {(() => {
+                        const jafungAsnProfiles = roleFilteredProfiles.filter(p => {
+                          if (p.status_kepegawaian !== 'Aktif') return false;
+                          const isAsn = p.status_pegawai_detail === 'PNS' || p.status_pegawai_detail === 'PPPK_Penuh_Waktu' || p.status_pegawai_detail === 'PPPK_Paruh_Waktu';
+                          if (!isAsn) return false;
+                          return p.jenis_pegawai === 'Jafung_Kesehatan' || !!p.jenjang_jafung;
+                        });
+
+                        const countKeahlian = jafungAsnProfiles.filter(p => {
+                          const jenj = (p.jenjang_jafung || '').toLowerCase();
+                          return jenj.includes('ahli');
+                        }).length;
+
+                        const countKeterampilan = jafungAsnProfiles.filter(p => {
+                          const jenj = (p.jenjang_jafung || '').toLowerCase();
+                          return jenj !== '' && !jenj.includes('ahli');
+                        }).length;
+
+                        const filteredJafungProfiles = roleFilteredProfiles.filter(p => {
+                          if (p.status_kepegawaian !== 'Aktif') return false;
+                          const isAsn = p.status_pegawai_detail === 'PNS' || p.status_pegawai_detail === 'PPPK_Penuh_Waktu' || p.status_pegawai_detail === 'PPPK_Paruh_Waktu';
+                          if (!isAsn) return false;
+
+                          if (currentRole === 'admin_dinkes' && filterPuskesmasUnit !== 'ALL') {
+                            if (p.id_puskesmas !== Number(filterPuskesmasUnit)) return false;
+                          }
+                          if (filterStatusAsn !== 'ALL') {
+                            if (filterStatusAsn === 'PNS' && p.status_pegawai_detail !== 'PNS') return false;
+                            if (filterStatusAsn === 'PPPK_PN' && p.status_pegawai_detail !== 'PPPK_Penuh_Waktu') return false;
+                            if (filterStatusAsn === 'PPPK_PW' && p.status_pegawai_detail !== 'PPPK_Paruh_Waktu') return false;
+                          }
+                          if (filterAsnSearchQuery.trim() !== '') {
+                            const s = filterAsnSearchQuery.toLowerCase();
+                            const matchesName = p.nama_lengkap.toLowerCase().includes(s);
+                            const matchesNip = p.nip?.toLowerCase().includes(s);
+                            const matchesNik = p.nik?.toLowerCase().includes(s);
+                            const matchesNi = p.pppk_ni?.toLowerCase().includes(s);
+                            const matchesJabatan = (p.pns_nama_jabatan || p.pppk_jabatan || p.pkwt_jabatan || '').toLowerCase().includes(s);
+                            if (!matchesName && !matchesNip && !matchesNik && !matchesNi && !matchesJabatan) return false;
+                          }
+
+                          const jenj = (p.jenjang_jafung || '').toLowerCase();
+                          if (filterJafungCategory === 'KEAHLIAN') {
+                            return jenj.includes('ahli');
+                          } else if (filterJafungCategory === 'KETERAMPILAN') {
+                            return jenj !== '' && !jenj.includes('ahli');
+                          }
+                          return false;
+                        });
+
+                        return (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] font-black uppercase tracking-wider text-teal-700 font-mono flex items-center gap-1.5 font-sans">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                                Jabatan Fungsional Keahlian &amp; Keterampilan ASN
+                              </label>
+                              {filterJafungCategory !== 'ALL' && (
+                                <button 
+                                  type="button" 
+                                  onClick={() => { setFilterJafungCategory('ALL'); }}
+                                  className="text-[9px] text-teal-600 hover:text-teal-800 font-bold font-mono uppercase bg-teal-50 px-2 py-0.5 rounded border border-teal-100 transition cursor-pointer"
+                                >
+                                  Reset Filter Jafung
+                                </button>
+                              )}
                             </div>
 
-                            <button
-                              type="submit"
-                              className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] py-1.5 px-3 rounded-lg uppercase tracking-wider transition-all w-full cursor-pointer hover:shadow-3xs"
-                            >
-                              Simpan Registrasi
-                            </button>
-                          </div>
-                          
-                          {saveStatusMsg && (
-                            <p className="text-[9px] text-indigo-750 font-extrabold font-mono mt-1.5 animate-pulse">{saveStatusMsg}</p>
-                          )}
-                        </form>
-                      </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {/* Subcard Keahlian */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFilterJafungCategory(filterJafungCategory === 'KEAHLIAN' ? 'ALL' : 'KEAHLIAN');
+                                  setFilterSubJenisJabatan('ALL'); // unselect Sub-Jenis
+                                  setFilterJafungPage(1);
+                                }}
+                                className={`p-3 rounded-xl border text-left flex flex-col justify-between transition duration-200 cursor-pointer shadow-3xs hover:shadow-2xs h-[92px] ${
+                                  filterJafungCategory === 'KEAHLIAN'
+                                    ? 'border-indigo-500 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-500/20'
+                                    : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/15 text-slate-800'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between w-full font-sans">
+                                  <div className={`p-1.5 rounded-lg border border-white/10 shrink-0 ${
+                                    filterJafungCategory === 'KEAHLIAN' ? 'text-indigo-650 bg-indigo-100/50' : 'text-indigo-600 bg-indigo-50'
+                                  }`}>
+                                    <Award size={14} />
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-base font-black font-mono leading-none">{countKeahlian}</span>
+                                    <span className="text-[8px] text-slate-400 font-bold block">Pegawai</span>
+                                  </div>
+                                </div>
+                                <div className="mt-2 text-left w-full">
+                                  <h4 className="text-[10px] font-extrabold leading-tight tracking-tight uppercase line-clamp-1">
+                                    Jenjang Keahlian (Ahli)
+                                  </h4>
+                                  <p className="text-[8px] text-slate-450 font-semibold truncate leading-none mt-0.5">
+                                    Ahli Pertama, Ahli Muda, Ahli Madya, Ahli Utama (PNS/PPPK)
+                                  </p>
+                                </div>
+                              </button>
+
+                              {/* Subcard Keterampilan */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFilterJafungCategory(filterJafungCategory === 'KETERAMPILAN' ? 'ALL' : 'KETERAMPILAN');
+                                  setFilterSubJenisJabatan('ALL'); // unselect Sub-Jenis
+                                  setFilterJafungPage(1);
+                                }}
+                                className={`p-3 rounded-xl border text-left flex flex-col justify-between transition duration-200 cursor-pointer shadow-3xs hover:shadow-2xs h-[92px] ${
+                                  filterJafungCategory === 'KETERAMPILAN'
+                                    ? 'border-emerald-500 bg-emerald-50/70 text-emerald-950 ring-2 ring-emerald-500/20'
+                                    : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/15 text-slate-800'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between w-full font-sans">
+                                  <div className={`p-1.5 rounded-lg border border-white/10 shrink-0 ${
+                                    filterJafungCategory === 'KETERAMPILAN' ? 'text-emerald-705 bg-emerald-100/50' : 'text-emerald-700 bg-emerald-50'
+                                  }`}>
+                                    <Zap size={14} />
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-base font-black font-mono leading-none">{countKeterampilan}</span>
+                                    <span className="text-[8px] text-slate-400 font-bold block">Pegawai</span>
+                                  </div>
+                                </div>
+                                <div className="mt-2 text-left w-full">
+                                  <h4 className="text-[10px] font-extrabold leading-tight tracking-tight uppercase line-clamp-1">
+                                    Jenjang Keterampilan
+                                  </h4>
+                                  <p className="text-[8px] text-slate-450 font-semibold truncate leading-none mt-0.5">
+                                    Terampil, Mahir, Penyelia (PNS/PPPK)
+                                  </p>
+                                </div>
+                              </button>
+                            </div>
+
+                            {/* Jafung Detailed Table - Only shown when clicked */}
+                            {filterJafungCategory !== 'ALL' && (
+                              <div className="space-y-4">
+                                <div className="w-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-4xs">
+                                  {filteredJafungProfiles.length === 0 ? (
+                                    <div className="p-8 text-center space-y-3">
+                                      <div className="mx-auto w-10 h-10 bg-slate-50 text-slate-400 rounded-full border border-slate-150 flex items-center justify-center">
+                                        <Users size={16} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <p className="text-xs font-black text-slate-850">Tidak Ada Pegawai Cocok</p>
+                                        <p className="text-[10px] text-slate-400 max-w-sm mx-auto leading-normal">
+                                          Tidak ada data pegawai Jabatan Fungsional {filterJafungCategory === 'KEAHLIAN' ? 'Keahlian' : 'Keterampilan'} yang sesuai.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-left border-collapse">
+                                        <thead>
+                                          <tr className="bg-slate-50 border-b border-slate-150 text-[9.5px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                                            <th className="py-2.5 px-4 font-black">Nama Pegawai / NIP</th>
+                                            <th className="py-2.5 px-4 font-black">Unit Kerja</th>
+                                            <th className="py-2.5 px-4 font-black font-sans">Jenis Jabatan / Jenjang</th>
+                                            <th className="py-2.5 px-4 font-black font-sans">Status ASN</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-150 text-xs text-slate-755">
+                                          {(() => {
+                                            const jafungItemsPerPage = 6;
+                                            const jafungTotalPages = Math.max(1, Math.ceil(filteredJafungProfiles.length / jafungItemsPerPage));
+                                            const jafungActivePage = Math.min(filterJafungPage, jafungTotalPages);
+                                            const jafungStartIndex = (jafungActivePage - 1) * jafungItemsPerPage;
+                                            const jafungPaginatedList = filteredJafungProfiles.slice(jafungStartIndex, jafungStartIndex + jafungItemsPerPage);
+                                            
+                                            return (
+                                              <>
+                                                {jafungPaginatedList.map((p) => (
+                                                  <tr key={p.id} className="hover:bg-slate-50/50 transition">
+                                                    <td className="py-3 px-4">
+                                                      <div className="font-extrabold text-slate-800 leading-tight">
+                                                        {p.nama_lengkap}
+                                                        {p.gelar_belakang && `, ${p.gelar_belakang}`}
+                                                      </div>
+                                                      <div className="text-[9.5px] text-slate-400 mt-0.5 font-mono">
+                                                        {p.status_pegawai_detail === 'PNS' && `NIP: ${p.nip || '-'}`}
+                                                        {p.status_pegawai_detail === 'PPPK_Penuh_Waktu' && `NI PPPK: ${p.pppk_ni || '-'}`}
+                                                        {p.status_pegawai_detail === 'PPPK_Paruh_Waktu' && `NI PPPW: ${p.pppk_ni || '-'}`}
+                                                      </div>
+                                                    </td>
+
+                                                    <td className="py-3 px-4">
+                                                      <div className="font-bold text-slate-650 truncate max-w-[170px]">
+                                                        {unitLabel(p.id_puskesmas)}
+                                                      </div>
+                                                    </td>
+
+                                                    <td className="py-3 px-4">
+                                                      <div className="font-bold text-slate-705 truncate max-w-[180px]">
+                                                        {getJabatanName(p)}
+                                                      </div>
+                                                      <div className="mt-0.5">
+                                                        <span className="inline-flex text-[8.5px] text-purple-705 bg-purple-50 border border-purple-200 rounded px-1.5 py-0.2 font-black uppercase tracking-wider leading-none">
+                                                          {p.jenjang_jafung || 'Fungsional'}
+                                                        </span>
+                                                      </div>
+                                                    </td>
+
+                                                    <td className="py-3 px-4">
+                                                      {p.status_pegawai_detail === 'PNS' && (
+                                                        <span className="inline-flex text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                                          PNS
+                                                        </span>
+                                                      )}
+                                                      {p.status_pegawai_detail === 'PPPK_Penuh_Waktu' && (
+                                                        <span className="inline-flex text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-250">
+                                                          PPPK PN
+                                                        </span>
+                                                      )}
+                                                      {p.status_pegawai_detail === 'PPPK_Paruh_Waktu' && (
+                                                        <span className="inline-flex text-[9px] font-black px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                                                          PPPK PW
+                                                        </span>
+                                                      )}
+                                                    </td>
+                                                  </tr>
+                                                ))}
+
+                                                {filteredJafungProfiles.length > jafungItemsPerPage && (
+                                                  <tr>
+                                                    <td colSpan={4} className="p-3 bg-slate-50 border-t border-slate-150">
+                                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                        <span className="text-[10px] text-slate-400 font-bold font-mono">
+                                                          Menampilkan {jafungStartIndex + 1}-{Math.min(jafungStartIndex + jafungItemsPerPage, filteredJafungProfiles.length)} dari {filteredJafungProfiles.length} pegawai
+                                                        </span>
+
+                                                        <div className="flex items-center space-x-1">
+                                                          <button
+                                                            type="button"
+                                                            disabled={jafungActivePage === 1}
+                                                            onClick={() => setFilterJafungPage(jafungActivePage - 1)}
+                                                            className="bg-white hover:bg-slate-50 disabled:bg-slate-50 disabled:text-slate-350 disabled:border-slate-150 disabled:cursor-not-allowed text-slate-700 border border-slate-300 font-extrabold text-[10px] px-2 py-0.5 rounded uppercase tracking-wider transition cursor-pointer"
+                                                          >
+                                                            Sebelumnya
+                                                          </button>
+                                                          <div className="flex items-center space-x-0.5">
+                                                            {Array.from({ length: jafungTotalPages }).map((_, idx) => {
+                                                              const pNum = idx + 1;
+                                                              const isCurr = pNum === jafungActivePage;
+                                                              return (
+                                                                <button
+                                                                  key={pNum}
+                                                                  type="button"
+                                                                  onClick={() => setFilterJafungPage(pNum)}
+                                                                  className={`text-[10px] font-bold font-mono w-5 h-5 rounded flex items-center justify-center cursor-pointer transition ${
+                                                                    isCurr 
+                                                                      ? 'bg-teal-650 text-white font-extrabold' 
+                                                                      : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200'
+                                                                  }`}
+                                                                >
+                                                                  {pNum}
+                                                                </button>
+                                                              );
+                                                            })}
+                                                          </div>
+                                                          <button
+                                                            type="button"
+                                                            disabled={jafungActivePage === jafungTotalPages}
+                                                            onClick={() => setFilterJafungPage(jafungActivePage + 1)}
+                                                            className="bg-white hover:bg-slate-50 disabled:bg-slate-50 disabled:text-slate-355 disabled:border-slate-150 disabled:cursor-not-allowed text-slate-700 border border-slate-300 font-extrabold text-[10px] px-2 py-0.5 rounded uppercase tracking-wider transition cursor-pointer"
+                                                          >
+                                                            Berikutnya
+                                                          </button>
+                                                        </div>
+                                                      </div>
+                                                    </td>
+                                                  </tr>
+                                                )}
+                                              </>
+                                            );
+                                          })()}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
