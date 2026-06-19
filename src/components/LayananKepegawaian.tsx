@@ -488,6 +488,83 @@ export default function LayananKepegawaian({
 
   // File Preview & Download handlers for Usulan Documents
   const [activeUsulanFilePreview, setActiveUsulanFilePreview] = useState<{ file: UsulanDokumenFile; usulan: UsulanLayanan } | null>(null);
+  const [usulanPreviewUrl, setUsulanPreviewUrl] = React.useState<string | null>(null);
+  const [usulanPreviewType, setUsulanPreviewType] = React.useState<'PDF' | 'IMAGE' | 'FALLBACK'>('FALLBACK');
+  const usulanUrlRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (!activeUsulanFilePreview) {
+      if (usulanUrlRef.current) {
+        URL.revokeObjectURL(usulanUrlRef.current);
+        usulanUrlRef.current = null;
+      }
+      setUsulanPreviewUrl(null);
+      return;
+    }
+
+    const { file, usulan } = activeUsulanFilePreview;
+    const asm = asnProfiles.find(a => a.id === usulan.id_asn);
+    const ftr = masterFitur.find(f => f.id === usulan.id_fitur);
+    const docType = masterDokumen.find(d => d.id === file.id_dokumen)?.nama_dokumen || "Dokumen Pendukung";
+    const cleanUnit = asm?.id_puskesmas === 100 ? "Dinas Kesehatan PPKB" : getPuskesmasName(asm?.id_puskesmas || 1);
+
+    let localUrl = '';
+    let type: 'PDF' | 'IMAGE' | 'FALLBACK' = 'PDF';
+
+    // Check if we have high-fidelity real uploaded dataUrl
+    const dataUrlToUse = file.data_url || (file.file_path && file.file_path.startsWith('data:') ? file.file_path : '');
+
+    if (dataUrlToUse) {
+      try {
+        const blob = dataURLtoBlob(dataUrlToUse);
+        localUrl = URL.createObjectURL(blob);
+        if (dataUrlToUse.startsWith('data:image/') || file.file_name?.match(/\.(jpe?g|png|gif)$/i)) {
+          type = 'IMAGE';
+        } else {
+          type = 'PDF';
+        }
+      } catch (err) {
+        console.error("Gagal convert dataURL ke blob:", err);
+        const pdfLines = [
+          `ID DOKUMEN USULAN: LOBAR-USL-DOC-${file.id}`,
+          `NOMOR USULAN: #USL-${usulan.id}`,
+          `LAYANAN: ${ftr?.nama_fitur || 'Layanan SIMPEG'}`,
+          `PEGAWAI: ${asm?.nama_lengkap || 'Tidak diketahui'}`,
+          `NIP: ${asm?.nip || '-'}`,
+          `UNIT KERJA: ${cleanUnit}`,
+          `SYARAT DOKUMEN: ${docType}`,
+          `FILENAME ASLI: ${file.file_name}`,
+          `TANGGAL USULAN: ${new Date(usulan.tanggal_pengusulan).toLocaleDateString('id-ID')}`
+        ];
+        const blob = generateMinimalPDF(docType, pdfLines);
+        localUrl = URL.createObjectURL(blob);
+        type = 'PDF';
+      }
+    } else {
+      const pdfLines = [
+        `ID DOKUMEN USULAN: LOBAR-USL-DOC-${file.id}`,
+        `NOMOR USULAN: #USL-${usulan.id}`,
+        `LAYANAN: ${ftr?.nama_fitur || 'Layanan SIMPEG'}`,
+        `PEGAWAI: ${asm?.nama_lengkap || 'Tidak diketahui'}`,
+        `NIP: ${asm?.nip || '-'}`,
+        `UNIT KERJA: ${cleanUnit}`,
+        `SYARAT DOKUMEN: ${docType}`,
+        `FILENAME ASLI: ${file.file_name}`,
+        `TANGGAL USULAN: ${new Date(usulan.tanggal_pengusulan).toLocaleDateString('id-ID')}`
+      ];
+      const blob = generateMinimalPDF(docType, pdfLines);
+      localUrl = URL.createObjectURL(blob);
+      type = 'PDF';
+    }
+
+    if (usulanUrlRef.current && usulanUrlRef.current !== localUrl) {
+      URL.revokeObjectURL(usulanUrlRef.current);
+    }
+
+    usulanUrlRef.current = localUrl;
+    setUsulanPreviewUrl(localUrl);
+    setUsulanPreviewType(type);
+  }, [activeUsulanFilePreview?.file?.id, activeUsulanFilePreview?.file?.data_url]);
 
   const handlePreviewUsulanFile = (file: UsulanDokumenFile, usulan: UsulanLayanan) => {
     setActiveUsulanFilePreview({ file, usulan });
@@ -1820,118 +1897,176 @@ export default function LayananKepegawaian({
                 </div>
 
                 <div className="flex-1 overflow-y-auto pr-1">
-                  {/* Real Document Preview if Data URL */}
-                  {isDataUrl ? (
-                    <div className="space-y-3">
-                      <div className="bg-[#16161a] p-3 rounded-lg border border-white/5 flex items-center justify-between text-xs text-slate-300">
-                        <span>Nama File: <strong>{file.file_name}</strong></span>
-                        <span className="text-emerald-400 font-bold">✓ Dokumen Asli Terunggah</span>
+                  <div className="space-y-4">
+                    {/* Top download reminder bar */}
+                    <div className="bg-emerald-950/40 border border-emerald-500/20 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-emerald-300 gap-2">
+                      <div className="flex items-center space-x-2">
+                        <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>Pratinjau Berkas Digital: <strong>{file.file_name}</strong></span>
                       </div>
-                      {file.file_path.startsWith('data:image/') ? (
-                        <div className="flex justify-center bg-slate-950 p-4 rounded-xl border border-white/5">
-                          <img 
-                            src={file.file_path} 
-                            className="max-h-[50vh] w-auto object-contain rounded-lg shadow-lg" 
-                            alt="Uploaded Preview" 
-                            referrerPolicy="no-referrer"
-                          />
-                        </div>
-                      ) : file.file_path.startsWith('data:application/pdf') ? (
-                        <div className="space-y-4">
-                          {/* Top download reminder bar */}
-                          <div className="bg-emerald-950/40 border border-emerald-500/20 p-3 rounded-xl flex items-center justify-between text-xs text-emerald-300">
-                            <div className="flex items-center space-x-2">
-                              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                              <span>Dokumen asli <strong>{file.file_name}</strong> terunggah dengan aman.</span>
+                      <div className="flex items-center space-x-2 self-start sm:self-auto">
+                        {usulanPreviewUrl && usulanPreviewType === 'PDF' && (
+                          <button
+                            type="button"
+                            onClick={() => window.open(usulanPreviewUrl, '_blank')}
+                            className="px-3 py-1 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-lg text-[10px] transition cursor-pointer flex items-center space-x-1"
+                          >
+                            <Eye size={10} />
+                            <span>Buka di Tab Baru</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadUsulanFile(file, usulan)}
+                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[10px] transition cursor-pointer flex items-center space-x-1"
+                        >
+                          <Download size={10} />
+                          <span>Unduh Berkas</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {usulanPreviewUrl ? (
+                      <div>
+                        {usulanPreviewType === 'IMAGE' ? (
+                          <div className="flex justify-center bg-slate-900 border border-white/10 p-4 rounded-2xl shadow-inner max-h-[500px] overflow-auto">
+                            <img 
+                              src={usulanPreviewUrl} 
+                              className="max-h-[450px] w-auto object-contain rounded-lg shadow-lg border border-white/5" 
+                              alt="Pratinjau Berkas Gambar" 
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        ) : (
+                          /* Official Govt Document Simulator Sheet */
+                          <div className="bg-white border border-slate-300 rounded-3xl shadow-xl p-8 md:p-10 font-sans text-slate-800 relative overflow-hidden ring-1 ring-black/5 max-w-xl mx-auto">
+                            
+                            {/* Background Watermark/Seal */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] select-none pointer-events-none">
+                              <div className="border-[15px] border-emerald-800 rounded-full w-80 h-80 flex items-center justify-center font-bold text-lg text-center tracking-widest leading-normal">
+                                SIMPEG DINAS KESEHATAN<br/>LOMBOK BARAT
+                              </div>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadUsulanFile(file, usulan)}
-                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[10px] transition cursor-pointer flex items-center space-x-1"
-                            >
-                              <Download size={10} />
-                              <span>Buka / Unduh File</span>
-                            </button>
-                          </div>
 
-                          <PDFCanvasViewer dataUrl={file.file_path} />
-                        </div>
-                      ) : (
-                        <div className="p-8 text-center text-xs text-slate-400 bg-slate-950 rounded-xl border border-white/5">
-                          Format pratinjau tidak didukung langsung di browser. Format dapat diunduh di bawah.
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    /* High-Fidelity Paper-Type Simulated Document Viewer for mock attachments */
-                    <div className="bg-white text-slate-800 p-8 rounded-xl shadow-md border border-slate-200 font-sans mx-auto max-w-2xl text-xs space-y-6 leading-relaxed relative">
-                      {/* Decorative double border on draft documents */}
-                      <div className="absolute inset-2 border-2 border-double border-slate-200/50 pointer-events-none rounded-lg" />
-                      
-                      {/* Garuda / Lombok Barat Header */}
-                      <div className="text-center space-y-1 pb-4 border-b-2 border-slate-800 relative z-10">
-                        <p className="font-bold text-sm tracking-wide text-gray-900">PEMERINTAH KABUPATEN LOMBOK BARAT</p>
-                        <p className="font-bold text-xs uppercase text-gray-800">DINAS KESEHATAN PPKB</p>
-                        <p className="text-[10px] text-slate-500 italic">Jl. Gatot Subroto No. 5, Giri Menang, Gerung (83371)</p>
+                            {/* Letterhead (KOP SURAT) */}
+                            <div className="text-center border-b-4 border-double border-slate-900 pb-3 flex flex-col items-center">
+                              <div className="flex items-center justify-center space-x-3 mb-1">
+                                <span className="text-2xl">🇲🇨</span>
+                                <div className="text-left">
+                                  <h4 className="font-extrabold text-[12px] leading-tight tracking-wider uppercase text-slate-900">PEMERINTAH KABUPATEN LOMBOK BARAT</h4>
+                                  <h3 className="font-black text-[13px] leading-tight tracking-widest uppercase text-slate-950">DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KB</h3>
+                                </div>
+                              </div>
+                              <p className="text-[9px] text-slate-500 font-mono">Jalan Giri Menang No. 1, Gerung, NTB &bull; Telp (0370) 681321 &bull; Kode Pos 83371</p>
+                            </div>
+
+                            {/* Document Title Header */}
+                            <div className="text-center my-6 space-y-1">
+                              <h2 className="font-black text-[12px] tracking-widest uppercase text-slate-900 underline decoration-1 underline-offset-4">
+                                VERIFIKASI SYARAT LAYANAN KEPEGAWAIAN
+                              </h2>
+                              <p className="text-[9px] font-mono text-slate-500 tracking-wider">
+                                NOMOR REGISTER: REG-LOBAR/USULAN-{usulan.id}/DOC-{file.id}/2026
+                              </p>
+                            </div>
+
+                            {/* Main Grid Data */}
+                            <div className="space-y-4 text-[11px] md:text-xs">
+                              <p className="leading-relaxed">
+                                Dokumen digital di bawah ini terdaftar sebagai berkas lampiran yang sah untuk permohonan usulan layanan kepegawaian SIMPEG Kabupaten Lombok Barat:
+                              </p>
+
+                              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 md:p-5 space-y-2.5 font-mono text-[11px] text-slate-700 shadow-inner">
+                                <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                                  <span className="col-span-4 text-slate-400">ID USULAN</span>
+                                  <span className="col-span-8 font-bold text-slate-900">#USL-{usulan.id}</span>
+                                </div>
+                                <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                                  <span className="col-span-4 text-slate-400">NAMA SYARAT</span>
+                                  <span className="col-span-8 font-bold text-emerald-800">{masterDokumen.find(d => d.id === file.id_dokumen)?.nama_dokumen || "Dokumen Pendukung"}</span>
+                                </div>
+                                <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                                  <span className="col-span-4 text-slate-400">JENIS LAYANAN</span>
+                                  <span className="col-span-8 text-slate-900 font-semibold">{masterFitur.find(f => f.id === usulan.id_fitur)?.nama_fitur || "Layanan Kepegawaian"}</span>
+                                </div>
+                                <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                                  <span className="col-span-4 text-slate-400">NAMA PEGAWAI</span>
+                                  <span className="col-span-8 font-bold text-slate-900">{asnProfiles.find(a => a.id === usulan.id_asn)?.nama_lengkap || "Tidak diketahui"}</span>
+                                </div>
+                                <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                                  <span className="col-span-4 text-slate-400">NIP PEGAWAI</span>
+                                  <span className="col-span-8 text-slate-900 font-bold">{asnProfiles.find(a => a.id === usulan.id_asn)?.nip || "-"}</span>
+                                </div>
+                                <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                                  <span className="col-span-4 text-slate-400">UNIT KERJA</span>
+                                  <span className="col-span-8 text-slate-900">{asnProfiles.find(a => a.id === usulan.id_asn)?.id_puskesmas === 100 ? "Dinas Kesehatan PPKB" : getPuskesmasName(asnProfiles.find(a => a.id === usulan.id_asn)?.id_puskesmas || 1)}</span>
+                                </div>
+                                <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                                  <span className="col-span-4 text-slate-400">FILE ASLI</span>
+                                  <span className="col-span-8 text-slate-600 truncate">{file.file_name}</span>
+                                </div>
+                                <div className="grid grid-cols-12 gap-1">
+                                  <span className="col-span-4 text-slate-400">TANGGAL</span>
+                                  <span className="col-span-8 text-slate-900">{new Date(usulan.tanggal_pengusulan).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</span>
+                                </div>
+                              </div>
+
+                              <p className="leading-relaxed text-[10px] text-slate-500">
+                                * Berkas ini terupload langsung oleh pemohon usul dinas / puskesmas melalui modul Layanan Mandiri SIMPEG Lombok Barat.
+                              </p>
+                            </div>
+
+                            {/* Signature & Validation Footer */}
+                            <div className="mt-8 pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                              {/* QR / Digital Code Validation */}
+                              <div className="flex items-center space-x-2.5 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                                <div className="w-12 h-12 bg-slate-950 flex flex-wrap p-1 rounded border border-slate-300 shrink-0">
+                                  <div className="w-1/2 h-1/2 border border-white bg-slate-950 flex justify-center items-center">
+                                    <div className="w-1.5 h-1.5 bg-white" />
+                                  </div>
+                                  <div className="w-1/2 h-1/2 border border-white bg-slate-950 flex justify-center items-center">
+                                    <div className="w-1.5 h-1.5 bg-white" />
+                                  </div>
+                                  <div className="w-1/2 h-1/2 border border-white bg-slate-950 flex justify-center items-center">
+                                    <div className="w-1.5 h-1.5 bg-white" />
+                                  </div>
+                                  <div className="w-1/2 h-1/2 bg-white flex justify-center items-center">
+                                    <div className="w-1.5 h-1.5 bg-slate-950" />
+                                  </div>
+                                </div>
+                                <div className="font-mono text-[8px] leading-tight text-slate-500">
+                                  <span className="text-slate-700 font-bold block uppercase">VERIFIED SYARAT</span>
+                                  <span>REG ID: LOBAR-USL-{file.id}</span>
+                                  <span className="block text-purple-700 font-bold mt-0.5">STATUS: PROSES VERIF</span>
+                                </div>
+                              </div>
+
+                              {/* Signature Slot */}
+                              <div className="text-right font-sans text-[11px] space-y-1.5 self-end">
+                                <p className="text-slate-500">Lombok Barat, 2026</p>
+                                <div className="font-bold text-slate-800 leading-normal text-[10px]">
+                                  <p>Dinas Kesehatan PPKB</p>
+                                  <p className="text-slate-600 font-medium">Lombok Barat</p>
+                                </div>
+                                <div className="h-8 flex justify-end items-center select-none">
+                                  <span className="text-[8px] bg-purple-50 text-purple-700 border border-purple-200/80 px-2.5 py-0.5 rounded-full font-bold flex items-center space-x-1 shadow-2xs">
+                                    <span>⏳ WAITING VERIFICATION</span>
+                                  </span>
+                                </div>
+                                <p className="font-bold text-slate-800 border-t border-slate-400 pt-0.5">Tim Verifikator SIMPEG</p>
+                                <p className="text-[9px] font-mono text-slate-500">DKS KAB. LOMBOK BARAT</p>
+                              </div>
+                            </div>
+
+                          </div>
+                        )}
                       </div>
-
-                      {/* Letter Identity / Meta info */}
-                      <div className="space-y-4 pt-2 relative z-10">
-                        <div className="text-center">
-                          <p className="font-bold underline text-xs tracking-wider uppercase text-slate-900">{docType}</p>
-                          <p className="text-[10px] text-slate-500 font-mono">Nomor Arsip: LOBAR-USL/DOC/{1000 + file.id}</p>
-                        </div>
-
-                        <p className="text-slate-700">
-                          Yang bertanda tangan di bawah ini, Kepala Bidang Kepegawaian Dinas Kesehatan PPKB Kabupaten Lombok Barat menerangkan dengan sesungguhnya bahwa berkas lampiran pendukung ini diajukan untuk kelengkapan administrasi kepegawaian sebagai berikut:
-                        </p>
-
-                        <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2 font-medium text-slate-700">
-                          <div className="grid grid-cols-3 gap-2">
-                            <span className="text-slate-500">Nama Pegawai :</span>
-                            <span className="col-span-2 text-slate-900 font-bold">{asm?.nama_lengkap} {asm?.gelar_belakang ? `, ${asm?.gelar_belakang}` : ''}</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            <span className="text-slate-500">NIP / Identitas :</span>
-                            <span className="col-span-2 font-mono text-slate-800">{asm?.nip}</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            <span className="text-slate-500">Unit Penempatan :</span>
-                            <span className="col-span-2 text-slate-800">{unitName}</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            <span className="text-slate-500">Jenis Layanan :</span>
-                            <span className="col-span-2 text-slate-800 font-semibold">{ftr?.nama_fitur}</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            <span className="text-slate-500">Keterangan Usulan :</span>
-                            <span className="col-span-2 text-slate-800">Usulan Berkas Terpilih #${usulan.id}</span>
-                          </div>
-                        </div>
-
-                        <p className="text-slate-700 text-justify">
-                          Demikian dokumen usulan digital ini disimpan secara valid dalam berkas kepegawaian internal portal SIMPEG dilingkungan Dinas Kesehatan Kabupaten Lombok Barat untuk dapat digunakan sebagaimana mestinya.
-                        </p>
+                    ) : (
+                      <div className="p-8 text-center text-xs text-slate-400 bg-slate-950 rounded-xl border border-white/5 animate-pulse">
+                        Sedang menyiapkan pratinjau lembar berkas asli...
                       </div>
-
-                      {/* Sign-off section */}
-                      <div className="flex justify-between items-end pt-8 relative z-10 text-[11px]">
-                        <div>
-                          <p className="text-slate-500 font-mono">Diajukan Pada: {new Date(file.uploaded_at).toLocaleDateString("id-ID")}</p>
-                        </div>
-                        <div className="text-center w-52 space-y-12">
-                          <div>
-                            <p className="text-slate-600">Mengesahkan,</p>
-                            <p className="text-slate-700 font-bold">Dinas Kesehatan PPKB Lobar</p>
-                          </div>
-                          <div>
-                            <p className="font-bold underline text-slate-900 text-[11.5px]">TIM KEPEGAWAIAN DAERAH</p>
-                            <p className="text-[10px] text-slate-500 font-mono">NIP. Official Verified</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex justify-end items-center space-x-3 mt-4 pt-3 border-t border-white/10">

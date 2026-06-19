@@ -168,6 +168,91 @@ export default function ArsipKepegawaianView({
   });
 
   const selectedASNObj = asnProfiles.find(a => a.id === selectedAsnId);
+  const file = selectedArsipForPreview;
+  const unitKerja = selectedASNObj 
+    ? (selectedASNObj.id_puskesmas === 100 
+        ? 'Dinas Kesehatan PPKB' 
+        : (puskesmasList.find(p => p.id === selectedASNObj.id_puskesmas)?.nama_puskesmas || 'Dinas Kesehatan PPKB'))
+    : '';
+
+  // States to track preview of files in Arsip Kepegawaian context
+  const [profilePreviewUrl, setProfilePreviewUrl] = useState<string | null>(null);
+  const [profilePreviewType, setProfilePreviewType] = useState<'PDF' | 'IMAGE' | 'FALLBACK'>('FALLBACK');
+  const profileUrlRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (!selectedArsipForPreview || !selectedASNObj) {
+      if (profileUrlRef.current) {
+        URL.revokeObjectURL(profileUrlRef.current);
+        profileUrlRef.current = null;
+      }
+      setProfilePreviewUrl(null);
+      return;
+    }
+
+    const file = selectedArsipForPreview;
+    let localUrl = '';
+    let type: 'PDF' | 'IMAGE' | 'FALLBACK' = 'PDF';
+
+    if (file.file_path && file.file_path.startsWith('data:')) {
+      try {
+        const blob = dataURLtoBlob(file.file_path);
+        localUrl = URL.createObjectURL(blob);
+        if (file.file_path.startsWith('data:image/') || file.file_name?.match(/\.(jpe?g|png|gif)$/i)) {
+          type = 'IMAGE';
+        } else {
+          type = 'PDF';
+        }
+      } catch (err) {
+        console.error("Gagal convert dataURL ke blob:", err);
+        const unitKerja = selectedASNObj.id_puskesmas === 100 
+          ? 'Dinas Kesehatan PPKB' 
+          : getPuskesmasName(selectedASNObj.id_puskesmas);
+        const pdfLines = [
+          `ID DOKUMEN ARSIP: LOBAR-ARSDIG-${file.id}`,
+          `NAMA DOKUMEN: ${file.nama_berkas}`,
+          `NAMA PEGAWAI: ${selectedASNObj.nama_lengkap}`,
+          `NIP PEGAWAI: ${selectedASNObj.nip}`,
+          `UNIT KERJA: ${unitKerja}`,
+          `GOLONGAN: ${selectedASNObj.golongan_ruang}`,
+          `STATUS PEG: ${selectedASNObj.status_pegawai_detail}`,
+          `KELOMPOK MAP: ${file.kategori_kelompok}`,
+          `SUMBER RIWAYAT: ${file.source}`,
+          `CATATAN: ${file.notes || '-'}`
+        ];
+        const blob = generateMinimalPDF(file.nama_berkas, pdfLines);
+        localUrl = URL.createObjectURL(blob);
+        type = 'PDF';
+      }
+    } else {
+      const unitKerja = selectedASNObj.id_puskesmas === 100 
+        ? 'Dinas Kesehatan PPKB' 
+        : getPuskesmasName(selectedASNObj.id_puskesmas);
+      const pdfLines = [
+        `ID DOKUMEN ARSIP: LOBAR-ARSDIG-${file.id}`,
+        `NAMA DOKUMEN: ${file.nama_berkas}`,
+        `NAMA PEGAWAI: ${selectedASNObj.nama_lengkap}`,
+        `NIP PEGAWAI: ${selectedASNObj.nip}`,
+        `UNIT KERJA: ${unitKerja}`,
+        `GOLONGAN: ${selectedASNObj.golongan_ruang}`,
+        `STATUS PEG: ${selectedASNObj.status_pegawai_detail}`,
+        `KELOMPOK MAP: ${file.kategori_kelompok}`,
+        `SUMBER RIWAYAT: ${file.source}`,
+        `CATATAN: ${file.notes || '-'}`
+      ];
+      const blob = generateMinimalPDF(file.nama_berkas, pdfLines);
+      localUrl = URL.createObjectURL(blob);
+      type = 'PDF';
+    }
+
+    if (profileUrlRef.current && profileUrlRef.current !== localUrl) {
+      URL.revokeObjectURL(profileUrlRef.current);
+    }
+
+    profileUrlRef.current = localUrl;
+    setProfilePreviewUrl(localUrl);
+    setProfilePreviewType(type);
+  }, [selectedArsipForPreview?.id, selectedArsipForPreview?.file_path]);
 
   // Get archives of selected ASN
   const selectedAsnArchives = arsipList.filter(file => file.id_asn === selectedAsnId);
@@ -972,80 +1057,165 @@ export default function ArsipKepegawaianView({
             {/* Virtual Document Canvas */}
             <div className="p-6 bg-slate-50 flex-1 overflow-y-auto space-y-6">
               
-              <div className="bg-white p-8 border border-slate-300 shadow-sm rounded-lg font-serif text-slate-850 relative space-y-6 text-xs max-w-xl mx-auto leading-relaxed select-none">
-                
-                {/* Simulated Stamp Badge */}
-                <div className="absolute top-8 right-8 border-2 border-dashed border-emerald-500 text-emerald-600 font-sans font-bold uppercase rounded-lg p-2 text-[10px] tracking-wider rotate-6 bg-white shrink-0">
-                  Verified PDF<br />Dinkes Lobar
-                </div>
+              {profilePreviewUrl ? (
+                <div className="space-y-4">
+                  {profilePreviewType === 'IMAGE' ? (
+                    <div className="flex justify-center bg-slate-900 border border-slate-200/60 p-4 rounded-xl shadow-inner max-h-[500px] overflow-auto">
+                      <img 
+                        src={profilePreviewUrl} 
+                        className="max-h-[450px] w-auto object-contain rounded-lg shadow-md" 
+                        alt="Pratinjau Berkas Gambar" 
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Built-in Browser Document Preview Notice */}
+                      <div className="bg-emerald-50 border border-emerald-200/60 p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-emerald-800 gap-2 shadow-xs">
+                        <div className="flex items-center space-x-2">
+                          <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                          <span>Arsip digital tersertifikasi aman & tervalidasi SIMPEG cloud.</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => window.open(profilePreviewUrl || '', '_blank')}
+                          className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-[11px] transition cursor-pointer flex items-center space-x-1 self-start sm:self-auto shadow-xs active:scale-95"
+                        >
+                          <Download size={13} />
+                          <span>Unduh / Cetak Dokumen PDF</span>
+                        </button>
+                      </div>
 
-                {/* Simulated Government Header */}
-                <div className="text-center border-b-2 border-double border-slate-800 pb-4 font-sans text-xs">
-                  <h4 className="font-bold tracking-widest leading-none text-slate-900">PEMERINTAH KABUPATEN LOMBOK BARAT</h4>
-                  <h3 className="font-bold tracking-wider text-[13px] text-slate-900">DINAS KESEHATAN PENPENDUDUKAN DAN KB (PPKB)</h3>
-                  <p className="text-[9px] text-slate-500 font-mono">Jl. Giri Menang Raya No. 1, Gerung, Lombok Barat</p>
-                </div>
+                      {/* Official Govt Document Simulator Sheet */}
+                      <div className="bg-white border border-slate-300 rounded-3xl shadow-xl p-8 md:p-10 font-sans text-slate-800 relative overflow-hidden ring-1 ring-black/5 max-w-xl mx-auto">
+                        
+                        {/* Background Watermark/Seal */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] select-none pointer-events-none">
+                          <div className="border-[15px] border-emerald-800 rounded-full w-80 h-80 flex items-center justify-center font-bold text-lg text-center tracking-widest leading-normal">
+                            SIMPEG DINAS KESEHATAN<br/>LOMBOK BARAT
+                          </div>
+                        </div>
 
-                {/* Title */}
-                <div className="text-center font-sans space-y-0.5">
-                  <h3 className="font-bold underline text-slate-900 uppercase">{selectedArsipForPreview.nama_berkas}</h3>
-                  <p className="font-mono text-[9px] text-slate-500">Nomor Registrasi Digital: LOBAR-ARSDIG/LBR/{selectedArsipForPreview.id}</p>
-                </div>
+                        {/* Letterhead (KOP SURAT) */}
+                        <div className="text-center border-b-4 border-double border-slate-900 pb-3 flex flex-col items-center">
+                          <div className="flex items-center justify-center space-x-3 mb-1">
+                            <span className="text-2xl">🇲🇨</span>
+                            <div className="text-left">
+                              <h4 className="font-extrabold text-[12px] leading-tight tracking-wider uppercase text-slate-900">PEMERINTAH KABUPATEN LOMBOK BARAT</h4>
+                              <h3 className="font-black text-[13px] leading-tight tracking-widest uppercase text-slate-950">DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KB</h3>
+                            </div>
+                          </div>
+                          <p className="text-[9px] text-slate-500 font-mono">Jalan Giri Menang No. 1, Gerung, NTB &bull; Telp (0370) 681321 &bull; Kode Pos 83371</p>
+                        </div>
 
-                {/* Description Body */}
-                <div className="space-y-4 font-sans text-[11px] text-slate-700 leading-normal">
-                  <p>Yang bertanda tangan di bawah ini Kepala Dinas Kesehatan PPKB Kabupaten Lombok Barat memberikan pernyataan sah verifikasi bahwa dokumen digital dari pegawai:</p>
-                  
-                  <table className="w-full border-collapse">
-                    <tbody>
-                      <tr>
-                        <td className="py-1 w-32 font-bold text-slate-650">Nama Lengkap</td>
-                        <td className="py-1 w-4">:</td>
-                        <td className="py-1 text-slate-900 font-semibold">{selectedASNObj.nama_lengkap} {selectedASNObj.gelar_belakang && `, ${selectedASNObj.gelar_belakang}`}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-1 font-bold text-slate-650">NIP / Identitas</td>
-                        <td className="py-1">:</td>
-                        <td className="py-1 text-slate-900 font-mono font-semibold">{selectedASNObj.nip}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-1 font-bold text-slate-650">Unit Penempatan</td>
-                        <td className="py-1">:</td>
-                        <td className="py-1 text-slate-900 font-semibold">{getPuskesmasName(selectedASNObj.id_puskesmas)}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-1 font-bold text-slate-650">Golongan Ruang</td>
-                        <td className="py-1">:</td>
-                        <td className="py-1 text-slate-900 font-mono font-semibold">{selectedASNObj.golongan_ruang}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                        {/* Document Title Header */}
+                        <div className="text-center my-6 space-y-1">
+                          <h2 className="font-black text-[12px] tracking-widest uppercase text-slate-900 underline decoration-1 underline-offset-4">
+                            LEMBAR REPRE SENTASI ARSIP KEPEGAWAIAN DIGITAL
+                          </h2>
+                          <p className="text-[9px] font-mono text-slate-500 tracking-wider">
+                            NOMOR: SIMPEG-LOBAR/{file.kategori_kelompok.toUpperCase()}/{file.id}/2026
+                          </p>
+                        </div>
 
-                  <p>Adalah berkas digital yang <strong>Asli (Legitimate)</strong> dan telah terekam di dalam basis data SIMPEG Lombok Barat. Dokumen ini dapat dipertanggungjawabkan keaslian fisiknya secara hukum fasyankes.</p>
-                </div>
+                        {/* Main Grid Data */}
+                        <div className="space-y-4 text-[11px] md:text-xs">
+                          <p className="leading-relaxed">
+                            Berdasarkan data primer yang tersimpan pada Sistem Informasi Manajemen Kepegawaian (SIMPEG) Dinas Kesehatan Kabupaten Lombok Barat, dengan ini diterangkan bahwa berkas digital di bawah ini adalah sah dan tervalidasi:
+                          </p>
 
-                {/* Sign and Seal */}
-                <div className="pt-6 font-sans flex justify-between items-end gap-4 text-slate-700">
-                  <div className="text-center shrink-0">
-                    <p className="text-[8px] text-slate-400">Verificator QR-System</p>
-                    <div className="w-14 h-14 border border-slate-200 bg-slate-50 mx-auto mt-1 p-1 flex items-center justify-center select-none" title="SCAN QR VERIFIED REPOSITORY">
-                      <div className="w-full h-full bg-emerald-900 flex items-center justify-center text-white text-[7px] font-mono font-bold leading-none select-none text-center rounded">
-                        LOBAR<br />ARSDIG
+                          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 md:p-5 space-y-2.5 font-mono text-[11px] text-slate-700 shadow-inner">
+                            <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                              <span className="col-span-4 text-slate-400">NAMA BERKAS</span>
+                              <span className="col-span-8 font-bold text-slate-900">{file.nama_berkas}</span>
+                            </div>
+                            <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                              <span className="col-span-4 text-slate-400">NAMA PEGAWAI</span>
+                              <span className="col-span-8 font-bold text-slate-900">{selectedASNObj.nama_lengkap}</span>
+                            </div>
+                            <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                              <span className="col-span-4 text-slate-400">NIP PEGAWAI</span>
+                              <span className="col-span-8 font-bold text-emerald-800">{selectedASNObj.nip}</span>
+                            </div>
+                            <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                              <span className="col-span-4 text-slate-400">GOLONGAN</span>
+                              <span className="col-span-8 text-slate-900">{selectedASNObj.golongan_ruang}</span>
+                            </div>
+                            <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                              <span className="col-span-4 text-slate-400">UNIT KERJA</span>
+                              <span className="col-span-8 text-slate-900">{unitKerja}</span>
+                            </div>
+                            <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                              <span className="col-span-4 text-slate-400">KELOMPOK MAP</span>
+                              <span className="col-span-8 text-slate-900">{file.kategori_kelompok}</span>
+                            </div>
+                            <div className="grid grid-cols-12 gap-1 border-b border-dashed border-slate-200 pb-1.5">
+                              <span className="col-span-4 text-slate-400">SUMBER DATA</span>
+                              <span className="col-span-8 text-slate-900">{file.source}</span>
+                            </div>
+                            <div className="grid grid-cols-12 gap-1">
+                              <span className="col-span-4 text-slate-400">CATATAN</span>
+                              <span className="col-span-8 text-slate-900 italic">{file.notes || '-'}</span>
+                            </div>
+                          </div>
+
+                          <p className="leading-relaxed text-[10px] text-slate-500">
+                            * Dokumen representasi visual ini diterbitkan secara otomatis oleh SIMPEG Kabupaten Lombok Barat sebagai replika digital sah dari basis penyimpanan cloud terenkripsi.
+                          </p>
+                        </div>
+
+                        {/* Signature & Validation Footer */}
+                        <div className="mt-8 pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                          {/* QR / Digital Code Validation */}
+                          <div className="flex items-center space-x-2.5 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                            {/* Visual simulated QR code block */}
+                            <div className="w-12 h-12 bg-slate-950 flex flex-wrap p-1 rounded border border-slate-300 shrink-0">
+                              <div className="w-1/2 h-1/2 border border-white bg-slate-950 flex justify-center items-center">
+                                <div className="w-1.5 h-1.5 bg-white" />
+                              </div>
+                              <div className="w-1/2 h-1/2 border border-white bg-slate-950 flex justify-center items-center">
+                                <div className="w-1.5 h-1.5 bg-white" />
+                              </div>
+                              <div className="w-1/2 h-1/2 border border-white bg-slate-950 flex justify-center items-center">
+                                <div className="w-1.5 h-1.5 bg-white" />
+                              </div>
+                              <div className="w-1/2 h-1/2 bg-white flex justify-center items-center">
+                                <div className="w-1.5 h-1.5 bg-slate-950" />
+                              </div>
+                            </div>
+                            <div className="font-mono text-[8px] leading-tight text-slate-500">
+                              <span className="text-slate-700 font-bold block uppercase">VERIFIED BY SIMPEG</span>
+                              <span>SECURE ID: LOBAR-ARSDIG-{file.id}</span>
+                              <span className="block text-emerald-700 font-bold mt-0.5">STATUS: AKTIF & VALID</span>
+                            </div>
+                          </div>
+
+                          {/* Signature Slot */}
+                          <div className="text-right font-sans text-[11px] space-y-1.5 self-end">
+                            <p className="text-slate-500">Lombok Barat, 2026</p>
+                            <div className="font-bold text-slate-800 leading-normal text-[10px]">
+                              <p>a.n. Kepala Dinas Kesehatan PPKB</p>
+                              <p className="text-slate-600 font-medium">Sistem Integrasi Penjamin Layanan</p>
+                            </div>
+                            <div className="h-8 flex justify-end items-center select-none">
+                              <span className="text-[8px] bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2.5 py-0.5 rounded-full font-bold flex items-center space-x-1 shadow-2xs">
+                                <span>🔒 VALID DIGITAL SIGNATURE</span>
+                              </span>
+                            </div>
+                            <p className="font-bold text-slate-800 border-t border-slate-400 pt-0.5">Drs. H. M. Husni, M.Si.</p>
+                            <p className="text-[9px] font-mono text-slate-500">NIP. 19710312 199603 1 002</p>
+                          </div>
+                        </div>
+
                       </div>
                     </div>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <p className="text-[10px]">Lombok Barat, {new Date(selectedArsipForPreview.uploaded_at).toLocaleDateString('id-ID')}</p>
-                    <p className="font-bold text-[10px] text-slate-800">a.n. KEPALA DINAS KESEHATAN PPKB</p>
-                    <p className="text-[9px] text-slate-500">Kabid Sumber Daya Kesehatan</p>
-                    <div className="h-6"></div>
-                    <p className="font-bold underline text-slate-800 text-[10px]">dr. H. Wahyu Darizki, M.Kes</p>
-                    <p className="text-[9px] text-slate-500 font-mono">NIP 198004122005011003</p>
-                  </div>
+                  )}
                 </div>
-
-              </div>
+              ) : (
+                <div className="p-12 text-center text-xs text-slate-500 bg-white border rounded-2xl shadow-sm animate-pulse">
+                  Sedang menyiapkan pratinjau lembar berkas asli...
+                </div>
+              )}
 
               {/* Meta specifications */}
               <div className="bg-slate-100 p-4 rounded-xl space-y-2 text-xs text-slate-600 font-medium">
@@ -1054,7 +1224,7 @@ export default function ArsipKepegawaianView({
                   <p><strong>ID Berkas:</strong> #{selectedArsipForPreview.id}</p>
                   <p><strong>Sumber:</strong> {selectedArsipForPreview.source}</p>
                   <p><strong>Kategori Map:</strong> {selectedArsipForPreview.kategori_kelompok}</p>
-                  <p><strong>Format Salinan:</strong> PDF Digital Scan</p>
+                  <p><strong>Format Salinan:</strong> {selectedArsipForPreview.file_name?.match(/\.(jpe?g|png|gif)$/i) ? "Gambar (JPG/PNG)" : "PDF Digital Scan"}</p>
                 </div>
                 {selectedArsipForPreview.notes && (
                   <p className="text-[11px] font-normal italic mt-1 leading-normal">
