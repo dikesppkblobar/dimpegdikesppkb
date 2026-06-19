@@ -684,7 +684,7 @@ export default function App() {
     let hasNewNotification = false;
 
     if (newlySubmittedUsulans.length > 0) {
-      newlySubmittedUsulans.forEach(usulan => {
+      newlySubmittedUsulans.forEach((usulan, idx) => {
         const asn = dbState.asnProfiles.find(a => a.id === usulan.id_asn);
         const feature = dbState.fitur.find(f => f.id === usulan.id_fitur);
         const puskesmas = dbState.puskesmas.find(p => p.id === usulan.id_puskesmas_pengusul);
@@ -694,6 +694,8 @@ export default function App() {
         const puskesmasName = puskesmas ? puskesmas.nama_puskesmas : "Puskesmas Pengusul";
 
         const nextNotifId = currentNotifications.length > 0 ? Math.max(...currentNotifications.map(n => n.id)) + 1 : 1;
+        
+        // 1. Dinkes central notification
         currentNotifications.unshift({
           id: nextNotifId,
           sender: puskesmasName,
@@ -704,6 +706,19 @@ export default function App() {
           targetPuskesmasId: null,
           isRead: false
         });
+
+        // 2. Local unit notification (tampil di akun puskesmas masing-masing saat pengajuan)
+        currentNotifications.unshift({
+          id: nextNotifId + 1,
+          sender: "Sistem SIMPEG",
+          time: new Date().toISOString(),
+          title: `📤 Pengajuan Layanan Terkirim: ${featName}`,
+          message: `Anda baru saja mengajukan layanan ${featName} atas nama ${asnName} (${puskesmasName}). Berkas Anda sedang menunggu verifikasi/validasi Dinkes PPKB.`,
+          targetRole: "admin_puskesmas",
+          targetPuskesmasId: usulan.id_puskesmas_pengusul,
+          isRead: false
+        });
+
         hasNewNotification = true;
       });
     }
@@ -1554,11 +1569,21 @@ export default function App() {
               <FileText size={15} />
               <div className="flex-1 flex justify-between items-center">
                 <span>Layanan Kepegawaian</span>
-                {dbState.usulanLayanan.filter(u => u.status === 'Menunggu Validasi').length > 0 && (
-                  <span className="bg-amber-500 text-slate-950 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                    {dbState.usulanLayanan.filter(u => u.status === 'Menunggu Validasi').length}
-                  </span>
-                )}
+                {(() => {
+                  const filteredList = dbState.usulanLayanan.filter(u => {
+                    const matchesStatus = u.status === 'Menunggu Validasi';
+                    if (!matchesStatus) return false;
+                    if (currentRole !== 'admin_dinkes') {
+                      return u.id_puskesmas_pengusul === selectedPuskesmasId;
+                    }
+                    return true;
+                  });
+                  return filteredList.length > 0 ? (
+                    <span className="bg-amber-500 text-slate-950 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                      {filteredList.length}
+                    </span>
+                  ) : null;
+                })()}
               </div>
             </button>
 
@@ -1597,6 +1622,14 @@ export default function App() {
                 <span>Arsip Digital Pegawai</span>
                 {(() => {
                   const expiringCount = (dbState.arsipKepegawaian || []).filter(file => {
+                    const asn = dbState.asnProfiles.find(a => a.id === file.id_asn);
+                    if (!asn) return false;
+                    
+                    // Filter by unit if not admin_dinkes
+                    if (currentRole !== 'admin_dinkes' && asn.id_puskesmas !== selectedPuskesmasId) {
+                      return false;
+                    }
+
                     if (file.str_expired_date) {
                       const expDate = new Date(file.str_expired_date);
                       const today = new Date();
