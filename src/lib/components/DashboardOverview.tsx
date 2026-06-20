@@ -2020,7 +2020,7 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
         </div>
       )}
 
-      {/* 1. TOP BANNER: Keputusan Berbasis Data SIMPEG Kepegawaian */}
+      {/* 1. TOP BANNER: Keputusan Berbasis Data Kepegawaian */}
       <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
         <div className="absolute right-0 bottom-0 opacity-10 translate-x-1/4 translate-y-1/4">
           <TrendingUp size={300} />
@@ -2030,10 +2030,10 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
             {currentRole === 'admin_dinkes' ? 'Dinkes Kabupaten' : getPuskesmasName(selectedPuskesmasId || 1)}
           </span>
           <h1 className="text-3xl font-display font-semibold mt-3 leading-tight tracking-tight">
-            Keputusan Berbasis Data SIMPEG Kepegawaian
+            Keputusan Berbasis Data Kepegawaian
           </h1>
           <p className="text-teal-100 text-sm mt-2 font-light leading-relaxed">
-            Platform verifikasi dua arah (Dinkes & Puskesmas) terintegrasi dengan alert peringatan dini, kalkulator jafung dan dasbor analitikal Kemenkes RI.
+            Sistem Arsip, Pemberitahuan, & Analisis Kepegawaian Dinas Kesehatan PPKB Kab. Lombok Barat
           </p>
         </div>
       </div>
