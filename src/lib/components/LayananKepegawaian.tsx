@@ -713,9 +713,11 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
   const [previewStatusUsulan, setPreviewStatusUsulan] = useState<UsulanLayanan | null>(null);
   const [usulanPreviewUrl, setUsulanPreviewUrl] = React.useState<string | null>(null);
   const [usulanPreviewType, setUsulanPreviewType] = React.useState<'PDF' | 'IMAGE' | 'FALLBACK'>('FALLBACK');
+  const [usulanImageError, setUsulanImageError] = React.useState<boolean>(false);
   const usulanUrlRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
+    setUsulanImageError(false);
     if (!activeUsulanFilePreview) {
       if (usulanUrlRef.current) {
         URL.revokeObjectURL(usulanUrlRef.current);
@@ -2428,13 +2430,35 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                     {usulanPreviewUrl ? (
                       <div>
                         {usulanPreviewType === 'IMAGE' ? (
-                          <div className="flex justify-center bg-slate-900 border border-white/10 p-4 rounded-2xl shadow-inner max-h-[500px] overflow-auto">
-                            <img 
-                              src={usulanPreviewUrl} 
-                              className="max-h-[450px] w-auto object-contain rounded-lg shadow-lg border border-white/5" 
-                              alt="Pratinjau Berkas Gambar" 
-                              referrerPolicy="no-referrer"
-                            />
+                          <div className="flex flex-col items-center justify-center p-4 bg-slate-900 border border-white/10 rounded-2xl shadow-inner min-h-[300px] max-h-[500px] overflow-auto">
+                            {!usulanImageError ? (
+                              <img 
+                                src={usulanPreviewUrl} 
+                                className="max-h-[450px] w-auto max-w-full object-contain rounded-lg shadow-lg border border-white/5" 
+                                alt="Pratinjau Berkas Gambar" 
+                                referrerPolicy="no-referrer"
+                                onError={() => setUsulanImageError(true)}
+                              />
+                            ) : (
+                              <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 max-w-md w-full mx-auto text-slate-800">
+                                <div className="mx-auto w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
+                                  <AlertTriangle size={24} />
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="font-bold text-slate-800 text-xs">Gagal Memuat Pratinjau Gambar</p>
+                                  <p className="text-[11px] text-slate-500 leading-normal">
+                                    File gambar pratinjau tidak dapat dimuat karena keterbatasan sandbox iframe peramban atau format data rusak. Silakan gunakan tombol unduh di bagian atas atau bawah untuk mengekspor dokumen asli secara utuh.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadUsulanFile(file, usulan)}
+                                  className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer shadow-xs"
+                                >
+                                  Unduh Berkas Dokumen Asli
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           /* Official Govt Document Simulator Sheet */
