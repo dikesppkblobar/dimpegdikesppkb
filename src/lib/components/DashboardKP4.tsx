@@ -11,7 +11,8 @@ import {
   Building2, 
   Sliders, 
   FileDown, 
-  DollarSign 
+  DollarSign,
+  MessageSquare
 } from 'lucide-react';
 import { ASNProfile, KP4Anak } from '../../types';
 
@@ -279,6 +280,67 @@ export default function DashboardKP4({
 
     return true;
   });
+
+  const sendKP4WhatsAppNotification = (
+    p: ASNProfile,
+    isClean: boolean,
+    issues: { type: 'ERROR' | 'WARNING'; message: string; code: string; potentialFine: number }[]
+  ) => {
+    const rawWaNum = p.nomor_wa || '';
+    let cleanPhone = rawWaNum.replace(/[^0-9+]/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '+62' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('62') && !cleanPhone.startsWith('+62')) {
+      cleanPhone = '+' + cleanPhone;
+    } else if (!cleanPhone.startsWith('+62') && cleanPhone !== '') {
+      cleanPhone = '+62' + cleanPhone;
+    }
+
+    let messageContent = '';
+    
+    if (isClean) {
+      messageContent = `Yth. Bapak/Ibu *${p.nama_lengkap}${p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}*,
+
+Menginformasikan hasil audit kepatuhan database *SIMPEG Dinkes Lombok Barat* untuk berkas Keluarga (*Formulir KP4 / Model DK*):
+
+📌 *STATUS HASIL AUDIT*: ✅ *100% BEBAS TEMUAN (BERSIH)*
+
+Seluruh data tunjangan pasangan (suami/istri) dan anak-anak Anda telah tervalidasi sesuai PP No.7/1977 & PP No.51/1992. Terima kasih atas kepatuhan administrasi Anda dalam menjaga integritas dan ketertiban data kepegawaian.
+
+_Notifikasi otomatis dikirim via Sistem Analisa KP4 Dinkes Lombok Barat_`;
+    } else {
+      const issuesListStr = issues.map((i, idx) => `${idx + 1}. *[${i.type}]* ${i.message}`).join('\n');
+      messageContent = `Yth. Bapak/Ibu *${p.nama_lengkap}${p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}*,
+
+Menginformasikan hasil audit kepatuhan database *SIMPEG Dinkes Lombok Barat* untuk berkas Keluarga (*Formulir KP4 / Model DK*):
+
+📌 *STATUS HASIL AUDIT*: ⚠️ *TERDETEKSI POTENSI TEMUAN AUDIT BPK*
+
+Sistem auto-validasi kami mendeteksi ketidaksesuaian administrasi pada data Anda:
+
+${issuesListStr}
+
+*Mohon Tindak Lanjut Segera:*
+1. Lakukan pembaruan berkas KP4 digital di menu SIMPEG Anda.
+2. Unggah fotokopi SK / berkas pendukung terupdate untuk menghindari sanksi Tuntutan Ganti Rugi (TGR) / pemotongan tunjangan.
+
+_Notifikasi otomatis dikirim via Sistem Analisa KP4 Dinkes Lombok Barat_`;
+    }
+
+    const encodedMessage = encodeURIComponent(messageContent);
+    const whatsappApiUrl = `https://api.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encodedMessage}`;
+
+    if (!rawWaNum) {
+      window.alert(
+        `⚠️ Nomor WhatsApp untuk pegawai "${p.nama_lengkap}" belum terekam di database pegawai.\n\nHarap edit profil pegawai terlebih dahulu untuk menambahkan nomor WhatsApp.`
+      );
+    } else {
+      window.alert(
+        `✓ Menyiapkan draf notifikasi audit BPK untuk: ${p.nama_lengkap} (${cleanPhone})\n\nSistem akan mengarahkan ke WhatsApp Web.\n\nTekan OK untuk melanjutkan...`
+      );
+      window.open(whatsappApiUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   return (
     <div className="space-y-6 text-slate-800 animate-in fade-in duration-200">
@@ -660,13 +722,24 @@ export default function DashboardKP4({
                         )}
                       </td>
                       <td className="p-3 text-center">
-                        <button
-                          onClick={() => onEditEmployee(asn)}
-                          className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 mx-auto cursor-pointer shadow-xs border border-teal-700/20"
-                        >
-                          <Sliders size={12} />
-                          <span>Sesuaikan data</span>
-                        </button>
+                        <div className="flex flex-col items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => sendKP4WhatsAppNotification(asn, isClean, issues)}
+                            className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 mx-auto cursor-pointer shadow-xs border border-emerald-700/20 w-full max-w-[130px] justify-center"
+                          >
+                            <MessageSquare size={12} />
+                            <span>Kirim WA</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onEditEmployee(asn)}
+                            className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 mx-auto cursor-pointer shadow-xs border border-teal-700/20 w-full max-w-[130px] justify-center"
+                          >
+                            <Sliders size={12} />
+                            <span>Sesuaikan data</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
