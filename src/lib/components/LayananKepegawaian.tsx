@@ -690,10 +690,14 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
       }
 
       if (cleanPhone) {
+        const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
         const encoded = encodeURIComponent(editUsulanWaMessage);
-        const targetUrl = `https://web.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encoded}`;
+        const cleanPhoneNum = cleanPhone.replace('+', '');
+        const targetUrl = isMobileOrTablet 
+          ? `whatsapp://send?phone=${cleanPhoneNum}&text=${encoded}`
+          : `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
         window.open(targetUrl, 'whatsapp_window');
-        alert(`✓ Perubahan Usulan #${editingUsulan.id} berhasil disimpan dan diarahkan ke WhatsApp Web.`);
+        alert(`✓ Perubahan Usulan #${editingUsulan.id} berhasil disimpan dan diarahkan ke WhatsApp.`);
       } else {
         alert(`✓ Perubahan Usulan #${editingUsulan.id} berhasil disimpan.\n⚠️ Catatan: Nomor WhatsApp pegawai belum terdaftar.`);
       }
@@ -1307,9 +1311,12 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
               <button
                 type="button"
                 onClick={() => {
+                  const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
                   const encoded = encodeURIComponent(waDraftMessage);
                   const cleanPhoneNum = waRecipientPhone.replace('+', '');
-                  const targetUrl = `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
+                  const targetUrl = isMobileOrTablet 
+                    ? `whatsapp://send?phone=${cleanPhoneNum}&text=${encoded}`
+                    : `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
                   
                   window.open(targetUrl, 'whatsapp_window');
                   setWaModalOpen(false);
@@ -1790,12 +1797,15 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                           }
 
                           if (cleanPhone) {
+                            const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
                             window.alert(
-                              `✓ Usulan layanan kepegawaian berhasil diajukan dan masuk ke aplikasi SIMPEG.\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirim pesan kepada: ${recipientName} (${cleanPhone}).`
+                              `✓ Usulan layanan kepegawaian berhasil diajukan dan masuk ke aplikasi SIMPEG.\n\nSistem sekarang akan membuka WhatsApp untuk mengirim pesan kepada: ${recipientName} (${cleanPhone}).`
                             );
                             const encoded = encodeURIComponent(editedWaMessage);
                             const cleanPhoneNum = cleanPhone.replace('+', '');
-                            const targetUrl = `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
+                            const targetUrl = isMobileOrTablet 
+                              ? `whatsapp://send?phone=${cleanPhoneNum}&text=${encoded}`
+                              : `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
                             window.open(targetUrl, 'whatsapp_window');
                           } else {
                             window.alert(
