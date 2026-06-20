@@ -367,7 +367,26 @@ export default function LayananKepegawaian({
   const [newUsulanStatus, setNewUsulanStatus] = useState<StatusUsulan>('Usulan Dikirim ke BKD');
   const [newUsulanCatatan, setNewUsulanCatatan] = useState<string>('');
 
-  const sendUsulanWhatsAppNotification = (
+  const [editedWaMessage, setEditedWaMessage] = useState<string>('');
+
+  // WhatsApp Preview Modal States for LayananKepegawaian
+  const [waModalOpen, setWaModalOpen] = useState(false);
+  const [waRecipientName, setWaRecipientName] = useState('');
+  const [waRecipientPhone, setWaRecipientPhone] = useState('');
+  const [waDraftMessage, setWaDraftMessage] = useState('');
+  const [waCatatanInput, setWaCatatanInput] = useState('');
+  const [waOriginalBaseMsg, setWaOriginalBaseMsg] = useState('');
+
+  const handleCatatanChange = (newVal: string) => {
+    setWaCatatanInput(newVal);
+    if (newVal.trim() !== '') {
+      setWaDraftMessage(`${waOriginalBaseMsg}\n\n*Catatan Tambahan*: _"${newVal}"_`);
+    } else {
+      setWaDraftMessage(waOriginalBaseMsg);
+    }
+  };
+
+  const generateLayananWhatsAppMessage = (
     p: ASNProfile,
     status: string,
     serviceSlug: string,
@@ -377,20 +396,9 @@ export default function LayananKepegawaian({
       cutiDays?: number | string;
       jenjangSekarang?: string;
       jenjangSelanjutnya?: string;
-      customConfigValue?: string;
       catatan?: string;
     }
   ) => {
-    const rawWaNum = p.nomor_wa || '';
-    let cleanPhone = rawWaNum.replace(/[^0-9+]/g, '');
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = '+62' + cleanPhone.substring(1);
-    } else if (cleanPhone.startsWith('62') && !cleanPhone.startsWith('+62')) {
-      cleanPhone = '+' + cleanPhone;
-    } else if (!cleanPhone.startsWith('+62') && cleanPhone !== '') {
-      cleanPhone = '+62' + cleanPhone;
-    }
-
     let serviceLabel = '';
     let descriptionText = '';
 
@@ -422,9 +430,33 @@ export default function LayananKepegawaian({
       descriptionText = `Usulan layanan *${serviceLabel}* Anda`;
     }
 
-    const catatanText = details.catatan ? `\n*Catatan Admin*: _"${details.catatan}"_` : '';
+    let messageContent = '';
 
-    const messageContent = 
+    if (status === 'Pemberitahuan') {
+      const requiredDocIds = syaratFiturMap[serviceSlug] || [];
+      const docsList = masterDokumen.filter(d => requiredDocIds.includes(d.id));
+      const docStr = docsList.length > 0
+        ? docsList.map((d, index) => `${index + 1}. *${d.nama_dokumen}*`).join('\n')
+        : '- (Belum ada dokumen yang dipersyaratkan)';
+
+      messageContent = 
+`Yth. Bapak/Ibu *${p.nama_lengkap}${p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}*,
+ 
+Kami menginformasikan perkembangan usulan berkas kepegawaian Anda di *Dinas Kesehatan PPKB Kabupaten Lombok Barat*:
+ 
+*Detail Usulan*: ${descriptionText}
+*Status Terbaru*: 📌 *PEMBERITAHUAN PERSYARATAN WAJIB*
+
+Berdasarkan manajemen dokumen kepegawaian, usulan ini membutuhkan kelengkapan dokumen persyaratan berikut yang wajib dilengkapi segera:
+${docStr}
+${details.catatan ? `\n*Catatan Keterangan*: _"${details.catatan}"_` : ''}
+ 
+Mohon segera melengkapi berkas ini melalui portal mandiri SIMPEG atau menyerahkan kepada pengelola kepegawaian unit kerja Anda.
+
+_Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
+    } else {
+      const catatanText = details.catatan ? `\n*Catatan Admin*: _"${details.catatan}"_` : '';
+      messageContent = 
 `Yth. Bapak/Ibu *${p.nama_lengkap}${p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}*,
  
 Kami menginformasikan perkembangan usulan berkas kepegawaian Anda di *Dinas Kesehatan PPKB Kabupaten Lombok Barat*:
@@ -434,20 +466,50 @@ Kami menginformasikan perkembangan usulan berkas kepegawaian Anda di *Dinas Kese
 ${catatanText}
  
 _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
+    }
 
-    const encodedMessage = encodeURIComponent(messageContent);
-    const whatsappApiUrl = `https://api.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encodedMessage}`;
+    return messageContent;
+  };
+
+  const sendUsulanWhatsAppNotification = (
+    p: ASNProfile,
+    status: string,
+    serviceSlug: string,
+    details: {
+      golonganLama?: string;
+      golonganBaru?: string;
+      cutiDays?: number | string;
+      jenjangSekarang?: string;
+      jenjangSelanjutnya?: string;
+      customConfigValue?: string;
+      catatan?: string;
+    }
+  ) => {
+    const rawWaNum = p.nomor_wa || '';
+    let cleanPhone = rawWaNum.replace(/[^0-9+]/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '+62' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('62') && !cleanPhone.startsWith('+62')) {
+      cleanPhone = '+' + cleanPhone;
+    } else if (!cleanPhone.startsWith('+62') && cleanPhone !== '') {
+      cleanPhone = '+62' + cleanPhone;
+    }
 
     if (!rawWaNum) {
       window.alert(
         `⚠️ Nomor WhatsApp untuk pegawai "${p.nama_lengkap}" belum terekam di database pegawai.\n\nNamun Anda tetap dapat memproses transaksi ini.`
       );
-    } else {
-      window.alert(
-        `✓ Menyiapkan notifikasi WA untuk: ${p.nama_lengkap} (${cleanPhone})\n\nSistem akan membuka WhatsApp Web untuk mengirim notifikasi status "${status}".\n\nTekan OK untuk melanjutkan...`
-      );
-      window.open(whatsappApiUrl, '_blank', 'noopener,noreferrer');
+      return;
     }
+
+    const messageContent = generateLayananWhatsAppMessage(p, status, serviceSlug, details);
+
+    setWaRecipientName(`${p.nama_lengkap}${p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}`);
+    setWaRecipientPhone(cleanPhone);
+    setWaOriginalBaseMsg(messageContent);
+    setWaDraftMessage(messageContent);
+    setWaCatatanInput('');
+    setWaModalOpen(true);
   };
 
   React.useEffect(() => {
@@ -752,6 +814,32 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
   const selectedAsn = asnProfiles.find(p => p.id === selectedAsnId);
   const selectedFitur = masterFitur.find(f => f.id === selectedFiturId);
 
+  React.useEffect(() => {
+    if (selectedAsn && selectedFitur) {
+      const msg = generateLayananWhatsAppMessage(selectedAsn, newUsulanStatus, selectedFitur.slug, {
+        golonganLama: selectedAsn.golongan_ruang,
+        golonganBaru: pangkatBaru,
+        cutiDays: cutiDays,
+        jenjangSekarang: selectedAsn.jenjang_jafung,
+        jenjangSelanjutnya: jafungBaruLevel,
+        catatan: newUsulanCatatan
+      });
+      setEditedWaMessage(msg);
+    }
+  }, [
+    selectedAsn,
+    selectedFitur,
+    newUsulanStatus,
+    newUsulanCatatan,
+    pangkatBaru,
+    cutiDays,
+    jafungBaruLevel,
+    targetMutasiPuskesmasId,
+    gelarBaru,
+    masterDokumen,
+    syaratFiturMap
+  ]);
+
   // Requirements list for selected feature slug 
   const fetchRequiredDocIds = (slug?: string) => {
     if (!slug) return [];
@@ -992,6 +1080,78 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
 
   return (
     <div className="space-y-6">
+      
+      {/* WhatsApp Modal Dialog */}
+      {waModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl text-left space-y-4">
+            <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <span className="text-emerald-600 text-base">💬</span>
+                  Pratinjau Kirim WhatsApp
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Kepada: <strong className="text-slate-700">{waRecipientName}</strong> ({waRecipientPhone})
+                </p>
+              </div>
+              <button
+                onClick={() => setWaModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">Edit Draft Format Pesan</label>
+              <textarea
+                rows={10}
+                value={waDraftMessage}
+                onChange={(e) => setWaDraftMessage(e.target.value)}
+                className="w-full p-3 border border-slate-200 bg-slate-50 rounded-lg text-xs text-slate-700 font-mono focus:ring-1 focus:ring-slate-450 focus:outline-none focus:bg-white leading-relaxed resize-y"
+                placeholder="Tulis pesan..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">Catatan Tambahan (Opsional)</label>
+              <input
+                type="text"
+                value={waCatatanInput}
+                onChange={(e) => handleCatatanChange(e.target.value)}
+                placeholder="e.g. Harap segera diserahkan sebelum hari Jumat ini."
+                className="w-full p-2 border border-slate-200 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-teal-500 focus:outline-none"
+              />
+              <p className="text-[10px] text-slate-400">Catatan akan ditambahkan otomatis di bagian bawah draf pesan di atas.</p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setWaModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const encoded = encodeURIComponent(waDraftMessage);
+                  const cleanPhoneNum = waRecipientPhone.replace('+', '');
+                  window.open(`https://api.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`, '_blank', 'noopener,noreferrer');
+                  setWaModalOpen(false);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-sm flex items-center space-x-1.5"
+              >
+                <MessageSquare size={13} />
+                <span>Kirim</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
           <div>
@@ -1344,7 +1504,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                     </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Status select without Draft and Menunggu Validasi, and with Usulan Dikirim ke BKD */}
+                      {/* Status select without Draft and Menunggu Validasi, and with Usulan Dikirim ke BKD and Pemberitahuan */}
                       <div className="space-y-1.5 text-left">
                         <label className="text-xs font-bold text-slate-700 block text-left">Status Dokumen Usulan</label>
                         <select
@@ -1356,6 +1516,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                           <option value="Perbaikan Berkas">Perbaikan Berkas</option>
                           <option value="Diproses">Diproses</option>
                           <option value="Selesai">Selesai</option>
+                          <option value="Pemberitahuan">Pemberitahuan</option>
                         </select>
                       </div>
 
@@ -1367,6 +1528,23 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                         </div>
                       </div>
                     </div>
+
+                    {newUsulanStatus === 'Pemberitahuan' && (
+                      <div className="p-3.5 bg-teal-50/50 border border-teal-100 rounded-lg text-xs text-left animate-in fade-in duration-150 space-y-1.5">
+                        <span className="font-bold text-teal-800 flex items-center gap-1">
+                          📋 Persyaratan Wajib ({selectedFitur?.nama_fitur}):
+                        </span>
+                        <ul className="list-disc pl-5 text-teal-700 font-semibold space-y-1">
+                          {(selectedFitur ? syaratFiturMap[selectedFitur.slug] || [] : []).map(id => {
+                            const doc = masterDokumen.find(d => d.id === id);
+                            return <li key={id}>{doc?.nama_dokumen || `Syarat ID ${id}`}</li>;
+                          })}
+                          {(!selectedFitur || !(syaratFiturMap[selectedFitur.slug]?.length)) && (
+                            <li className="list-none text-slate-450 italic">Belum ada dokumen persyaratan yang terdefinisi pada manajemen dokumen.</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
 
                     <div className="space-y-1.5 text-left">
                       <label className="text-xs font-bold text-slate-700 block text-left">Catatan Keterangan Tambahan / Alasan Perbaikan</label>
@@ -1391,75 +1569,57 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                         </div>
                       </div>
 
-                      <div className="bg-white border border-emerald-100 p-3 rounded-lg text-xs text-slate-700 font-sans space-y-1 max-h-32 overflow-y-auto leading-relaxed shadow-3xs border-l-4 border-l-emerald-500">
-                        <p>Yth. Bapak/Ibu <strong>{selectedAsn.nama_lengkap}{selectedAsn.gelar_belakang ? `, ${selectedAsn.gelar_belakang}` : ''}</strong>,</p>
-                        <p className="text-slate-600 my-1">
-                          {selectedFitur?.slug === 'kenaikan-pangkat' && (
-                            <span>Usulan kenaikan pangkat Anda dari Golongan <strong>{selectedAsn.golongan_ruang}</strong> ke <strong>{pangkatBaru || 'IV/a'}</strong></span>
-                          )}
-                          {selectedFitur?.slug === 'cuti' && (
-                            <span>Usulan cuti tahunan Anda sebanyak <strong>{cutiDays || 3} Hari</strong>. Sisa hak cuti tahunan aktif Anda saat ini adalah <strong>{selectedAsn.sisa_cuti_tahunan} Hari Kerja</strong></span>
-                          )}
-                          {selectedFitur?.slug === 'usulan-jafung' && (
-                            <span>Usulan peningkatan jabatan dari jenjang <strong>{selectedAsn.jenjang_jafung || 'Ahli Pertama'}</strong> ke jenjang lanjut yaitu <strong>{jafungBaruLevel || 'Ahli Muda'}</strong></span>
-                          )}
-                          {selectedFitur?.slug === 'mutasi' && (
-                            <span>Usulan mutasi unit kerja Anda dari <strong>{getPuskesmasName(selectedAsn.id_puskesmas)}</strong> ke <strong>{puskesmasList.find(pl => pl.id === targetMutasiPuskesmasId)?.nama_puskesmas || 'Unit Terpilih'}</strong></span>
-                          )}
-                          {selectedFitur?.slug === 'pencantuman-gelar' && (
-                            <span>Usulan pencantuman gelar akademik baru Anda: <strong>{gelarBaru}</strong></span>
-                          )}
-                          {!['kenaikan-pangkat', 'cuti', 'usulan-jafung', 'mutasi', 'pencantuman-gelar'].includes(selectedFitur?.slug || '') && (
-                            <span>Usulan layanan <strong>{selectedFitur?.nama_fitur}</strong> Anda</span>
-                          )}
-                        </p>
-                        <p className="font-semibold text-emerald-700 my-1">Status Terbaru: 📌 {newUsulanStatus.toUpperCase()}</p>
-                        {newUsulanCatatan && <p className="text-slate-500 italic mt-1 leading-normal">*Catatan Admin*: "{newUsulanCatatan}"</p>}
-                      </div>
-
-                      <div className="pt-2 flex flex-col md:flex-row md:items-center justify-between gap-2">
-                        <span className="text-[10px] text-slate-400">Pesan WA diformulasikan sesuai data profil & status usulan.</span>
-                        <button
-                          type="button"
-                          onClick={() => sendUsulanWhatsAppNotification(selectedAsn, newUsulanStatus, selectedFitur?.slug || '', {
-                            golonganLama: selectedAsn.golongan_ruang,
-                            golonganBaru: pangkatBaru,
-                            cutiDays: cutiDays,
-                            jenjangSekarang: selectedAsn.jenjang_jafung,
-                            jenjangSelanjutnya: jafungBaruLevel,
-                            catatan: newUsulanCatatan
-                          })}
-                          className="px-3 py-1.5 text-xs rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center space-x-1.5 transition cursor-pointer self-start md:self-auto shadow-2xs"
-                        >
-                          <MessageSquare size={12} className="text-white" />
-                          <span>Kirim Notifikasi WA</span>
-                        </button>
+                      <div className="space-y-1">
+                        <textarea
+                          rows={8}
+                          value={editedWaMessage}
+                          onChange={(e) => setEditedWaMessage(e.target.value)}
+                          className="w-full p-3 border border-emerald-200 bg-white rounded-lg text-xs text-slate-705 font-mono leading-relaxed shadow-3xs focus:outline-none focus:ring-1 focus:ring-emerald-505 resize-y"
+                          placeholder="Hasil sinkronisasi pesan WhatsApp otomatis..."
+                        />
+                        <p className="text-[10px] text-slate-400">Pesan di atas ter-sinkronisasi langsung dengan isian form, dan dapat Anda edit/sesuaikan secara bebas.</p>
                       </div>
                     </div>
 
-                    {/* Block Action Buttons */}
+                    {/* Block Action Buttons with Consolidated Button */}
                     <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center space-x-1.5 bg-sky-50 border border-sky-200 text-sky-800 p-2.5 rounded-lg text-[11px] text-left leading-relaxed max-w-sm">
                         <Check size={16} className="text-sky-600 shrink-0" />
-                        <span>Kirim usulan ini untuk didaftarkan secara permanent ke sistem kepegawaian.</span>
+                        <span>Kirim usulan ini untuk didaftarkan secara permanent ke sistem kepegawaian sekaligus mengirimkan notifikasi WhatsApp ke pegawai yang bersangkutan.</span>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => {
                           handleKirimUsulan();
-                          sendUsulanWhatsAppNotification(selectedAsn, newUsulanStatus, selectedFitur?.slug || '', {
-                            golonganLama: selectedAsn.golongan_ruang,
-                            golonganBaru: pangkatBaru,
-                            cutiDays: cutiDays,
-                            jenjangSekarang: selectedAsn.jenjang_jafung,
-                            jenjangSelanjutnya: jafungBaruLevel,
-                            catatan: newUsulanCatatan
-                          });
+                          
+                          // Auto trigger WA send with the customized text
+                          const rawWaNum = selectedAsn.nomor_wa || '';
+                          let cleanPhone = rawWaNum.replace(/[^0-9+]/g, '');
+                          if (cleanPhone.startsWith('0')) {
+                            cleanPhone = '+62' + cleanPhone.substring(1);
+                          } else if (cleanPhone.startsWith('62') && !cleanPhone.startsWith('+62')) {
+                            cleanPhone = '+' + cleanPhone;
+                          } else if (!cleanPhone.startsWith('+62') && cleanPhone !== '') {
+                            cleanPhone = '+62' + cleanPhone;
+                          }
+
+                          if (!rawWaNum) {
+                            window.alert(
+                              `✓ Usulan layanan kepegawaian berhasil dikirim ke database.\n\n⚠️ Nomor WhatsApp untuk pegawai "${selectedAsn.nama_lengkap}" tidak terdaftar di direktori, sehingga notifikasi WA ditiadakan.`
+                            );
+                          } else {
+                            window.alert(
+                              `✓ Usulan layanan kepegawaian berhasil dikirim ke database.\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirim pesan kepada: ${selectedAsn.nama_lengkap} (${cleanPhone}).`
+                            );
+                            const encoded = encodeURIComponent(editedWaMessage);
+                            window.open(`https://api.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encoded}`, '_blank', 'noopener,noreferrer');
+                          }
                         }}
-                        className="px-6 py-3 rounded-xl font-bold text-xs bg-teal-800 text-white hover:bg-teal-950 shadow-md transition duration-200 cursor-pointer"
+                        className="px-6 py-3 rounded-xl font-bold text-xs bg-teal-850 hover:bg-teal-950 text-white shadow-md transition duration-200 cursor-pointer flex items-center space-x-2"
                       >
-                        Kirim Usulan Layanan
+                        <MessageSquare size={14} />
+                        <span>Kirim Usulan &amp; Notifikasi WA</span>
                       </button>
                     </div>
                   </div>
@@ -2274,8 +2434,26 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                       <option value="Perbaikan Berkas">Perbaikan Berkas</option>
                       <option value="Diproses">Diproses</option>
                       <option value="Selesai">Selesai</option>
+                      <option value="Pemberitahuan">Pemberitahuan</option>
                     </select>
                   </div>
+
+                  {editUsulanStatus === 'Pemberitahuan' && (
+                    <div className="p-3 bg-teal-50/50 border border-teal-100 rounded-lg text-xs text-left animate-in fade-in duration-150 space-y-1.5">
+                      <span className="font-bold text-teal-800 flex items-center gap-1">
+                        📋 Persyaratan Wajib ({ftr?.nama_fitur}):
+                      </span>
+                      <ul className="list-disc pl-5 text-teal-700 font-semibold space-y-1">
+                        {(ftr ? syaratFiturMap[ftr.slug] || [] : []).map(id => {
+                          const doc = masterDokumen.find(d => d.id === id);
+                          return <li key={id}>{doc?.nama_dokumen || `Syarat ID ${id}`}</li>;
+                        })}
+                        {(!ftr || !(syaratFiturMap[ftr.slug]?.length)) && (
+                          <li className="list-none text-slate-450 italic">Belum ada dokumen persyaratan yang terdefinisi pada manajemen dokumen.</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
 
                   <div className="space-y-1.5 text-left">
                     <label className="text-xs font-bold text-slate-600 block text-left">Catatan Pendukung / Perbaikan (Opsional)</label>
