@@ -256,6 +256,74 @@ export default function ArsipKepegawaianView({
     setProfilePreviewType(type);
   }, [selectedArsipForPreview?.id, selectedArsipForPreview?.file_path]);
 
+  const handleOpenImageInNewTab = (url: string | null) => {
+    if (!url) return;
+    try {
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Pratinjau Berkas Gambar - SIMPEG</title>
+            <style>
+              body {
+                margin: 0;
+                padding: 0;
+                background-color: #0f172a;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              }
+              .container {
+                text-align: center;
+                max-width: 100%;
+                padding: 16px;
+                box-sizing: border-box;
+              }
+              img {
+                max-width: 100%;
+                max-height: 85vh;
+                object-fit: contain;
+                border-radius: 12px;
+                box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+              }
+              .toolbar {
+                margin-top: 20px;
+                color: #94a3b8;
+                font-size: 13px;
+                background-color: rgba(30, 41, 59, 0.8);
+                padding: 8px 16px;
+                border-radius: 9999px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                display: inline-block;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <img src="${url}" alt="Pratinjau Berkas Gambar" />
+              <p></p>
+              <div class="toolbar">
+                Menampilkan berkas gambar menggunakan penampil gambar bawaan browser.
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const blobUrl = URL.createObjectURL(blob);
+      const newWin = window.open(blobUrl, '_blank');
+      if (!newWin) {
+        window.open(url, '_blank');
+      }
+    } catch (e) {
+      window.open(url, '_blank');
+    }
+  };
+
   const handleOpenPreview = (file: ArsipKepegawaian) => {
     let isImage = false;
     if (file.file_path && file.file_path.startsWith('data:')) {
@@ -1122,35 +1190,58 @@ export default function ArsipKepegawaianView({
               {profilePreviewUrl ? (
                 <div className="space-y-4">
                   {profilePreviewType === 'IMAGE' ? (
-                    <div className="flex flex-col items-center justify-center p-4 bg-slate-900 border border-slate-200/60 rounded-xl shadow-inner min-h-[300px] max-h-[500px] overflow-auto">
-                      {!previewImageError ? (
-                        <img 
-                          src={profilePreviewUrl} 
-                          className="max-h-[450px] w-auto max-w-full object-contain rounded-lg shadow-md" 
-                          alt="Pratinjau Berkas Gambar" 
-                          referrerPolicy="no-referrer"
-                          onError={() => setPreviewImageError(true)}
-                        />
-                      ) : (
-                        <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 max-w-md w-full mx-auto text-slate-800">
-                          <div className="mx-auto w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
-                            <AlertTriangle size={24} />
+                    <div className="space-y-3">
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenImageInNewTab(profilePreviewUrl)}
+                          className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg text-xs transition duration-150 flex items-center space-x-1 border border-indigo-200 cursor-pointer"
+                        >
+                          <span>🌐 Buka Gambar di Tab Baru</span>
+                        </button>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-slate-900 border border-slate-200/60 rounded-xl shadow-inner min-h-[300px] max-h-[500px] overflow-auto">
+                        {!previewImageError ? (
+                          <img 
+                            src={profilePreviewUrl} 
+                            className="max-h-[450px] w-auto max-w-full object-contain rounded-lg shadow-md" 
+                            alt="Pratinjau Berkas Gambar" 
+                            referrerPolicy="no-referrer"
+                            onError={() => {
+                              setPreviewImageError(true);
+                              handleOpenImageInNewTab(profilePreviewUrl);
+                            }}
+                          />
+                        ) : (
+                          <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 max-w-md w-full mx-auto text-slate-800">
+                            <div className="mx-auto w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
+                              <AlertTriangle size={24} />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="font-bold text-slate-800 text-xs text-center">Pratinjau Gambar Dialihkan ke Tab Baru</p>
+                              <p className="text-[11px] text-slate-500 leading-normal text-center">
+                                Sandbox iframe membatasi pemuatan langsung gambar jenis ini di halaman. Kami mendeteksi kegagalan render, sehingga berkas dialihkan untuk dibuka pada tab baru menggunakan penampil bawaan browser.
+                              </p>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2 w-full">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenImageInNewTab(profilePreviewUrl)}
+                                className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer shadow-xs"
+                              >
+                                Tampilkan Kembali Tab Baru
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadPDF(selectedArsipForPreview)}
+                                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer shadow-xs border border-slate-200"
+                              >
+                                Unduh File Asli
+                              </button>
+                            </div>
                           </div>
-                          <div className="space-y-1">
-                            <p className="font-bold text-slate-800 text-xs">Gagal Memuat Pratinjau Gambar</p>
-                            <p className="text-[11px] text-slate-500 leading-normal">
-                              Berkas Gambar pratinjau tidak dapat dimuat karena keterbatasan sandbox iframe peramban atau format data rusak. Silakan gunakan tombol unduh di bawah untuk mengekspor dokumen asli secara utuh.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDownloadPDF(selectedArsipForPreview)}
-                            className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer shadow-xs"
-                          >
-                            Unduh Dokumen Berkas Asli
-                          </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 max-w-md mx-auto">
