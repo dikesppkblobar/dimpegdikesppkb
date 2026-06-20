@@ -737,7 +737,7 @@ export default function LaporanSDMK({
             {currentRole === 'admin_puskesmas' && (
               <div className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-250 flex items-center space-x-1 shadow-xs">
                 <Sparkles size={13} className="text-emerald-600 shrink-0" />
-                <span>Terintegrasi Database SIMPEG</span>
+                <span>Terintegrasi Database SAPA</span>
               </div>
             )}
 
@@ -872,7 +872,7 @@ export default function LaporanSDMK({
                 <p>Total data Personil terinput di Matriks: <strong className="text-slate-800">{cachedValidation.totalReported} Org</strong></p>
               </div>
               <div>
-                <p>Total Pegawai aktif nyata di Profil Induk DB SIMPEG: <strong className="text-slate-800">{cachedValidation.totalDatabase} Org</strong></p>
+                <p>Total Pegawai aktif nyata di Profil Induk DB SAPA: <strong className="text-slate-800">{cachedValidation.totalDatabase} Org</strong></p>
               </div>
             </div>
 
@@ -918,7 +918,7 @@ export default function LaporanSDMK({
             {/* Official Signed Letter Paper Layout */}
             <div id="print-officer-sdmk-paper" className="bg-white border border-slate-300 p-8 text-slate-900 rounded-2xl font-sans space-y-6 text-sm text-center relative max-w-4xl mx-auto shadow-xl">
               <div className="absolute right-4 top-4 font-mono text-[10px] border-2 border-slate-300 p-1 rounded no-print">
-                SIMPEG LOBAR v1.0
+                SAPA PEGAWAI v1.0
               </div>
 
               {/* Kop Surat */}
@@ -938,7 +938,7 @@ export default function LaporanSDMK({
 
               <div className="text-left font-sans text-xs space-y-2 leading-relaxed text-slate-700">
                 <p>
-                  Berdasarkan hasil sinkronisasi data seketika biografi induk kepegawaian SIMPEG Kabupaten Lombok Barat, berikut adalah rincian data sebaran seluruh rumpun profesi tenaga kesehatan di Unit Kerja <strong>{getPuskesmasName(activePuskesmasForReport)}</strong> untuk Periode Laporan <strong>{getBulanName(filterBulan)} {filterTahun}</strong>:
+                  Berdasarkan hasil sinkronisasi data seketika biografi induk kepegawaian SAPA pegawai Dikes PPKB Kabupaten Lombok Barat, berikut adalah rincian data sebaran seluruh rumpun profesi tenaga kesehatan di Unit Kerja <strong>{getPuskesmasName(activePuskesmasForReport)}</strong> untuk Periode Laporan <strong>{getBulanName(filterBulan)} {filterTahun}</strong>:
                 </p>
               </div>
 
