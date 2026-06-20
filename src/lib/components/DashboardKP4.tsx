@@ -417,9 +417,12 @@ _Notifikasi otomatis dikirim via Sistem Analisa KP4 Dinkes Lombok Barat_`;
               <button
                 type="button"
                 onClick={() => {
+                  const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
                   const encoded = encodeURIComponent(waDraftMessage);
                   const cleanPhoneNum = waRecipientPhone.replace('+', '');
-                  const targetUrl = `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
+                  const targetUrl = isMobileOrTablet 
+                    ? `whatsapp://send?phone=${cleanPhoneNum}&text=${encoded}`
+                    : `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
                   
                   window.open(targetUrl, 'whatsapp_window');
                   setWaModalOpen(false);
