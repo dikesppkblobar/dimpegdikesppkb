@@ -47,7 +47,7 @@ export class ErrorBoundary extends (React.Component as any) {
             </div>
             
             <p className="text-sm text-slate-300 leading-relaxed">
-              SIMPEG Lombok Barat mendeteksi adanya error runtime atau kegagalan inisialisasi pada browser Anda.
+              SAPA pegawai Dikes PPKB mendeteksi adanya error runtime atau kegagalan inisialisasi pada browser Anda.
               Hal ini biasanya terjadi karena data cache <code className="bg-slate-950 px-1.5 py-0.5 rounded text-rose-400 text-xs">localStorage</code> yang tidak sinkron, atau kegagalan parsing state.
             </p>
 
