@@ -29,7 +29,7 @@ export function countMonthDiff(start: Date, end: Date): number {
 export interface EarlyWarningAlert {
   id: string;
   id_asn: number;
-  type: 'pensiun' | 'pangkat' | 'berkala';
+  type: 'pensiun' | 'pangkat' | 'berkala' | 'kp4';
   message: string;
   subMessage: string;
   monthsLeft: number;
@@ -106,6 +106,25 @@ export function getEarlyWarningAlerts(asnList: ASNProfile[]): EarlyWarningAlert[
         nip: asn.nip,
         puskesmasId: asn.id_puskesmas
       });
+    }
+
+    // 4. KP4 / MODEL DK (Annual Family Allowance Validation update for current year)
+    if (asn.status_pegawai_detail && asn.status_pegawai_detail !== 'Non_ASN') {
+      const currentYear = SYSTEM_DATE.getFullYear();
+      if (!asn.kp4_tahun_validasi || asn.kp4_tahun_validasi < currentYear) {
+        alerts.push({
+          id: `kp4-${asn.id}`,
+          id_asn: asn.id,
+          type: 'kp4',
+          message: `Validasi Formulir KP4 / Model DK Tahunan Belum Diperbarui`,
+          subMessage: `Terakhir divalidasi tahun ${asn.kp4_tahun_validasi || 'Belum Ada'}. Hubungkan data KK/KP4 baru Anda ke Sistem.`,
+          monthsLeft: 2.5, // Priority ranking
+          targetDateStr: `${currentYear}-12-31`,
+          asnName: asn.nama_lengkap + (asn.gelar_belakang ? `, ${asn.gelar_belakang}` : ''),
+          nip: asn.nip,
+          puskesmasId: asn.id_puskesmas
+        });
+      }
     }
   });
 
