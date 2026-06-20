@@ -137,11 +137,13 @@ export default function App() {
             const refetch = await pullCloudDataFromSupabase();
             if (refetch.success && refetch.data) {
               setDbState(refetch.data);
+              saveDB(refetch.data);
             } else {
               setDbState(defaultData);
             }
           } else {
             setDbState(res.data);
+            saveDB(res.data);
           }
           setSuccessToast("⚡ Terkoneksi Supabase: Seluruh data live ditarik langsung dari cloud!");
         } else {
@@ -906,16 +908,17 @@ export default function App() {
   // Handle adding employee manual form submission (Puskesmas or Dinkes)
   const handleAddEmployeeManual = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newStatusDetail === 'Non_ASN') {
-      if (!newNik || !newNama) {
-        alert("Harap lengkapi nama dan NIK pegawai!");
-        return;
-      }
-    } else {
-      if (!newNip || !newNama) {
-        alert("Harap lengkapi nama dan NIP pegawai!");
-        return;
-      }
+    if (!newNik || newNik.length !== 16) {
+      alert("Harap lengkapi 16 digit Nomor Induk Kependudukan (NIK) pegawai!");
+      return;
+    }
+    if (!newNama) {
+      alert("Harap lengkapi nama pegawai!");
+      return;
+    }
+    if (newStatusDetail !== 'Non_ASN' && !newNip) {
+      alert("Harap lengkapi NIP pegawai!");
+      return;
     }
 
     // Assign unit kerja automatically depending on acting role tenancy
@@ -942,6 +945,7 @@ export default function App() {
       jenis_kelamin: newGender,
       status_pegawai_detail: newStatusDetail,
       nomor_wa: newNomorWa,
+      nik: newNik,
 
       // PNS Detailed Values
       pangkat_nama: newStatusDetail === 'PNS' ? newPangkatNama : undefined,
@@ -982,7 +986,6 @@ export default function App() {
       pppk_golongan: (newStatusDetail === 'PPPK_Penuh_Waktu' || newStatusDetail === 'PPPK_Paruh_Waktu') ? newPppkBknGolongan : undefined,
  
       // PKWT Detailed Values
-      nik: newStatusDetail === 'Non_ASN' ? newNik : undefined,
       pkwt_tmt_sk: newStatusDetail === 'Non_ASN' ? newPkwtTmtSk : undefined,
       pkwt_no_sk_kontrak: newStatusDetail === 'Non_ASN' ? newPkwtNoSkKontrak : undefined,
       pkwt_tgl_sk_kontrak: newStatusDetail === 'Non_ASN' ? newPkwtTglSkKontrak : undefined,
@@ -1959,6 +1962,27 @@ export default function App() {
                         />
                       </div>
 
+                      <div className="space-y-1.5 font-semibold">
+                        <label className="text-slate-400">
+                          Nomor Induk Kependudukan (NIK) <span className="text-rose-505 text-rose-500 font-bold">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          maxLength={16}
+                          placeholder="NIK 16 Digit..."
+                          value={newNik}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, ''); // numeric only
+                            setNewNik(val);
+                          }}
+                          className={`w-full p-2 border bg-[#16161a] text-white rounded-lg focus:ring-1 focus:ring-emerald-500 font-mono ${(!newNik || newNik.length !== 16) ? 'border-amber-500/40 ring-1 ring-amber-500/10' : 'border-white/5'}`}
+                        />
+                        {(!newNik || newNik.length !== 16) && (
+                          <p className="text-[10px] text-amber-500">NIK wajib 16 digit angka ({newNik?.length || 0}/16)</p>
+                        )}
+                      </div>
+
                       <div className="space-y-1.5">
                         <label className="text-slate-400">Nama Lengkap</label>
                         <input
@@ -2625,20 +2649,7 @@ export default function App() {
                             </p>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-1.5">
-                              <label className="text-slate-400">Nomor Induk Kependudukan (NIK)</label>
-                              <input
-                                type="text"
-                                required
-                                maxLength={16}
-                                value={newNik}
-                                onChange={(e) => setNewNik(e.target.value)}
-                                className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg font-mono focus:ring-1 focus:ring-amber-500"
-                                placeholder="520102..."
-                              />
-                            </div>
-
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                               <label className="text-slate-400">Nomor SK Kontrak PKWT</label>
                               <input
