@@ -611,7 +611,7 @@ Kami dari *Dinas Kesehatan PPKB Kabupaten Lombok Barat* menginformasikan Peringa
 - *Keterangan*: ${alertItem.message}
 - *Batas TMT / Jatuh Tempo*: ${formatDate(systemDateStr)} (${alertItem.subMessage})
 
-Mohon segera lengkapi dan hubungkan Berkas Wajib ke menu *Layanan Kepegawaian - ${serviceName}* Anda di SIMPEG:
+Mohon segera lengkapi dan serahkan ke UP/Kepegawaian DInas PPKB Lobar untuk di usulkan:
 
 *Daftar Berkas Wajib*:
 ${docListText}
