@@ -57,6 +57,7 @@ export interface ASNProfile {
   jenis_kelamin: JenisKelamin;
   status_pegawai_detail: StatusPegawaiDetail; // PNS, P3K (PN/PW), Non-ASN for logic crosschecks
   id_profesi?: number; // Linked Rumpun Profesi Kes (15)
+  nomor_wa?: string; // Active WhatsApp number with +62 prefix
 
   // === PNS Detail Fields ===
   pangkat_nama?: string; // e.g. "Pembina Tingkat I" or "Penata"
