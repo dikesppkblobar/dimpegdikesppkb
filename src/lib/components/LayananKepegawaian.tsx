@@ -1139,7 +1139,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                 onClick={() => {
                   const encoded = encodeURIComponent(waDraftMessage);
                   const cleanPhoneNum = waRecipientPhone.replace('+', '');
-                  window.open(`https://api.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`, '_blank', 'noopener,noreferrer');
+                  window.open(`https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`, 'whatsapp_window');
                   setWaModalOpen(false);
                 }}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-sm flex items-center space-x-1.5"
@@ -1613,7 +1613,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                               `✓ Usulan layanan kepegawaian berhasil dikirim ke database.\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirim pesan kepada: ${selectedAsn.nama_lengkap} (${cleanPhone}).`
                             );
                             const encoded = encodeURIComponent(editedWaMessage);
-                            window.open(`https://api.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encoded}`, '_blank', 'noopener,noreferrer');
+                            window.open(`https://web.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encoded}`, 'whatsapp_window');
                           }
                         }}
                         className="px-6 py-3 rounded-xl font-bold text-xs bg-teal-850 hover:bg-teal-950 text-white shadow-md transition duration-200 cursor-pointer flex items-center space-x-2"
