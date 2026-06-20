@@ -633,7 +633,7 @@ Mohon segera lengkapi dan serahkan ke UP/Kepegawaian DInas PPKB Lobar untuk di u
 *Daftar Berkas Wajib*:
 ${docListText}
 
-Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Dinas Kesehatan PPKB Lombok Barat.`;
+Pesan ini disusun secara otomatis oleh SAPA pegawai Dikes PPKB (Sistem Arsip, Pemberitahuan, & Analisis Kepegawaian Dinas Kesehatan Pengendalian Penduduk dan Keluarga Berencana Kab. Lombok Barat).`;
 
     if (!rawWaNum) {
       window.alert(
@@ -735,7 +735,7 @@ Kami dari *Dinas Kesehatan PPKB Kabupaten Lombok Barat* ${messageBody}
 *Daftar Dokumen/Persyaratan Rekomendasi*:
 ${docListText || '-'}
  
-Informasi ini dikirim langsung dari Dashboard Sistem Monitoring SIMPEG Terintegrasi Dinas Kesehatan PPKB Lombok Barat untuk memastikan kelancaran administrasi kepegawaian Anda. Terima kasih.`;
+Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Arsip, Pemberitahuan, & Analisis Kepegawaian Dinas Kesehatan Pengendalian Penduduk dan Keluarga Berencana Kab. Lombok Barat) untuk memastikan kelancaran administrasi kepegawaian Anda. Terima kasih.`;
 
     if (!rawWaNum) {
       window.alert(
@@ -2219,7 +2219,7 @@ Informasi ini dikirim langsung dari Dashboard Sistem Monitoring SIMPEG Terintegr
               </div>
             )}
             <p className="text-[10px] text-slate-400 font-mono italic">
-              *Hak asasi usulan TAT (Terhitung Tanggal) dihitung selaras dengan data valid pada SIMPEG induk Lombok Barat Nusa Tenggara Barat.
+              *Hak asasi usulan TAT (Terhitung Tanggal) dihitung selaras dengan data valid pada database SAPA pegawai Dikes PPKB Kabupaten Lombok Barat.
             </p>
           </div>
         )}
@@ -2235,7 +2235,7 @@ Informasi ini dikirim langsung dari Dashboard Sistem Monitoring SIMPEG Terintegr
               <TrendingUp size={18} />
             </div>
             <div>
-              <h2 className="font-display font-semibold text-slate-800 text-lg">Analisa &amp; KPI Cerdas SIMPEG</h2>
+              <h2 className="font-display font-semibold text-slate-800 text-lg">Analisa &amp; KPI Cerdas SAPA</h2>
               <p className="text-xs text-slate-500">Parameter sebaran, sisa tenggat, dan kepatuhan administrasi kepegawaian fasyankes</p>
             </div>
           </div>
