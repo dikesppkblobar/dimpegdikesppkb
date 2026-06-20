@@ -181,6 +181,23 @@ export default function DashboardOverview({
   // State for interactive KPI cards filter
   const [activeKpiFilter, setActiveKpiFilter] = useState<'pangkat' | 'jafung' | 'kgb' | 'cuti' | null>(null);
 
+  // WhatsApp Preview Modal States for DashboardOverview
+  const [waModalOpen, setWaModalOpen] = useState(false);
+  const [waRecipientName, setWaRecipientName] = useState('');
+  const [waRecipientPhone, setWaRecipientPhone] = useState('');
+  const [waDraftMessage, setWaDraftMessage] = useState('');
+  const [waCatatanInput, setWaCatatanInput] = useState('');
+  const [waOriginalBaseMsg, setWaOriginalBaseMsg] = useState('');
+
+  const handleCatatanChange = (newVal: string) => {
+    setWaCatatanInput(newVal);
+    if (newVal.trim() !== '') {
+      setWaDraftMessage(`${waOriginalBaseMsg}\n\n*Catatan Tambahan*: _"${newVal}"_`);
+    } else {
+      setWaDraftMessage(waOriginalBaseMsg);
+    }
+  };
+
   // State for interactive STR & SIP compliance cards filter
   const [activeComplianceFilter, setActiveComplianceFilter] = useState<'str_dekat' | 'str_kadaluarsa' | 'sip_dekat' | 'sip_kadaluarsa' | null>(null);
 
@@ -618,19 +635,17 @@ ${docListText}
 
 Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Dinas Kesehatan PPKB Lombok Barat.`;
 
-    const encodedMessage = encodeURIComponent(messageContent);
-    // Official WhatsApp API redirect URL
-    const whatsappApiUrl = `https://api.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encodedMessage}`;
-
     if (!rawWaNum) {
       window.alert(
-        `✓ Notifikasi In-App berhasil dikirim ke Admin Puskesmas.\n\n⚠️ Nomor WhatsApp untuk pegawai "${alertItem.asnName}" belum terekam di database pegawai. Silakan lengkapi "No. WhatsApp Aktif" (dengan awalan wajib +62) di menu Direktori Pegawai agar fitur pengiriman pesan otomatis bisa bekerja.`
+        `✓ Notifikasi In-App berhasil dikirim ke Admin Puskesmas.\n\n⚠️ Nomor WhatsApp untuk pegawai "${alertItem.asnName}" belum terekam di database pegawai. Silakan lengkapi "No. WhatsApp Aktif" (dengan awalan wajib +62) di menu Direktori Pegawai.`
       );
     } else {
-      window.alert(
-        `✓ Peringatan dini berhasil disimpan ke In-App.\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirimkan pesan otomatis ke nomor WhatsApp Pegawai (${cleanPhone}) berisi informasi Berkas Wajib Hubungkan ke Layanan.\n\nTekan OK untuk melanjutkan...`
-      );
-      window.open(whatsappApiUrl, '_blank', 'noopener,noreferrer');
+      setWaRecipientName(alertItem.asnName);
+      setWaRecipientPhone(cleanPhone);
+      setWaOriginalBaseMsg(messageContent);
+      setWaDraftMessage(messageContent);
+      setWaCatatanInput('');
+      setWaModalOpen(true);
     }
   };
 
@@ -722,18 +737,17 @@ ${docListText || '-'}
  
 Informasi ini dikirim langsung dari Dashboard Sistem Monitoring SIMPEG Terintegrasi Dinas Kesehatan PPKB Lombok Barat untuk memastikan kelancaran administrasi kepegawaian Anda. Terima kasih.`;
 
-    const encodedMessage = encodeURIComponent(messageContent);
-    const whatsappApiUrl = `https://api.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encodedMessage}`;
-
     if (!rawWaNum) {
       window.alert(
         `⚠️ Nomor WhatsApp untuk pegawai "${p.nama_lengkap}" belum terekam di database pegawai. Silakan lengkapi "No. WhatsApp Aktif" (dengan awalan +62 atau 08) di menu Direktori Pegawai.`
       );
     } else {
-      window.alert(
-        `✓ Menyiapkan notifikasi WA untuk: ${p.nama_lengkap} (${cleanPhone})\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirimkan pesan otomatis terkait ${serviceName}.\n\nTekan OK untuk melanjutkan...`
-      );
-      window.open(whatsappApiUrl, '_blank', 'noopener,noreferrer');
+      setWaRecipientName(`${p.nama_lengkap}${p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}`);
+      setWaRecipientPhone(cleanPhone);
+      setWaOriginalBaseMsg(messageContent);
+      setWaDraftMessage(messageContent);
+      setWaCatatanInput('');
+      setWaModalOpen(true);
     }
   };
 
@@ -1930,6 +1944,77 @@ Informasi ini dikirim langsung dari Dashboard Sistem Monitoring SIMPEG Terintegr
   return (
     <div className="space-y-6">
       
+      {/* WhatsApp Modal Dialog */}
+      {waModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl text-left space-y-4">
+            <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <span className="text-emerald-600 text-base">💬</span>
+                  Pratinjau Kirim WhatsApp
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Kepada: <strong className="text-slate-700">{waRecipientName}</strong> ({waRecipientPhone})
+                </p>
+              </div>
+              <button
+                onClick={() => setWaModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">Edit Draft Format Pesan</label>
+              <textarea
+                rows={10}
+                value={waDraftMessage}
+                onChange={(e) => setWaDraftMessage(e.target.value)}
+                className="w-full p-3 border border-slate-200 bg-slate-50 rounded-lg text-xs text-slate-700 font-mono focus:ring-1 focus:ring-slate-450 focus:outline-none focus:bg-white leading-relaxed resize-y"
+                placeholder="Tulis pesan..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">Catatan Tambahan (Opsional)</label>
+              <input
+                type="text"
+                value={waCatatanInput}
+                onChange={(e) => handleCatatanChange(e.target.value)}
+                placeholder="e.g. Harap segera diserahkan sebelum hari Jumat ini."
+                className="w-full p-2 border border-slate-200 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-teal-500 focus:outline-none"
+              />
+              <p className="text-[10px] text-slate-400">Catatan akan ditambahkan otomatis di bagian draf pesan di atas.</p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setWaModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const encoded = encodeURIComponent(waDraftMessage);
+                  const cleanPhoneNum = waRecipientPhone.replace('+', '');
+                  window.open(`https://api.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`, '_blank', 'noopener,noreferrer');
+                  setWaModalOpen(false);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-sm flex items-center space-x-1.5"
+              >
+                <MessageSquare size={13} />
+                <span>Kirim</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. TOP BANNER: Keputusan Berbasis Data SIMPEG Kepegawaian */}
       <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
         <div className="absolute right-0 bottom-0 opacity-10 translate-x-1/4 translate-y-1/4">
