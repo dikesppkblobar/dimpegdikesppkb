@@ -300,7 +300,7 @@ export const SEED_USULAN_LAYANAN: UsulanLayanan[] = [
     id_asn: 4,
     id_puskesmas_pengusul: 3,
     tanggal_pengusulan: "2026-06-01T08:30:00Z",
-    status: "Menunggu Validasi",
+    status: "Usulan Dikirim ke BKD",
     catatan_perbaikan: null,
     file_sk_final: null
   },
