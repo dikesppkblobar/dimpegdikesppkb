@@ -249,6 +249,9 @@ export default function DinkesManagement({
   const [newUserName, setNewUserName] = useState('');
   const [newUserRole, setNewUserRole] = useState<RoleType>('admin_puskesmas');
   const [newUserPuskesmasId, setNewUserPuskesmasId] = useState<number>(1);
+  const [newUserUsername, setNewUserUsername] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserWa, setNewUserWa] = useState('');
 
   // Edit states for user CRUD
   const [editingUserId, setEditingUserId] = useState<number | bigint | null>(null);
@@ -256,6 +259,9 @@ export default function DinkesManagement({
   const [editingUserName, setEditingUserName] = useState('');
   const [editingUserRole, setEditingUserRole] = useState<RoleType>('admin_puskesmas');
   const [editingUserPuskesmasId, setEditingUserPuskesmasId] = useState<number>(1);
+  const [editingUserUsername, setEditingUserUsername] = useState('');
+  const [editingUserPassword, setEditingUserPassword] = useState('');
+  const [editingUserWa, setEditingUserWa] = useState('');
 
   const handleStartEditUser = (user: User) => {
     setEditingUserId(user.id);
@@ -263,12 +269,18 @@ export default function DinkesManagement({
     setEditingUserName(user.nama_lengkap);
     setEditingUserRole(user.role);
     setEditingUserPuskesmasId(user.id_puskesmas || 1);
+    setEditingUserUsername(user.username || '');
+    setEditingUserPassword(user.password || '');
+    setEditingUserWa(user.nomor_wa || '');
   };
 
   const handleCancelEditUser = () => {
     setEditingUserId(null);
     setEditingUserNip('');
     setEditingUserName('');
+    setEditingUserUsername('');
+    setEditingUserPassword('');
+    setEditingUserWa('');
   };
 
   const handleSaveUserEdit = (e: React.FormEvent) => {
@@ -282,7 +294,10 @@ export default function DinkesManagement({
           nip: editingUserNip,
           nama_lengkap: editingUserName,
           role: editingUserRole,
-          id_puskesmas: editingUserRole === 'admin_dinkes' ? null : editingUserPuskesmasId
+          id_puskesmas: editingUserRole === 'admin_dinkes' ? null : editingUserPuskesmasId,
+          username: editingUserUsername || undefined,
+          password: editingUserPassword || undefined,
+          nomor_wa: editingUserWa || undefined
         };
       }
       return u;
@@ -292,6 +307,9 @@ export default function DinkesManagement({
     setEditingUserId(null);
     setEditingUserNip('');
     setEditingUserName('');
+    setEditingUserUsername('');
+    setEditingUserPassword('');
+    setEditingUserWa('');
     alert("✓ Data pengguna berhasil diperbarui!");
   };
 
@@ -305,12 +323,18 @@ export default function DinkesManagement({
       nip: newUserNip,
       nama_lengkap: newUserName,
       role: newUserRole,
-      id_puskesmas: newUserRole === 'admin_dinkes' ? null : newUserPuskesmasId
+      id_puskesmas: newUserRole === 'admin_dinkes' ? null : newUserPuskesmasId,
+      username: newUserUsername || undefined,
+      password: newUserPassword || undefined,
+      nomor_wa: newUserWa || undefined
     };
 
     onUpdateUsersList([...usersList, newUser]);
     setNewUserNip('');
     setNewUserName('');
+    setNewUserUsername('');
+    setNewUserPassword('');
+    setNewUserWa('');
     alert("✓ Pengguna berhasil ditambahkan!");
   };
 
@@ -846,6 +870,39 @@ export default function DinkesManagement({
                       </div>
                     )}
 
+                    <div className="space-y-1.5">
+                      <label className="text-slate-400 font-medium">Username (Akses Login)</label>
+                      <input
+                        type="text"
+                        placeholder="Masukkan username baru..."
+                        value={editingUserUsername}
+                        onChange={(e) => setEditingUserUsername(e.target.value)}
+                        className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:ring-1 focus:ring-amber-500 focus:outline-none text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-slate-400 font-medium">Password Baru</label>
+                      <input
+                        type="password"
+                        placeholder="Masukkan password baru..."
+                        value={editingUserPassword}
+                        onChange={(e) => setEditingUserPassword(e.target.value)}
+                        className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:ring-1 focus:ring-amber-500 focus:outline-none text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-slate-400 font-medium">Nomor WA Aktif (+62)</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: +628123456789"
+                        value={editingUserWa}
+                        onChange={(e) => setEditingUserWa(e.target.value)}
+                        className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:ring-1 focus:ring-amber-500 focus:outline-none text-xs font-mono"
+                      />
+                    </div>
+
                     <div className="flex space-x-2 pt-2">
                       <button
                         type="button"
@@ -922,6 +979,39 @@ export default function DinkesManagement({
                       </div>
                     )}
 
+                    <div className="space-y-1.5">
+                      <label className="text-slate-400 font-medium">Username (Akses Login)</label>
+                      <input
+                        type="text"
+                        placeholder="Masukkan username..."
+                        value={newUserUsername}
+                        onChange={(e) => setNewUserUsername(e.target.value)}
+                        className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:ring-1 focus:ring-emerald-500 focus:outline-none text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-slate-400 font-medium">Password</label>
+                      <input
+                        type="password"
+                        placeholder="Pilih password..."
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                        className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:ring-1 focus:ring-emerald-500 focus:outline-none text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-slate-400 font-medium">Nomor WA Aktif (+62)</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: +628123456789"
+                        value={newUserWa}
+                        onChange={(e) => setNewUserWa(e.target.value)}
+                        className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:ring-1 focus:ring-emerald-500 focus:outline-none text-xs font-mono"
+                      />
+                    </div>
+
                     <button
                       type="submit"
                       className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition"
@@ -962,6 +1052,17 @@ export default function DinkesManagement({
                           <td className="p-3">
                             <p className="font-bold text-white">{user.nama_lengkap}</p>
                             <p className="text-[10px] text-slate-500 font-mono">NIP {user.nip}</p>
+                            {user.username && (
+                              <p className="text-[10px] text-teal-400 mt-1">
+                                Username: <span className="font-mono font-bold text-teal-300">{user.username}</span>
+                                {user.password && <span className="text-slate-500 ml-1.5">(Pass: •••••)</span>}
+                              </p>
+                            )}
+                            {user.nomor_wa && (
+                              <p className="text-[10px] text-emerald-400 font-mono">
+                                WA Aktif: <span className="font-bold">{user.nomor_wa}</span>
+                              </p>
+                            )}
                           </td>
                           <td className="p-3">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${user.role === 'admin_dinkes' ? 'bg-teal-950 text-teal-400 border border-teal-850/45' : 'bg-slate-900 border border-white/10 text-slate-400'}`}>
