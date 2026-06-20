@@ -567,6 +567,11 @@ export const getDB = () => {
     const updated = { ...p };
     updated.id_profesi = updated.id_profesi || getFallbackProfesiId(updated.nama_lengkap, updated.gelar_belakang);
     
+    // Auto-heal missing WhatsApp numbers with +62 prefix
+    if (!updated.nomor_wa) {
+      updated.nomor_wa = `+62812345678${updated.id}`;
+    }
+    
     // Auto-heal Hj. Baiq Sumiati (id: 2) or anyone named Baiq Sumiati
     if (updated.nama_lengkap && updated.nama_lengkap.includes("Baiq Sumiati")) {
       updated.no_str = updated.no_str || "STR-19681125-199103-2-001";
