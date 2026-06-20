@@ -33,9 +33,9 @@ import {
   Zap
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { ASNProfile, UsulanLayanan, Puskesmas, InAppNotification, ArsipKepegawaian } from '../types';
-import { getFallbackProfesiId } from '../mockData';
-import { EarlyWarningAlert, getEarlyWarningAlerts, formatDate } from '../utils';
+import { ASNProfile, UsulanLayanan, Puskesmas, InAppNotification, ArsipKepegawaian } from '../../types';
+import { getFallbackProfesiId } from '../../mockData';
+import { EarlyWarningAlert, getEarlyWarningAlerts, formatDate } from '../../utils';
 
 const PROFESSION_COLORS: Record<string, string> = {
   'PERAWAT': '#6366f1', // indigo

@@ -32,14 +32,14 @@ import {
   MasterDokumen, 
   User, 
   RoleType 
-} from '../types';
+} from '../../types';
 import { 
   testSupabaseConnection, 
   pushClientDataToSupabase, 
   pullCloudDataFromSupabase, 
   SUPABASE_URL,
   SUPABASE_SQL_SCHEMA
-} from '../lib/supabase';
+} from '../supabase';
 
 interface DinkesManagementProps {
   puskesmasList: Puskesmas[];
@@ -2056,7 +2056,19 @@ CREATE TABLE asn_profiles (
     is_str_seumur_hidup BOOLEAN DEFAULT FALSE,
     no_sip VARCHAR(100),
     tanggal_terbit_sip DATE,
-    tanggal_akhir_sip DATE
+    tanggal_akhir_sip DATE,
+    kp4_status_pernikahan VARCHAR(50),
+    kp4_nik_pasangan VARCHAR(50),
+    kp4_nama_pasangan VARCHAR(255),
+    kp4_pasangan_asn BOOLEAN,
+    kp4_pasangan_nip VARCHAR(50),
+    kp4_pasangan_kerja_instansi VARCHAR(255),
+    kp4_pasangan_tunjangan_diklaim BOOLEAN,
+    kp4_tahun_validasi INT,
+    kp4_tanggal_validasi DATE,
+    kp4_berkas_file_name TEXT,
+    kp4_berkas_file_path TEXT,
+    kp4_daftar_anak TEXT
 );
 
 CREATE TABLE usulan_layanan (

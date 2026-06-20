@@ -29,7 +29,7 @@ import {
   RiwayatAngkaKredit,
   PredikatSKP,
   StatusUsulan
-} from '../types';
+} from '../../types';
 import { 
   KOEFISIEN_TAHUNAN_JAFUNG, 
   MULTIPLIER_PREDIKAT_SKP, 
@@ -37,7 +37,7 @@ import {
   compileTotalCredit, 
   runMockOcrValidation,
   formatDate 
-} from '../utils';
+} from '../../utils';
 
 const dataURLtoBlob = (dataurl: string): Blob => {
   const arr = dataurl.split(',');

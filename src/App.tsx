@@ -37,15 +37,17 @@ import {
   MasterProfesiSDMK,
   StatusPegawaiDetail,
   JenisPegawai,
-  JenisKelamin
+  JenisKelamin,
+  KP4Anak
 } from './types';
 
 // Importing Custom Component Views
-import DashboardOverview from './components/DashboardOverview';
-import LayananKepegawaian from './components/LayananKepegawaian';
-import LaporanSDMK from './components/LaporanSDMK';
-import DinkesManagement from './components/DinkesManagement';
-import ArsipKepegawaianView from './components/ArsipKepegawaianView';
+import DashboardOverview from './lib/components/DashboardOverview';
+import LayananKepegawaian from './lib/components/LayananKepegawaian';
+import LaporanSDMK from './lib/components/LaporanSDMK';
+import DinkesManagement from './lib/components/DinkesManagement';
+import ArsipKepegawaianView from './lib/components/ArsipKepegawaianView';
+import DashboardKP4 from './lib/components/DashboardKP4';
 import { pushClientDataToSupabase, pullCloudDataFromSupabase, testSupabaseConnection } from './lib/supabase';
 import { formatDate, addYearsToDateString } from './utils';
 
@@ -351,6 +353,16 @@ export default function App() {
   // Active editing employee state
   const [editingAsn, setEditingAsn] = useState<ASNProfile | null>(null);
   const [selectedProfileForDetail, setSelectedProfileForDetail] = useState<ASNProfile | null>(null);
+  
+  // Temporary child form states inside KP4/Model DK
+  const [newChildName, setNewChildName] = useState('');
+  const [newChildNik, setNewChildNik] = useState('');
+  const [newChildDob, setNewChildDob] = useState('');
+  const [newChildSchool, setNewChildSchool] = useState<'Tidak Sekolah' | 'Sekolah/Kuliah' | 'Bekerja' | 'Menikah'>('Sekolah/Kuliah');
+  const [newChildSkks, setNewChildSkks] = useState(false);
+  const [newChildSkksNo, setNewChildSkksNo] = useState('');
+  const [newChildSkksDate, setNewChildSkksDate] = useState('');
+  const [newChildClaimed, setNewChildClaimed] = useState(true);
   const [asnToDelete, setAsnToDelete] = useState<{ id: number; name: string } | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
@@ -1601,6 +1613,60 @@ export default function App() {
 
             <button
               onClick={() => {
+                setActiveTab('analisa-kp4');
+                setNavAsnId(null);
+                setNavSlug(null);
+              }}
+              className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs flex items-center space-x-3 transition duration-150 ${activeTab === 'analisa-kp4' ? 'bg-white/10 text-white border border-white/5 shadow-xs' : 'hover:bg-white/[0.03] text-slate-400 hover:text-white'}`}
+            >
+              <Users size={15} className="text-rose-450" />
+              <div className="flex-1 flex justify-between items-center">
+                <span>Analisa KP4 &amp; Model DK</span>
+                {(() => {
+                  const warningsCount = (dbState?.asnProfiles || []).filter(asn => {
+                    if (asn.status_pegawai_detail === 'Non_ASN') return false;
+                    if (currentRole !== 'admin_dinkes' && asn.id_puskesmas !== selectedPuskesmasId) {
+                      return false;
+                    }
+                    if (asn.kp4_status_pernikahan === 'Kawin' && asn.kp4_pasangan_asn && asn.kp4_pasangan_tunjangan_diklaim) {
+                      return true;
+                    }
+                    if (asn.kp4_tahun_validasi && asn.kp4_tahun_validasi !== 2026) {
+                      return true;
+                    }
+                    try {
+                      const list = JSON.parse(asn.kp4_daftar_anak || '[]');
+                      const claimedCount = list.filter((c: any) => c.tunjangan_diklaim).length;
+                      if (claimedCount > 2) return true;
+                      
+                      const hasChildIssue = list.some((child: any) => {
+                        if (!child.tunjangan_diklaim) return false;
+                        let age = 0;
+                        if (child.tanggal_lahir) {
+                          age = 2026 - new Date(child.tanggal_lahir).getFullYear();
+                        }
+                        const ageTooHigh = age > 25;
+                        const statusIneligible = child.status_sekolah === 'Bekerja' || child.status_sekolah === 'Menikah';
+                        const needsSkks = age >= 21 && age <= 25;
+                        const skksMissing = needsSkks && (!child.has_skks || child.status_sekolah !== 'Sekolah/Kuliah');
+                        return ageTooHigh || statusIneligible || skksMissing;
+                      });
+                      if (hasChildIssue) return true;
+                    } catch(e) {}
+                    return false;
+                  }).length;
+
+                  return warningsCount > 0 ? (
+                    <span className="bg-rose-500/10 text-rose-400 text-[10px] px-1.5 py-0.5 border border-rose-500/20 rounded-full font-bold animate-pulse">
+                      {warningsCount}
+                    </span>
+                  ) : null;
+                })()}
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
                 setActiveTab('roster-asn');
                 setNavAsnId(null);
                 setNavSlug(null);
@@ -1743,6 +1809,16 @@ export default function App() {
               arsipList={dbState.arsipKepegawaian || []}
               onUpdateArsipList={updateArsipKepegawaian}
               onUpdateAsnProfiles={updateProfiles}
+            />
+          )}
+
+          {activeTab === 'analisa-kp4' && (
+            <DashboardKP4
+              currentRole={currentRole}
+              selectedPuskesmasId={selectedPuskesmasId}
+              puskesmasList={dbState.puskesmas}
+              asnProfiles={dbState.asnProfiles}
+              onEditEmployee={(emp) => setEditingAsn(emp)}
             />
           )}
 
@@ -3121,6 +3197,24 @@ export default function App() {
                     </div>
 
                     <div className="space-y-1.5">
+                      <label className="text-slate-600 font-semibold block mb-1">NIK (Nomor Induk Kependudukan) <span className="text-rose-500 font-bold">*</span></label>
+                      <input
+                        type="text" required
+                        maxLength={16}
+                        placeholder="NIK 16 Digit"
+                        value={editingAsn.nik || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, ''); // numeric only
+                          setEditingAsn({ ...editingAsn, nik: val });
+                        }}
+                        className={`w-full p-2 border bg-white text-slate-900 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-medium shadow-xs ${(!editingAsn.nik || editingAsn.nik.length !== 16) ? 'border-amber-300 ring-1 ring-amber-100' : 'border-slate-300'}`}
+                      />
+                      {(!editingAsn.nik || editingAsn.nik.length !== 16) && (
+                        <p className="text-[10px] text-amber-600 font-semibold">NIK harus berupa 16 digit angka ({editingAsn.nik?.length || 0}/16)</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
                       <label className="text-slate-600 font-semibold block mb-1">Gelar Belakang (Optional)</label>
                       <input
                         type="text"
@@ -3510,13 +3604,12 @@ export default function App() {
                     <h5 className="font-bold text-amber-800 text-[10.5px] uppercase tracking-wider border-b border-amber-100 pb-1">II. Informasi PKWT &amp; Non-ASN</h5>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-slate-600 font-semibold block mb-1">Nomor NIK KTP</label>
+                        <label className="text-slate-400 font-semibold block mb-1">Nomor NIK KTP <span className="text-[10px] text-slate-400 font-normal font-sans">(Input di Data Dasar)</span></label>
                         <input
-                          type="text"
+                          type="text" disabled
                           value={editingAsn.nik || ''}
-                          onChange={(e) => setEditingAsn({ ...editingAsn, nik: e.target.value })}
-                          className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-medium shadow-xs"
-                          placeholder="NIK 16 Digit"
+                          className="w-full p-2 border border-slate-200 bg-slate-50 text-slate-500 rounded-lg outline-none font-medium text-xs cursor-not-allowed"
+                          placeholder="Terisi otomatis dari Data Dasar"
                         />
                       </div>
 
@@ -3684,6 +3777,546 @@ export default function App() {
                         </div>
                       </div>
 
+                    </div>
+                  </div>
+                )}
+
+                {/* IV. DATA KP4 & MODEL DK (TUNJANGAN KELUARGA ASN) */}
+                {editingAsn.status_pegawai_detail !== 'Non_ASN' && (
+                  <div className="border-t border-slate-200 pt-5 space-y-5 animate-in fade-in duration-200">
+                    <div className="flex justify-between items-center border-b border-rose-100 pb-1.5 flex-wrap gap-2">
+                      <h5 className="font-bold text-rose-800 text-[10.5px] uppercase tracking-wider">
+                        IV. Data KP4 &amp; Model DK (Tunjangan Keluarga ASN)
+                      </h5>
+                      <span className="text-[9px] font-sans font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full inline-flex items-center space-x-1">
+                        <span>🛡️ Proteksi Temuan BPK Aktif</span>
+                      </span>
+                    </div>
+
+                    <p className="text-[10.5px] text-slate-500 font-sans leading-relaxed">
+                      Lengkapi data KP4 (Daftar Keluarga) tahunan untuk menentukan besaran tunjangan suami/istri (10%) dan tunjangan anak (2% per anak, maks 2 anak). Sistem ini dilengkapi model validasi otomatis sesuai <strong>PP 7/1977, PP 51/1992, dan Surat Edaran BKN</strong> untuk mendeteksi dini data tidak valid sebelum menjadi temuan administratif BPK.
+                    </p>
+
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-4">
+                      {/* Sub-A: Status Perkawinan & Pasangan */}
+                      <div className="space-y-3">
+                        <h6 className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider flex items-center space-x-1 border-b border-slate-200 pb-1">
+                          <span>A. Status Perkawinan &amp; Pasangan</span>
+                        </h6>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-slate-600 font-semibold block text-[11px]">Status Pernikahan</label>
+                            <select
+                              value={editingAsn.kp4_status_pernikahan || 'Belum Kawin'}
+                              onChange={(e) => {
+                                const status = e.target.value as any;
+                                setEditingAsn({ 
+                                  ...editingAsn, 
+                                  kp4_status_pernikahan: status,
+                                  ...(status === 'Belum Kawin' || status === 'Cerai Hidup' || status === 'Cerai Mati' ? {
+                                    kp4_nama_pasangan: '',
+                                    kp4_nik_pasangan: '',
+                                    kp4_pasangan_asn: false,
+                                    kp4_pasangan_nip: '',
+                                    kp4_pasangan_kerja_instansi: '',
+                                    kp4_pasangan_tunjangan_diklaim: false
+                                  } : {})
+                                });
+                              }}
+                              className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg text-xs font-semibold outline-none focus:ring-1 focus:ring-teal-500"
+                            >
+                              <option value="Belum Kawin">Belum Kawin (Lajang)</option>
+                              <option value="Kawin">Kawin (Menikah Aktif)</option>
+                              <option value="Cerai Hidup">Cerai Hidup (Duda/Janda Hukum)</option>
+                              <option value="Cerai Mati">Cerai Hidup / Mati (Menikgal Dunia)</option>
+                            </select>
+                          </div>
+
+                          {(editingAsn.kp4_status_pernikahan === 'Kawin') && (
+                            <>
+                              <div className="space-y-1">
+                                <label className="text-slate-600 font-semibold block text-[11px]">Nama Pasangan (Suami/Istri)</label>
+                                <input
+                                  type="text"
+                                  value={editingAsn.kp4_nama_pasangan || ''}
+                                  onChange={(e) => setEditingAsn({ ...editingAsn, kp4_nama_pasangan: e.target.value })}
+                                  className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg text-xs"
+                                  placeholder="Nama Lengkap Pasangan"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-slate-600 font-semibold block text-[11px]">NIK Pasangan</label>
+                                <input
+                                  type="text"
+                                  maxLength={16}
+                                  value={editingAsn.kp4_nik_pasangan || ''}
+                                  onChange={(e) => setEditingAsn({ ...editingAsn, kp4_nik_pasangan: e.target.value.replace(/\D/g, '') })}
+                                  className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg text-xs font-mono"
+                                  placeholder="16 Digit NIK"
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {(editingAsn.kp4_status_pernikahan === 'Kawin') && (
+                          <div className="p-3 bg-slate-100/50 border border-slate-200/80 rounded-lg space-y-3 mt-2">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <label className="flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={editingAsn.kp4_pasangan_asn || false}
+                                  onChange={(e) => setEditingAsn({ 
+                                    ...editingAsn, 
+                                    kp4_pasangan_asn: e.target.checked,
+                                    ...(!e.target.checked ? { kp4_pasangan_nip: '', kp4_pasangan_kerja_instansi: '' } : {})
+                                  })}
+                                  className="accent-teal-700"
+                                />
+                                <span>Pasangan adalah ASN (PNS / PPPK / TNI / POLRI / BUMN)</span>
+                              </label>
+
+                              <label className="flex items-center space-x-2 text-xs font-semibold text-rose-700 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={editingAsn.kp4_pasangan_tunjangan_diklaim || false}
+                                  onChange={(e) => setEditingAsn({ ...editingAsn, kp4_pasangan_tunjangan_diklaim: e.target.checked })}
+                                  className="accent-rose-700"
+                                />
+                                <span className="font-bold underline">Klaim Tunjangan Suami/Istri? (10%)</span>
+                              </label>
+                            </div>
+
+                            {/* BPK Check: Pasangan ASN + Klaim Pasangan */}
+                            {editingAsn.kp4_pasangan_asn && editingAsn.kp4_pasangan_tunjangan_diklaim && (
+                              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-[11px] font-sans flex items-start space-x-2 leading-relaxed">
+                                <span className="text-sm mt-0.5">⚠️</span>
+                                <div>
+                                  <p className="font-extrabold text-amber-900 uppercase">RESIKO TEMUAN BPK (POTENSI DOUBLE-FUNDING)</p>
+                                  <p className="font-medium">Sesuai UU APBN &amp; PP 51/1992, apabila suami &amp; istri sama-sama berstatus ASN/pegawai negara, tunjangan suami/istri hanya boleh dibayarkan kepada salah satu pihak yang gajinya lebih tinggi. Klaim ganda akan didata sebagai <strong>kerugian daerah wajib setor balik</strong> oleh BPK.</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {editingAsn.kp4_pasangan_asn && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                <div className="space-y-1">
+                                  <label className="text-slate-500 font-semibold block text-[10.5px]">NIP Pasangan ASN</label>
+                                  <input
+                                    type="text"
+                                    value={editingAsn.kp4_pasangan_nip || ''}
+                                    onChange={(e) => setEditingAsn({ ...editingAsn, kp4_pasangan_nip: e.target.value })}
+                                    className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg text-xs font-mono"
+                                    placeholder="NIP Pasangan"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-slate-500 font-semibold block text-[10.5px]">Instansi / Tempat Kerja</label>
+                                  <input
+                                    type="text"
+                                    value={editingAsn.kp4_pasangan_kerja_instansi || ''}
+                                    onChange={(e) => setEditingAsn({ ...editingAsn, kp4_pasangan_kerja_instansi: e.target.value })}
+                                    className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg text-xs"
+                                    placeholder="e.g. RSUD Tripat / Puskesmas lain"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Sub-B: Daftar Anak Tertanggung */}
+                      <div className="space-y-3 border-t border-slate-200 pt-3">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-1">
+                          <h6 className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                            B. Anak Kandung / Angkat Tertanggung Tunjangan (Maks 2 Anak)
+                          </h6>
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            Tunjangan: {(() => {
+                              try {
+                                const arr = JSON.parse(editingAsn.kp4_daftar_anak || '[]');
+                                return arr.filter((child: any) => child.tunjangan_diklaim).length;
+                              } catch(e) { return 0; }
+                            })()}/2 Anak Diklaim
+                          </span>
+                        </div>
+
+                        {/* List Anak yang Sudah Ada */}
+                        <div className="space-y-2">
+                          {(() => {
+                            let list: KP4Anak[] = [];
+                            try {
+                              list = JSON.parse(editingAsn.kp4_daftar_anak || '[]');
+                            } catch(e) { list = []; }
+
+                            if (list.length === 0) {
+                              return <p className="text-xs text-slate-400 italic py-2 text-center bg-slate-100 rounded-lg border border-dashed border-slate-200">Belum ada data anak di daftar KP4. Gunakan formulir di bawah untuk menambahkan.</p>;
+                            }
+
+                            // Count how many children are claimed
+                            const claimedCount = list.filter(c => c.tunjangan_diklaim).length;
+
+                            return (
+                              <div className="space-y-2">
+                                {claimedCount > 2 && (
+                                  <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-[10.5px] font-medium flex items-center space-x-1.5 leading-relaxed">
+                                    <span>⚠️</span>
+                                    <span><strong>ATURAN BPK (TEMUAN POTENSIAL):</strong> Jumlah anak yang dituntut tunjungan melebihi batas regulasi <strong>(Max 2 Anak)</strong> sesuai PP 51/1992. Hal ini sering menjadi temuan khusus BPK. Silakan nonaktifkan centang tunjangan pada beberapa anak.</span>
+                                  </div>
+                                )}
+
+                                <div className="overflow-x-auto rounded-lg border border-slate-200">
+                                  <table className="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                      <tr className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                                        <th className="p-2">Nama &amp; NIK</th>
+                                        <th className="p-2">Tgl Lahir / Umur</th>
+                                        <th className="p-2">Status Sekolah / SKKS</th>
+                                        <th className="p-2">Status Tunjangan</th>
+                                        <th className="p-2 text-center w-12">Hapus</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                      {list.map((child) => {
+                                        // Calculate Age
+                                        let age = 0;
+                                        if (child.tanggal_lahir) {
+                                          const bYear = new Date(child.tanggal_lahir).getFullYear();
+                                          age = 2026 - bYear; // Using fixed 2026 current year for precision
+                                        }
+
+                                        // BPK checks for this child
+                                        const ageTooHigh = age > 25;
+                                        const statusIneligible = child.status_sekolah === 'Bekerja' || child.status_sekolah === 'Menikah';
+                                        const needsSkks = age >= 21 && age <= 25;
+                                        const skksMissing = needsSkks && (!child.has_skks || child.status_sekolah !== 'Sekolah/Kuliah');
+
+                                        const anyBpkIssue = (child.tunjangan_diklaim) && (ageTooHigh || statusIneligible || skksMissing);
+
+                                        return (
+                                          <tr key={child.id} className={`hover:bg-slate-50 transition ${anyBpkIssue ? 'bg-amber-50/40' : ''}`}>
+                                            <td className="p-2">
+                                              <p className="font-bold text-slate-900">{child.nama}</p>
+                                              <p className="text-[10px] font-mono text-slate-500">NIK: {child.nik}</p>
+                                            </td>
+                                            <td className="p-2 whitespace-nowrap">
+                                              <p className="font-semibold">{child.tanggal_lahir}</p>
+                                              <p className={`text-[10px] font-bold ${ageTooHigh ? 'text-rose-600' : 'text-slate-600'}`}>
+                                                Umur: {age} Tahun {ageTooHigh && ' (Batas Max 25)'}
+                                              </p>
+                                            </td>
+                                            <td className="p-2">
+                                              <span className="font-semibold block">{child.status_sekolah}</span>
+                                              {needsSkks ? (
+                                                child.has_skks ? (
+                                                  <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-150">✓ SKKS: {child.skks_nomor || '-'}</span>
+                                                ) : (
+                                                  <span className="text-[9.5px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-150">⚠️ SKKS Kuliah Absen</span>
+                                                )
+                                              ) : (
+                                                <span className="text-[10px] text-slate-400">Tidak wajib SKKS (&lt;21 Th)</span>
+                                              )}
+                                            </td>
+                                            <td className="p-2">
+                                              <div className="flex flex-col space-y-1">
+                                                <label className="flex items-center space-x-1.5 text-[10.5px] font-semibold text-slate-700 cursor-pointer">
+                                                  <input
+                                                    type="checkbox"
+                                                    checked={child.tunjangan_diklaim}
+                                                    disabled={ageTooHigh || statusIneligible}
+                                                    onChange={(e) => {
+                                                      const updatedList = list.map(c => c.id === child.id ? { ...c, tunjangan_diklaim: e.target.checked } : c);
+                                                      setEditingAsn({ ...editingAsn, kp4_daftar_anak: JSON.stringify(updatedList) });
+                                                    }}
+                                                    className="accent-rose-700"
+                                                  />
+                                                  <span className={child.tunjangan_diklaim ? 'text-rose-700 font-bold' : 'text-slate-400'}>
+                                                    {child.tunjangan_diklaim ? '✓ Dituntut Tunjangan' : 'Tidak Dituntut'}
+                                                  </span>
+                                                </label>
+
+                                                {/* BPK Warning Indicators */}
+                                                {child.tunjangan_diklaim && (
+                                                  <>
+                                                    {ageTooHigh && (
+                                                      <span className="text-[9px] font-bold text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-200 block w-fit">🔴 TEMUAN BPK: &gt; 25 Th dilarang tunjangan</span>
+                                                    )}
+                                                    {statusIneligible && (
+                                                      <span className="text-[9px] font-bold text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-200 block w-fit">🔴 TEMUAN BPK: Menikah/Bekerja dilarang tunjangan</span>
+                                                    )}
+                                                    {skksMissing && (
+                                                      <span className="text-[9px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200 block w-fit">⚠️ TEMUAN BPK: Usia kuliah + wajib SKKS</span>
+                                                    )}
+                                                  </>
+                                                )}
+                                              </div>
+                                            </td>
+                                            <td className="p-2 text-center">
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const filtered = list.filter(c => c.id !== child.id);
+                                                  setEditingAsn({ ...editingAsn, kp4_daftar_anak: JSON.stringify(filtered) });
+                                                }}
+                                                className="text-slate-400 hover:text-rose-600 transition cursor-pointer p-1"
+                                                title="Hapus Anak"
+                                              >
+                                                🗑️
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Inline Form Add Child */}
+                        <div className="bg-white border border-slate-200 p-3.5 rounded-xl space-y-3.5 mt-2 shadow-xs">
+                          <p className="text-[10.5px] font-bold text-slate-700 flex items-center space-x-1.5">
+                            <span className="bg-teal-50 border border-teal-200 h-5 w-5 rounded-full flex items-center justify-center text-teal-800 text-[10px]">＋</span>
+                            <span>Tambah Anak Baru ke KP4</span>
+                          </p>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] text-slate-500 font-bold">Nama Anak</label>
+                              <input
+                                type="text"
+                                value={newChildName || ''}
+                                onChange={(e) => setNewChildName(e.target.value)}
+                                className="w-full p-2 border border-slate-300 text-slate-800 bg-slate-50/50 rounded-lg text-xs"
+                                placeholder="Nama Lengkap Anak"
+                              />
+                            </div>
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] text-slate-500 font-bold">NIK Anak (16 Digit)</label>
+                              <input
+                                type="text"
+                                maxLength={16}
+                                value={newChildNik || ''}
+                                onChange={(e) => setNewChildNik(e.target.value.replace(/\D/g, ''))}
+                                className="w-full p-2 border border-slate-300 text-slate-800 bg-slate-50/50 rounded-lg text-xs font-mono"
+                                placeholder="NIK"
+                              />
+                            </div>
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] text-slate-500 font-bold">Tanggal Lahir</label>
+                              <input
+                                type="date"
+                                value={newChildDob || ''}
+                                onChange={(e) => setNewChildDob(e.target.value)}
+                                className="w-full p-2 border border-slate-300 text-slate-800 bg-slate-50/50 rounded-lg text-xs"
+                              />
+                            </div>
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] text-slate-500 font-bold">Status Hubungan/Sekolah</label>
+                              <select
+                                value={newChildSchool}
+                                onChange={(e) => setNewChildSchool(e.target.value as any)}
+                                className="w-full p-2 border border-slate-300 text-slate-800 bg-slate-50/50 rounded-lg text-xs"
+                              >
+                                <option value="Sekolah/Kuliah">Sekolah / Kuliah</option>
+                                <option value="Tidak Sekolah">Tidak Sekolah (Msh Balita)</option>
+                                <option value="Bekerja">Sudah Bekerja</option>
+                                <option value="Menikah">Sudah Menikah</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Conditional SKKS Fields */}
+                          {newChildSchool === 'Sekolah/Kuliah' && (
+                            <div className="p-3 bg-teal-50/30 border border-teal-100 rounded-lg space-y-3.5">
+                              <label className="flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={newChildSkks}
+                                  onChange={(e) => setNewChildSkks(e.target.checked)}
+                                  className="accent-teal-700"
+                                />
+                                <span className="text-teal-950">Memiliki Surat Keterangan Kuliah/Sekolah (SKKS) Aktif</span>
+                              </label>
+
+                              {newChildSkks && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-5">
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-teal-800 font-bold">Nomor SKKS</label>
+                                    <input
+                                      type="text"
+                                      value={newChildSkksNo || ''}
+                                      onChange={(e) => setNewChildSkksNo(e.target.value)}
+                                      className="w-full p-1.5 border border-teal-200 text-slate-800 bg-white rounded-md text-xs font-mono"
+                                      placeholder="e.g. 523/UN18/DT/2026"
+                                    />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-teal-800 font-bold">Tanggal Terbit SKKS</label>
+                                    <input
+                                      type="date"
+                                      value={newChildSkksDate || ''}
+                                      onChange={(e) => setNewChildSkksDate(e.target.value)}
+                                      className="w-full p-1.5 border border-teal-200 text-slate-800 bg-white rounded-md text-xs"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="flex justify-between items-center bg-slate-55 p-2 rounded-lg">
+                            <label className="flex items-center space-x-1.5 text-xs font-bold text-rose-700 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={newChildClaimed}
+                                disabled={newChildSchool === 'Bekerja' || newChildSchool === 'Menikah'}
+                                onChange={(e) => setNewChildClaimed(e.target.checked)}
+                                className="accent-rose-700 font-bold"
+                              />
+                              <span>Centang untuk klaim hak tunjangan untuk anak ini</span>
+                            </label>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!newChildName) {
+                                  alert('Nama anak mohon diisi');
+                                  return;
+                                }
+                                if (newChildNik.length !== 16) {
+                                  alert('NIK anak wajib 16 digit angka');
+                                  return;
+                                }
+                                if (!newChildDob) {
+                                  alert('Tanggal lahir anak wajib ditentukan');
+                                  return;
+                                }
+
+                                let list: KP4Anak[] = [];
+                                try {
+                                  list = JSON.parse(editingAsn.kp4_daftar_anak || '[]');
+                                } catch(e) { list = []; }
+
+                                const newlyAdded: KP4Anak = {
+                                  id: list.length > 0 ? Math.max(...list.map(c => c.id)) + 1 : 1,
+                                  nama: newChildName,
+                                  nik: newChildNik,
+                                  tanggal_lahir: newChildDob,
+                                  status_sekolah: newChildSchool,
+                                  has_skks: newChildSkks,
+                                  skks_nomor: newChildSkks ? newChildSkksNo : undefined,
+                                  skks_tanggal_terbit: newChildSkks ? newChildSkksDate : undefined,
+                                  tunjangan_diklaim: newChildClaimed && newChildSchool !== 'Bekerja' && newChildSchool !== 'Menikah'
+                                };
+
+                                const newList = [...list, newlyAdded];
+                                setEditingAsn({
+                                  ...editingAsn,
+                                  kp4_daftar_anak: JSON.stringify(newList)
+                                });
+
+                                // Clear forms
+                                setNewChildName('');
+                                setNewChildNik('');
+                                setNewChildDob('');
+                                setNewChildSchool('Sekolah/Kuliah');
+                                setNewChildSkks(false);
+                                setNewChildSkksNo('');
+                                setNewChildSkksDate('');
+                                setNewChildClaimed(true);
+                              }}
+                              className="px-4 py-1.5 bg-teal-800 hover:bg-teal-900 border border-teal-950 text-white font-bold rounded-lg text-[11px] transition cursor-pointer"
+                            >
+                              Sematkan Anak
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sub-C: Periode Berkas & Scan KP4 */}
+                      <div className="space-y-3 border-t border-slate-200 pt-3">
+                        <h6 className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider flex items-center space-x-1 border-b border-slate-200 pb-1">
+                          <span>C. Tanggal Pengesahan Tahunan &amp; Scan KP4</span>
+                        </h6>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-slate-600 font-semibold block text-[11px]">Tahun Validasi KP4</label>
+                            <select
+                              value={editingAsn.kp4_tahun_validasi || 2026}
+                              onChange={(e) => setEditingAsn({ ...editingAsn, kp4_tahun_validasi: parseInt(e.target.value) })}
+                              className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg text-xs font-semibold"
+                            >
+                              <option value="2026">Tahun Anggaran 2026 (Tahun Berjalan)</option>
+                              <option value="2025">Tahun Anggaran 2025 (Arsip Lama)</option>
+                              <option value="2024">Tahun Anggaran 2024 (Arsip Kedaluwarsa)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-slate-600 font-semibold block text-[11px]">Tanggal Tandatangan KP4</label>
+                            <input
+                              type="date"
+                              value={editingAsn.kp4_tanggal_validasi || ''}
+                              onChange={(e) => setEditingAsn({ ...editingAsn, kp4_tanggal_validasi: e.target.value })}
+                              className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-slate-600 font-semibold block text-[11px]">Scan Fisik Formulir KP4 (PDF/Gambar)</label>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="file"
+                                id="kp4_file_picker"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setEditingAsn({
+                                      ...editingAsn,
+                                      kp4_berkas_file_name: file.name,
+                                      kp4_berkas_file_path: 'data:application/pdf;base64,sample'
+                                    });
+                                  }
+                                }}
+                              />
+                              <label
+                                htmlFor="kp4_file_picker"
+                                className="px-3 py-2 border border-slate-300 hover:bg-slate-50 bg-white rounded-lg text-xs font-bold text-slate-700 cursor-pointer flex-1 text-center transition"
+                              >
+                                {editingAsn.kp4_berkas_file_name ? `✓ ${editingAsn.kp4_berkas_file_name}` : 'Pilih Berkas Scan'}
+                              </label>
+                              {editingAsn.kp4_berkas_file_name && (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingAsn({ ...editingAsn, kp4_berkas_file_name: undefined, kp4_berkas_file_path: undefined })}
+                                  className="text-rose-600 hover:bg-rose-50 px-2.5 py-2 border border-rose-200 rounded-lg text-xs font-bold"
+                                >
+                                  Reset
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* BPK Check: Tahun Validasi Out-of-date */}
+                        {editingAsn.kp4_tahun_validasi && editingAsn.kp4_tahun_validasi !== 2026 && (
+                          <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-[11px] font-sans flex items-start space-x-2 leading-relaxed mt-2 animate-pulse">
+                            <span className="text-sm mt-0.5">🚨</span>
+                            <div>
+                              <p className="font-extrabold text-rose-900 uppercase">TEMUAN BPK: KP4 BELUM DIPERBARUI TAHUN BERJALAN</p>
+                              <p className="font-medium">Instruksi Dirjen Anggaran BKN menerangkan formulir KP4/Model DK wajib disetor kembali setiap tahun anggaran (January - February). Dokumen tahun {editingAsn.kp4_tahun_validasi} dikategorikan sebagai berkas kedaluwarsa oleh auditor BPK.</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -4053,6 +4686,156 @@ export default function App() {
                     </div>
                   </div>
                 )}
+
+                {/* V. DATA INDIKATOR KP4 / MODEL DK (TUNJANGAN KELUARGA ASN) SUMMARY */}
+                {selectedProfileForDetail.status_pegawai_detail !== 'Non_ASN' && (
+                  <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-5 md:p-6 space-y-4">
+                    <h4 className="text-xs font-bold text-rose-800 uppercase tracking-wider flex items-center justify-between border-b border-rose-100 pb-2">
+                      <div className="flex items-center space-x-2">
+                        <Users size={14} className="text-rose-600" />
+                        <span>Tunjangan Keluarga Berdasarkan Berkas KP4 / Model DK ASN</span>
+                      </div>
+                      <span className="font-mono text-[9px] bg-rose-500/10 text-rose-700 px-2 py-0.5 rounded border border-rose-500/20 font-bold">
+                        Tahun Validasi: {selectedProfileForDetail.kp4_tahun_validasi || 'Belum Validasi'}
+                      </span>
+                    </h4>
+
+                    {/* Husband/Wife section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      <div className="p-3 bg-white/70 border border-slate-200/60 rounded-xl space-y-2">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Tunjangan Suami / Istri (10%)</span>
+                        {selectedProfileForDetail.kp4_status_pernikahan === 'Kawin' ? (
+                          <div className="space-y-1">
+                            <p className="text-xs text-slate-900 font-bold">Nama Pasangan: <span className="text-teal-700">{selectedProfileForDetail.kp4_nama_pasangan || '-'}</span></p>
+                            <p className="text-[10px] text-slate-500 font-mono">NIK: {selectedProfileForDetail.kp4_nik_pasangan || '-'}</p>
+                            <p className="text-[10px] text-slate-500 font-medium">
+                              Pasangan ASN: {selectedProfileForDetail.kp4_pasangan_asn ? `Ya (NIP. ${selectedProfileForDetail.kp4_pasangan_nip || '-'}, Instansi: ${selectedProfileForDetail.kp4_pasangan_kerja_instansi || '-'})` : 'Bukan ASN'}
+                            </p>
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold block w-fit ${
+                              selectedProfileForDetail.kp4_pasangan_tunjangan_diklaim 
+                                ? 'bg-emerald-500/10 text-emerald-700' 
+                                : 'bg-slate-500/10 text-slate-500'
+                            }`}>
+                              Status Klaim: {selectedProfileForDetail.kp4_pasangan_tunjangan_diklaim ? '✓ Klaim Tunjangan Suami/Istri' : '✗ Tidak Diklaim'}
+                            </span>
+
+                            {/* BPK Violation Warning */}
+                            {selectedProfileForDetail.kp4_pasangan_asn && selectedProfileForDetail.kp4_pasangan_tunjangan_diklaim && (
+                              <div className="mt-2 p-2 bg-red-100/80 border border-red-200 rounded text-[10px] text-red-900 font-medium space-y-1">
+                                <p className="font-extrabold flex items-center space-x-1 uppercase text-[9px]">
+                                  <span>⚠️</span> <span>POTENSI TEMUAN GANDA (BPK)</span>
+                                </p>
+                                <p className="leading-relaxed">Pasangan sesama ASN dilaporkan bertunjangan ganda. Sesuai regulasi satu tunjangan wajib dicabut.</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-slate-500 italic">Status perkawinan terdata: {selectedProfileForDetail.kp4_status_pernikahan || 'Belum Kawin'}. Tidak ada klaim tunjangan suami/istri.</p>
+                        )}
+                      </div>
+
+                      {/* Scan Physical Proof Section */}
+                      <div className="p-3 bg-white/70 border border-slate-200/60 rounded-xl flex flex-col justify-between">
+                        <div className="space-y-1">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Dokumen Scan Fisik KP4</span>
+                          {selectedProfileForDetail.kp4_berkas_file_name ? (
+                            <div className="space-y-1">
+                              <p className="text-xs text-slate-800 font-semibold truncate">✓ {selectedProfileForDetail.kp4_berkas_file_name}</p>
+                              <p className="text-[10px] text-slate-500">Formulir ttd basah disahkan Kepala Puskesmas / Pejabat dinkes.</p>
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-rose-600 font-medium">⚠️ Berkas fisik scan KP4 belum diunggah.</p>
+                          )}
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-100 text-[10px] text-slate-500 font-medium">
+                          <p>Tanggal Pengesahan: {selectedProfileForDetail.kp4_tanggal_validasi ? formatDate(selectedProfileForDetail.kp4_tanggal_validasi) : 'Belum Ditentukan'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Children allowance check */}
+                    <div className="p-3 bg-white/70 border border-slate-200/60 rounded-xl space-y-3 text-xs">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Daftar Anak Tertanggung KP4 (Tunjangan 2% per Anak, Maks 2 Anak)</span>
+                      
+                      {(() => {
+                        let childrenList: any[] = [];
+                        try {
+                          childrenList = JSON.parse(selectedProfileForDetail.kp4_daftar_anak || '[]');
+                        } catch(e) {}
+
+                        if (childrenList.length === 0) {
+                          return <p className="text-slate-500 italic py-2 text-center bg-slate-100 rounded">Tidak ada anak yang terdaftar di daftar KP4.</p>;
+                        }
+
+                        const claimedCount = childrenList.filter(c => c.tunjangan_diklaim).length;
+
+                        return (
+                          <div className="space-y-2">
+                            {claimedCount > 2 && (
+                              <div className="p-2 bg-red-100/80 border border-red-200 rounded text-[10px] text-red-900 font-semibold uppercase flex items-center space-x-1">
+                                <span>⚠️</span>
+                                <span>MELEBIHI BATAS MAKSIMAL: PP 51/1992 melarang klaim lebih dari 2 anak. Kelebihan {claimedCount - 2} anak.</span>
+                              </div>
+                            )}
+
+                            <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto pr-1">
+                              {childrenList.map((child: any, idx: number) => {
+                                let age = 0;
+                                if (child.tanggal_lahir) {
+                                  age = 2026 - new Date(child.tanggal_lahir).getFullYear();
+                                }
+
+                                const needsSkks = age >= 21 && age <= 25;
+                                const isOverage = age > 25;
+                                const invalidStatus = child.status_sekolah === 'Bekerja' || child.status_sekolah === 'Menikah';
+
+                                return (
+                                  <div key={idx} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center space-x-2">
+                                        <p className="font-bold text-slate-900 text-xs">{child.nama}</p>
+                                        <span className="text-[10px] text-slate-500 font-mono">({age} Tahun)</span>
+                                        <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-bold ${
+                                          child.tunjangan_diklaim 
+                                            ? 'bg-indigo-50/100 text-indigo-700 border border-indigo-200' 
+                                            : 'bg-slate-150 text-slate-400'
+                                        }`}>
+                                          {child.tunjangan_diklaim ? 'Claim Tunjangan' : 'No Claim'}
+                                        </span>
+                                      </div>
+                                      <p className="text-[10px] text-slate-500 font-mono">NIK: {child.nik || '-'}</p>
+                                      <p className="text-[10px] text-slate-500">
+                                        Status Sekolah/Kerja: <span className="font-semibold text-slate-800">{child.status_sekolah || '-'}</span>
+                                      </p>
+                                      {needsSkks && (
+                                        <p className="text-[10px] font-medium">
+                                          SKKS Aktif Kuliah: {child.has_skks ? <span className="text-emerald-600 font-bold">✓ Terlampir</span> : <span className="text-rose-600 font-bold">⚠️ Belum Terlampir</span>}
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    {/* Warnings list on each child */}
+                                    {child.tunjangan_diklaim && (isOverage || invalidStatus || (needsSkks && !child.has_skks)) && (
+                                      <div className="p-1 px-2.5 bg-rose-100 border border-rose-200 rounded text-[9.5px] text-rose-900 font-medium max-w-xs space-y-0.5">
+                                        <p className="font-bold uppercase text-[8.5px]">Risiko Temuan:</p>
+                                        {isOverage && <p>• Umur melebihi batas absolut 25 tahun.</p>}
+                                        {invalidStatus && <p>• Berstatus {child.status_sekolah} (gugur hak tunjangan).</p>}
+                                        {needsSkks && !child.has_skks && <p>• Surat Keterangan Kuliah (SKKS) wajib ada.</p>}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                  </div>
+                )}
+
               </div>
 
             </div>

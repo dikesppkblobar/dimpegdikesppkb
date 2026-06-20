@@ -26,6 +26,18 @@ export type StatusKepegawaian = 'Aktif' | 'Pensiun' | 'Mutasi_Keluar';
 export type JenisKelamin = 'L' | 'P';
 export type StatusPegawaiDetail = 'PNS' | 'PPPK_Penuh_Waktu' | 'PPPK_Paruh_Waktu' | 'Non_ASN';
 
+export interface KP4Anak {
+  id: number;
+  nik: string;
+  nama: string;
+  tanggal_lahir: string; // YYYY-MM-DD
+  status_sekolah: 'Tidak Sekolah' | 'Sekolah/Kuliah' | 'Bekerja' | 'Menikah';
+  has_skks: boolean; // Surat Keterangan Kuliah/Sekolah
+  skks_nomor?: string;
+  skks_tanggal_terbit?: string;
+  tunjangan_diklaim: boolean; // Apakah menerima tunjangan (max 2 anak)
+}
+
 export interface ASNProfile {
   id: number;
   nip: string;
@@ -105,6 +117,20 @@ export interface ASNProfile {
   no_sip?: string;
   tanggal_terbit_sip?: string;
   tanggal_akhir_sip?: string;
+
+  // === KP4 / Model DK Fields (Tunjangan Keluarga ASN) ===
+  kp4_status_pernikahan?: 'Belum Kawin' | 'Kawin' | 'Cerai Hidup' | 'Cerai Mati';
+  kp4_nik_pasangan?: string;
+  kp4_nama_pasangan?: string;
+  kp4_pasangan_asn?: boolean;
+  kp4_pasangan_nip?: string;
+  kp4_pasangan_kerja_instansi?: string;
+  kp4_pasangan_tunjangan_diklaim?: boolean;
+  kp4_tahun_validasi?: number;
+  kp4_tanggal_validasi?: string; // YYYY-MM-DD
+  kp4_berkas_file_name?: string;
+  kp4_berkas_file_path?: string; // Data URL / Base64/ Placeholder
+  kp4_daftar_anak?: string; // JSON String of KP4Anak[]
 }
 
 export interface MasterFitur {

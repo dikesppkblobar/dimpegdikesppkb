@@ -28,7 +28,7 @@ import {
   ASNProfile, 
   MasterProfesiSDMK, 
   LaporanSDMKBulanan 
-} from '../types';
+} from '../../types';
 
 interface LaporanSDMKProps {
   currentRole: 'admin_dinkes' | 'admin_puskesmas';

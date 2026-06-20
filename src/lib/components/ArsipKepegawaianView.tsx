@@ -18,7 +18,7 @@ import {
   X,
   FileDown
 } from 'lucide-react';
-import { Puskesmas, ASNProfile, ArsipKepegawaian } from '../types';
+import { Puskesmas, ASNProfile, ArsipKepegawaian } from '../../types';
 
 const dataURLtoBlob = (dataurl: string): Blob => {
   const arr = dataurl.split(',');

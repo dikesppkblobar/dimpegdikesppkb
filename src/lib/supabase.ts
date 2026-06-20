@@ -130,7 +130,21 @@ CREATE TABLE IF NOT EXISTS asn_profiles (
     is_str_seumur_hidup BOOLEAN DEFAULT FALSE,
     no_sip VARCHAR(100),
     tanggal_terbit_sip DATE,
-    tanggal_akhir_sip DATE
+    tanggal_akhir_sip DATE,
+
+    -- KP4 / Model DK (Tunjangan Keluarga ASN)
+    kp4_status_pernikahan VARCHAR(50),
+    kp4_nik_pasangan VARCHAR(50),
+    kp4_nama_pasangan VARCHAR(255),
+    kp4_pasangan_asn BOOLEAN,
+    kp4_pasangan_nip VARCHAR(50),
+    kp4_pasangan_kerja_instansi VARCHAR(255),
+    kp4_pasangan_tunjangan_diklaim BOOLEAN,
+    kp4_tahun_validasi INT,
+    kp4_tanggal_validasi DATE,
+    kp4_berkas_file_name TEXT,
+    kp4_berkas_file_path TEXT,
+    kp4_daftar_anak TEXT
 );
 
 -- 7. Table Usulan Layanan Kepegawaian
@@ -706,7 +720,21 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
           is_str_seumur_hidup: !!p.is_str_seumur_hidup,
           no_sip: p.no_sip || null,
           tanggal_terbit_sip: sanitizePgDate(p.tanggal_terbit_sip),
-          tanggal_akhir_sip: sanitizePgDate(p.tanggal_akhir_sip)
+          tanggal_akhir_sip: sanitizePgDate(p.tanggal_akhir_sip),
+
+          // KP4 / Model DK (Tunjangan Keluarga ASN)
+          kp4_status_pernikahan: p.kp4_status_pernikahan || null,
+          kp4_nik_pasangan: p.kp4_nik_pasangan || null,
+          kp4_nama_pasangan: p.kp4_nama_pasangan || null,
+          kp4_pasangan_asn: p.kp4_pasangan_asn !== undefined ? !!p.kp4_pasangan_asn : null,
+          kp4_pasangan_nip: p.kp4_pasangan_nip || null,
+          kp4_pasangan_kerja_instansi: p.kp4_pasangan_kerja_instansi || null,
+          kp4_pasangan_tunjangan_diklaim: p.kp4_pasangan_tunjangan_diklaim !== undefined ? !!p.kp4_pasangan_tunjangan_diklaim : null,
+          kp4_tahun_validasi: p.kp4_tahun_validasi ? Number(p.kp4_tahun_validasi) : null,
+          kp4_tanggal_validasi: sanitizePgDate(p.kp4_tanggal_validasi),
+          kp4_berkas_file_name: p.kp4_berkas_file_name || null,
+          kp4_berkas_file_path: p.kp4_berkas_file_path || null,
+          kp4_daftar_anak: p.kp4_daftar_anak || null
         }));
 
         if (sanitizedAsn.length > 0) {
