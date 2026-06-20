@@ -543,6 +543,7 @@ export default function DashboardOverview({
   });
 
   const handleSendNotificationToUserAccount = (alertItem: EarlyWarningAlert) => {
+    // 1. Send in-app notification to the tenant
     const nextId = notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1;
     const newNotif: InAppNotification = {
       id: nextId,
@@ -555,7 +556,82 @@ export default function DashboardOverview({
       isRead: false
     };
     onUpdateNotifications([newNotif, ...notifications]);
-    window.alert(`✓ Sukses mengirimkan notifikasi peringatan dini TMT untuk ${alertItem.asnName} langsung ke akun masing-masing (Admin ${getPuskesmasName(alertItem.puskesmasId)}) secara real-time!`);
+
+    // 2. Locate Employee profile
+    const profile = asnProfiles.find(p => p.id === alertItem.id_asn);
+    const rawWaNum = profile?.nomor_wa || '';
+    
+    // Clean and validate WA number
+    let cleanPhone = rawWaNum.replace(/[^0-9+]/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '+62' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('62') && !cleanPhone.startsWith('+62')) {
+      cleanPhone = '+' + cleanPhone;
+    } else if (!cleanPhone.startsWith('+62') && cleanPhone !== '') {
+      cleanPhone = '+62' + cleanPhone;
+    }
+
+    // Compose custom message
+    let serviceName = '';
+    let requiredDocs: string[] = [];
+
+    if (alertItem.type === 'pensiun') {
+      serviceName = 'Layanan Masa Pensiun';
+      requiredDocs = [
+        '- Surat Pengantar UPT Puskesmas',
+        '- Surat Permohonan Pensiun dari Pegawai Bersangkutan',
+        '- Data Riwayat Hidup / Salinan Buku Nikah Sah'
+      ];
+    } else if (alertItem.type === 'pangkat') {
+      serviceName = 'Layanan Kenaikan Pangkat';
+      requiredDocs = [
+        '- Surat Pengantar UPT Puskesmas',
+        '- SK Pangkat Terakhir',
+        '- PAK (Penetapan Angka Kredit) Terakhir',
+        '- Sasaran Kinerja Pegawai (SKP) 2 Tahun Terakhir'
+      ];
+    } else {
+      serviceName = 'Layanan Kenaikan Gaji Berkala (KGB)';
+      requiredDocs = [
+        '- Surat Pengantar UPT Puskesmas',
+        '- SK Kenaikan Gaji Berkala (KGB) Terakhir'
+      ];
+    }
+
+    const docListText = requiredDocs.join('\n');
+    const systemDateStr = alertItem.targetDateStr; // TMT Target Date
+
+    const messageContent = 
+`Yth. Bapak/Ibu *${alertItem.asnName}*,
+
+Kami dari *Dinas Kesehatan PPKB Kabupaten Lombok Barat* menginformasikan Peringatan Dini (Early Warning) Kepegawaian Anda yang mendekati batas jatuh tempo:
+
+- *Nama*: ${alertItem.asnName}
+- *NIP / Identitas*: ${alertItem.nip}
+- *Keterangan*: ${alertItem.message}
+- *Batas TMT / Jatuh Tempo*: ${formatDate(systemDateStr)} (${alertItem.subMessage})
+
+Mohon segera lengkapi dan hubungkan Berkas Wajib ke menu *Layanan Kepegawaian - ${serviceName}* Anda di SIMPEG:
+
+*Daftar Berkas Wajib*:
+${docListText}
+
+Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Dinas Kesehatan PPKB Lombok Barat.`;
+
+    const encodedMessage = encodeURIComponent(messageContent);
+    // Official WhatsApp API redirect URL
+    const whatsappApiUrl = `https://api.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encodedMessage}`;
+
+    if (!rawWaNum) {
+      window.alert(
+        `✓ Notifikasi In-App berhasil dikirim ke Admin Puskesmas.\n\n⚠️ Nomor WhatsApp untuk pegawai "${alertItem.asnName}" belum terekam di database pegawai. Silakan lengkapi "No. WhatsApp Aktif" (dengan awalan wajib +62) di menu Direktori Pegawai agar fitur pengiriman pesan otomatis bisa bekerja.`
+      );
+    } else {
+      window.alert(
+        `✓ Peringatan dini berhasil disimpan ke In-App.\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirimkan pesan otomatis ke nomor WhatsApp Pegawai (${cleanPhone}) berisi informasi Berkas Wajib Hubungkan ke Layanan.\n\nTekan OK untuk melanjutkan...`
+      );
+      window.open(whatsappApiUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const getPuskesmasName = (id: number) => {
@@ -3809,6 +3885,43 @@ export default function DashboardOverview({
             })}
           </div>
         )}
+
+        {/* Linked Devices & WhatsApp Web FAQ Accordion */}
+        <div className="bg-[#1e1e24] border border-white/5 rounded-xl p-4 mt-2">
+          <details className="group">
+            <summary className="flex items-center justify-between cursor-pointer list-none">
+              <div className="flex items-center space-x-2.5">
+                <span className="p-1.5 bg-emerald-950/50 text-emerald-400 rounded-lg">
+                  <MessageSquare size={13} />
+                </span>
+                <span className="text-xs font-bold text-slate-300 group-hover:text-white transition">
+                  Bagaimana Cara WhatsApp Web Menangani "Login Perangkat Tertaut"?
+                </span>
+              </div>
+              <span className="transition group-open:rotate-180 text-emerald-400">
+                <svg fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="18">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </summary>
+            
+            <div className="mt-4 text-[11px] text-slate-450 text-slate-400 leading-relaxed border-t border-white/5 pt-4 space-y-3">
+              <div className="flex items-start space-x-2.5">
+                <div className="mt-0.5 px-2 py-0.5 rounded bg-emerald-950/60 text-[9.5px] text-emerald-400 font-mono font-bold border border-emerald-500/10">Skenario A</div>
+                <p className="flex-1">
+                  <strong>Jika pengguna sudah pernah login WA Web di laptop tersebut:</strong> Browser menyimpan session (cookie / local storage) secara aman. Begitu tombol diklik, WhatsApp Web akan langsung terbuka secara otomatis, masuk ke ruang obrolan pegawai bersangkutan, dan teks draf pesan yang disusun dinamis berdasarkan fitur &amp; dokumen wajib langsung terisi di kolom inputan. Anda cukup menekan tombol <strong>Kirim (Enter)</strong> di keyboard.
+                </p>
+              </div>
+              
+              <div className="flex items-start space-x-2.5">
+                <div className="mt-0.5 px-2 py-0.5 rounded bg-amber-955/60 bg-yellow-950/60 text-[9.5px] text-amber-400 font-mono font-bold border border-amber-500/10">Skenario B</div>
+                <p className="flex-1">
+                  <strong>Jika pengguna BELUM pernah login WA Web di laptop tersebut:</strong> WhatsApp secara otomatis menampilkan halaman QR Code terlebih dahulu. Setelah Anda melakukan scan QR menggunakan HP (melalui menu Perangkat Tertaut di aplikasi WA HP), WhatsApp Web tidak akan melempar Anda kembali ke beranda utama, melainkan tetap <strong>melanjutkan instruksi awal secara instan</strong>, yaitu langsung membuka ruang obrolan pegawai tersebut beserta pesan draf lengkap dengan daftar Berkas Wajib.
+                </p>
+              </div>
+            </div>
+          </details>
+        </div>
       </div>
     </div>
   );
