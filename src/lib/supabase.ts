@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS asn_profiles (
     jenis_kelamin VARCHAR(5) NOT NULL, -- 'L' | 'P'
     status_pegawai_detail VARCHAR(100) NOT NULL, -- 'PNS' | 'PPPK_Penuh_Waktu' | 'PPPK_Paruh_Waktu' | 'Non_ASN'
     id_profesi INT REFERENCES profesi_sdmk(id) ON DELETE SET NULL,
+    nomor_wa VARCHAR(50),
 
     -- PNS Details
     pangkat_nama VARCHAR(150),
@@ -791,6 +792,7 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
           jenis_kelamin: String(p.jenis_kelamin || "L"),
           status_pegawai_detail: String(p.status_pegawai_detail || ""),
           id_profesi: p.id_profesi && !isNaN(Number(p.id_profesi)) ? Number(p.id_profesi) : null,
+          nomor_wa: p.nomor_wa || null,
 
           // PNS Details
           pangkat_nama: p.pangkat_nama || null,
@@ -1284,6 +1286,25 @@ export async function pullCloudDataFromSupabase(): Promise<{ success: boolean; d
       });
     }
 
+    // Merge pulled profiles with local ones to preserve custom fields (like nik, nomor_wa) if they are missing/null in the cloud
+    let localProfiles: any[] = [];
+    try {
+      localProfiles = JSON.parse(localStorage.getItem('simpeg_asn_profiles') || '[]');
+    } catch (_) {}
+
+    const mergedAsns = asns?.map((p: any) => {
+      const localItem = localProfiles.find((la: any) => Number(la.id) === Number(p.id));
+      if (localItem) {
+        return {
+          ...localItem,
+          ...p,
+          nik: p.nik || localItem.nik || null,
+          nomor_wa: p.nomor_wa || localItem.nomor_wa || null
+        };
+      }
+      return p;
+    }) || asns;
+
     logs.push("✅ Pull Berhasil! Seluruh data live terupdate dari cloud.");
     
     return {
@@ -1295,7 +1316,7 @@ export async function pullCloudDataFromSupabase(): Promise<{ success: boolean; d
         fitur: fits,
         dokumen: docs,
         syaratFiturMap: syaratFiturMap,
-        asnProfiles: asns,
+        asnProfiles: mergedAsns,
         usulanLayanan: usulans,
         usulanDokumenFile: docsFiles,
         riwayatAk: riwayats,
