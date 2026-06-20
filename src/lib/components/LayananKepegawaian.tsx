@@ -359,6 +359,23 @@ export default function LayananKepegawaian({
   const [editUsulanStatus, setEditUsulanStatus] = useState<StatusUsulan>('Draft');
   const [editUsulanCatatan, setEditUsulanCatatan] = useState<string>('');
   const [editUsulanSkFile, setEditUsulanSkFile] = useState<string>('');
+  const [editUsulanWaMessage, setEditUsulanWaMessage] = useState<string>('');
+
+  React.useEffect(() => {
+    if (editingUsulan) {
+      const asm = asnProfiles.find(a => a.id === editingUsulan.id_asn);
+      const ftr = masterFitur.find(f => f.id === editingUsulan.id_fitur);
+      if (asm) {
+        const msg = generateLayananWhatsAppMessage(asm, editUsulanStatus, ftr?.slug || '', {
+          golonganLama: asm.golongan_ruang,
+          catatan: editUsulanCatatan
+        });
+        setEditUsulanWaMessage(msg);
+      }
+    } else {
+      setEditUsulanWaMessage('');
+    }
+  }, [editingUsulan, editUsulanStatus, editUsulanCatatan, asnProfiles, masterFitur]);
 
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [usulanToDelete, setUsulanToDelete] = useState<{ id: number; serviceName: string } | null>(null);
@@ -635,19 +652,31 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
     onUpdateUsulanLayanan(updatedList);
     
     const asm = asnProfiles.find(a => a.id === editingUsulan.id_asn);
-    const ftr = masterFitur.find(f => f.id === editingUsulan.id_fitur);
     
-    alert(`✓ Perubahan Usulan #${editingUsulan.id} berhasil disimpan.`);
-    setEditingUsulan(null);
-
     if (asm) {
-      setTimeout(() => {
-        sendUsulanWhatsAppNotification(asm, editUsulanStatus, ftr?.slug || '', {
-          golonganLama: asm.golongan_ruang,
-          catatan: editUsulanCatatan
-        });
-      }, 100);
+      const rawWaNum = asm.nomor_wa || '';
+      let cleanPhone = rawWaNum.replace(/[^0-9+]/g, '');
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = '+62' + cleanPhone.substring(1);
+      } else if (cleanPhone.startsWith('62') && !cleanPhone.startsWith('+62')) {
+        cleanPhone = '+' + cleanPhone;
+      } else if (!cleanPhone.startsWith('+62') && cleanPhone !== '') {
+        cleanPhone = '+62' + cleanPhone;
+      }
+
+      if (cleanPhone) {
+        const encoded = encodeURIComponent(editUsulanWaMessage);
+        const targetUrl = `https://web.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encoded}`;
+        window.open(targetUrl, 'whatsapp_window');
+        alert(`✓ Perubahan Usulan #${editingUsulan.id} berhasil disimpan dan diarahkan ke WhatsApp Web.`);
+      } else {
+        alert(`✓ Perubahan Usulan #${editingUsulan.id} berhasil disimpan.\n⚠️ Catatan: Nomor WhatsApp pegawai belum terdaftar.`);
+      }
+    } else {
+      alert(`✓ Perubahan Usulan #${editingUsulan.id} berhasil disimpan.`);
     }
+
+    setEditingUsulan(null);
   };
 
   // File Preview & Download handlers for Usulan Documents
@@ -2483,16 +2512,42 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                     />
                   </div>
 
-                  {/* WA Notification automated alert info */}
-                  <div className="border border-emerald-100 bg-emerald-50/25 p-3 rounded-xl flex items-start space-x-2 text-left text-emerald-850">
-                    <span className="text-sm">💬</span>
-                    <div className="space-y-0.5">
-                      <p className="font-extrabold text-[10.5px] uppercase tracking-wider text-emerald-900">Notifikasi Otomatis Terintegrasi</p>
-                      <p className="text-[10px] text-emerald-800 leading-normal font-sans">
-                        Format pesan WhatsApp berisi informasi kemajuan status terbaru (<strong className="font-bold">{editUsulanStatus}</strong>) akan otomatis terbuka dalam pratinjau setelah menyetujui dan menyimpan perubahan di bawah.
-                      </p>
-                    </div>
-                  </div>
+                  {/* Pratinjau Kirim WhatsApp */}
+                  {(() => {
+                    const rawWaNum = asm?.nomor_wa || '';
+                    let cleanPhone = rawWaNum.replace(/[^0-9+]/g, '');
+                    if (cleanPhone.startsWith('0')) {
+                      cleanPhone = '+62' + cleanPhone.substring(1);
+                    } else if (cleanPhone.startsWith('62') && !cleanPhone.startsWith('+62')) {
+                      cleanPhone = '+' + cleanPhone;
+                    } else if (!cleanPhone.startsWith('+62') && cleanPhone !== '') {
+                      cleanPhone = '+62' + cleanPhone;
+                    }
+
+                    return (
+                      <div className="border border-teal-200 bg-teal-50/15 p-3.5 rounded-xl space-y-2.5 text-left">
+                        <div className="space-y-0.5">
+                          <label className="text-[11px] font-extrabold text-teal-900 tracking-wider uppercase block">
+                            📱 Pratinjau Kirim WhatsApp
+                          </label>
+                          <p className="text-[10.5px] text-slate-500 font-medium">
+                            Kepada: <strong className="text-slate-800 font-bold">{asm?.nama_lengkap}</strong> ({cleanPhone || 'Nomor WA tidak tersedia'})
+                          </p>
+                        </div>
+                        
+                        <textarea
+                          rows={4}
+                          value={editUsulanWaMessage}
+                          onChange={(e) => setEditUsulanWaMessage(e.target.value)}
+                          placeholder="Tulis pesan kustom WhatsApp di sini..."
+                          className="w-full p-2.5 border border-slate-200 bg-white rounded-lg text-[10.5px] text-slate-700 font-mono leading-relaxed resize-y focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        />
+                        <p className="text-[9px] text-slate-400 leading-tight">
+                          *Pesan di atas akan otomatis terbuka di WhatsApp Web bersamaan saat Anda mengklik tombol "Simpan Perubahan" di bawah.
+                        </p>
+                      </div>
+                    );
+                  })()}
 
                   {editUsulanStatus === 'Selesai' && (
                     <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-150 border border-emerald-200 p-3 rounded-xl bg-emerald-50/15">
