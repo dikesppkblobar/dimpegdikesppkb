@@ -17,7 +17,9 @@ import {
   Plus,
   Trash2,
   Trash,
-  Eye
+  Eye,
+  MessageSquare,
+  Settings
 } from 'lucide-react';
 import { 
   ASNProfile, 
@@ -360,6 +362,93 @@ export default function LayananKepegawaian({
 
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [usulanToDelete, setUsulanToDelete] = useState<{ id: number; serviceName: string } | null>(null);
+
+  // States for the overhauled Step 2 (Ubah Detail & Status Usulan)
+  const [newUsulanStatus, setNewUsulanStatus] = useState<StatusUsulan>('Usulan Dikirim ke BKD');
+  const [newUsulanCatatan, setNewUsulanCatatan] = useState<string>('');
+
+  const sendUsulanWhatsAppNotification = (
+    p: ASNProfile,
+    status: string,
+    serviceSlug: string,
+    details: {
+      golonganLama?: string;
+      golonganBaru?: string;
+      cutiDays?: number | string;
+      jenjangSekarang?: string;
+      jenjangSelanjutnya?: string;
+      customConfigValue?: string;
+      catatan?: string;
+    }
+  ) => {
+    const rawWaNum = p.nomor_wa || '';
+    let cleanPhone = rawWaNum.replace(/[^0-9+]/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '+62' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('62') && !cleanPhone.startsWith('+62')) {
+      cleanPhone = '+' + cleanPhone;
+    } else if (!cleanPhone.startsWith('+62') && cleanPhone !== '') {
+      cleanPhone = '+62' + cleanPhone;
+    }
+
+    let serviceLabel = '';
+    let descriptionText = '';
+
+    const golLama = details.golonganLama || p.golongan_ruang || 'III/a';
+    const golBaru = details.golonganBaru || pangkatBaru || 'IV/a';
+    const jfSekarang = details.jenjangSekarang || p.jenjang_jafung || 'Ahli Pertama';
+    const jfSelanjutnya = details.jenjangSelanjutnya || jafungBaruLevel || 'Ahli Muda';
+    const cutiAmount = details.cutiDays || cutiDays || 3;
+
+    if (serviceSlug === 'kenaikan-pangkat') {
+      serviceLabel = 'Kenaikan Pangkat/Golongan';
+      descriptionText = `Usulan kenaikan pangkat Anda dari Golongan *${golLama}* ke *${golBaru}*`;
+    } else if (serviceSlug === 'cuti') {
+      serviceLabel = 'Permohonan Cuti Pegawai';
+      descriptionText = `Usulan cuti tahunan Anda sebanyak *${cutiAmount} Hari*. Sisa hak cuti tahunan aktif Anda saat ini adalah *${p.sisa_cuti_tahunan || 0} Hari Kerja*`;
+    } else if (serviceSlug === 'usulan-jafung') {
+      serviceLabel = 'Peningkatan Jabatan Fungsional (Jafung)';
+      descriptionText = `Usulan peningkatan jabatan dari jenjang *${jfSekarang}* ke jenjang lanjut yaitu *${jfSelanjutnya}*`;
+    } else if (serviceSlug === 'mutasi') {
+      serviceLabel = 'Mutasi Unit Fasyankes';
+      const targetPk = puskesmasList.find(pl => pl.id === targetMutasiPuskesmasId)?.nama_puskesmas || 'Unit Terpilih';
+      descriptionText = `Usulan mutasi unit kerja Anda dari *${getPuskesmasName(p.id_puskesmas)}* menuju *${targetPk}*`;
+    } else if (serviceSlug === 'pencantuman-gelar') {
+      serviceLabel = 'Pencantuman Gelar Akademik';
+      descriptionText = `Usulan pencantuman gelar akademik baru Anda: *${gelarBaru}*`;
+    } else {
+      const ftr = masterFitur.find(f => f.slug === serviceSlug);
+      serviceLabel = ftr?.nama_fitur || 'Layanan Kepegawaian SIMPEG';
+      descriptionText = `Usulan layanan *${serviceLabel}* Anda`;
+    }
+
+    const catatanText = details.catatan ? `\n*Catatan Admin*: _"${details.catatan}"_` : '';
+
+    const messageContent = 
+`Yth. Bapak/Ibu *${p.nama_lengkap}${p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}*,
+ 
+Kami menginformasikan perkembangan usulan berkas kepegawaian Anda di *Dinas Kesehatan PPKB Kabupaten Lombok Barat*:
+ 
+*Detail Usulan*: ${descriptionText}
+*Status Terbaru*: 📌 *${status.toUpperCase()}*
+${catatanText}
+ 
+_Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
+
+    const encodedMessage = encodeURIComponent(messageContent);
+    const whatsappApiUrl = `https://api.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encodedMessage}`;
+
+    if (!rawWaNum) {
+      window.alert(
+        `⚠️ Nomor WhatsApp untuk pegawai "${p.nama_lengkap}" belum terekam di database pegawai.\n\nNamun Anda tetap dapat memproses transaksi ini.`
+      );
+    } else {
+      window.alert(
+        `✓ Menyiapkan notifikasi WA untuk: ${p.nama_lengkap} (${cleanPhone})\n\nSistem akan membuka WhatsApp Web untuk mengirim notifikasi status "${status}".\n\nTekan OK untuk melanjutkan...`
+      );
+      window.open(whatsappApiUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   React.useEffect(() => {
     if (successToast) {
@@ -759,7 +848,6 @@ export default function LayananKepegawaian({
   // Submit Usulan Transaction (Client -> DB)
   const handleKirimUsulan = () => {
     if (!selectedAsn || !selectedFitur) return;
-    if (!isSubmissionCompleted) return;
 
     const newUsulanId = usulanLayanan.length > 0 ? Math.max(...usulanLayanan.map(u => u.id)) + 1 : 1;
     const newUsulan: UsulanLayanan = {
@@ -768,25 +856,13 @@ export default function LayananKepegawaian({
       id_asn: selectedAsn.id,
       id_puskesmas_pengusul: selectedAsn.id_puskesmas,
       tanggal_pengusulan: new Date().toISOString(),
-      status: 'Menunggu Validasi',
-      catatan_perbaikan: null,
+      status: newUsulanStatus,
+      catatan_perbaikan: newUsulanCatatan || null,
       file_sk_final: null
     };
 
-    // Store uploaded files reference inside database
-    const startFileId = usulanDokumenFile.length > 0 ? Math.max(...usulanDokumenFile.map(f => f.id)) + 1 : 1;
-    const newFiles: any[] = Object.entries(currentDraftAttachments).map(([docIdStr, refRaw], idx) => {
-      const ref = refRaw as any;
-      return {
-        id: startFileId + idx,
-        id_usulan: newUsulanId,
-        id_dokumen: parseInt(docIdStr),
-        file_name: ref.file_name,
-        file_path: ref.data_url || `/uploads/${newUsulanId}_${docIdStr}.pdf`,
-        uploaded_at: new Date().toISOString(),
-        ocr_status: ref.ocr_status
-      };
-    });
+    // Since files are no longer required to be uploaded during usulan creation, newFiles list is empty
+    const newFiles: any[] = [];
 
     // Perform specific inline config parameters for the sync calculations later
     // Save additional transactional parameters to local storage mock trackers for the specific usulan
@@ -821,6 +897,8 @@ export default function LayananKepegawaian({
     setSelectedAsnId(null);
     setSearchQuery('');
     setCustomConfigValue('');
+    setNewUsulanCatatan('');
+    setNewUsulanStatus('Usulan Dikirim ke BKD');
     setActiveSubTab('berjalan');
   };
 
@@ -1147,18 +1225,18 @@ export default function LayananKepegawaian({
               )}
             </div>
 
-            {/* Document Checklist & OCR Smart File Upload Simulation (Right, 7 columns) */}
-            <div className="lg:col-span-7 space-y-4">
+            {/* Ubah Detail & Status Usulan Section (Right, 7 columns) */}
+            <div className="lg:col-span-7 space-y-4 text-left">
               <h3 className="font-semibold text-slate-800 text-sm flex items-center space-x-1">
                 <span className="h-4 w-1 bg-teal-600 rounded-full mr-1 inline-block"></span>
-                2. Berkas Persyaratan Terintegrasi OCR
+                2. Ubah Detail & Status Usulan
               </h3>
 
               {!selectedAsn ? (
                 <div className="py-16 text-center border border-dashed border-slate-200 rounded-xl flex flex-col justify-center items-center space-y-2 bg-slate-50">
                   <FileText size={40} className="text-slate-300" />
                   <p className="text-xs font-semibold text-slate-500">Silakan pilih Pegawai terlebih dahulu.</p>
-                  <p className="text-[11px] text-slate-400">Sistem akan memuat katalog data berkas yang wajib diunggah.</p>
+                  <p className="text-[11px] text-slate-400">Sistem akan memuat ringkasan kelayakan dan status usulan.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1199,7 +1277,7 @@ export default function LayananKepegawaian({
                           <select
                             value={skpPredikat}
                             onChange={(e) => setSkpPredikat(e.target.value as PredikatSKP)}
-                            className="w-full bg-white text-xs border border-teal-200 p-1 rounded-md"
+                            className="w-full bg-white text-xs border border-teal-200 p-1 rounded-md cursor-pointer"
                           >
                             <option value="Sangat Baik">Sangat Baik (X 150%)</option>
                             <option value="Baik">Baik (X 100%)</option>
@@ -1212,7 +1290,7 @@ export default function LayananKepegawaian({
                           <button
                             type="button"
                             onClick={handleAddSkpCalcRow}
-                            className="w-full py-1.5 px-3 bg-teal-800 text-white rounded-md text-xs font-semibold hover:bg-teal-900 transition flex items-center justify-center space-x-1"
+                            className="w-full py-1.5 px-3 bg-teal-800 text-white rounded-md text-xs font-semibold hover:bg-teal-900 transition flex items-center justify-center space-x-1 cursor-pointer"
                           >
                             <Plus size={12} />
                             <span>Simpan AK</span>
@@ -1246,7 +1324,7 @@ export default function LayananKepegawaian({
                                 <span>Tahun {r.tahun_skp} ({r.predikat_skp})</span>
                                 <div className="flex items-center space-x-2">
                                   <span className="font-mono font-semibold">+{r.ak_diperoleh.toFixed(3)}</span>
-                                  <button onClick={() => handleRemoveSkpRow(r.id)} className="text-rose-600 hover:text-rose-800">
+                                  <button onClick={() => handleRemoveSkpRow(r.id)} className="text-rose-600 hover:text-rose-800 cursor-pointer">
                                     <Trash size={12} />
                                   </button>
                                 </div>
@@ -1258,68 +1336,128 @@ export default function LayananKepegawaian({
                     </div>
                   )}
 
-                  {/* Checklist and trigger block */}
-                  <div className="space-y-2 border border-slate-105 p-4 rounded-xl">
-                    <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Status Unggah Berkas Wajib (Wajib Lengkap 100%)</p>
-                    
-                    <div className="space-y-2.5">
-                      {requiredDocs.map(doc => {
-                        const fileAttachment = currentDraftAttachments[doc.id];
-                        const isUploaded = fileAttachment?.ocr_status === 'SUCCESS';
+                  {/* Overhauled Detail & Status Selector Card */}
+                  <div className="space-y-4 border border-slate-200 p-5 rounded-xl bg-white shadow-2xs">
+                    <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wide flex items-center space-x-1.5">
+                      <Settings size={14} className="text-teal-600" />
+                      <span>Konfigurasi Status Usulan & Saluran Komunikasi</span>
+                    </p>
 
-                        return (
-                          <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg bg-white border border-slate-200 gap-3 shadow-2xs hover:shadow-xs transition duration-155">
-                            <div className="space-y-0.5">
-                              <p className="text-xs font-semibold text-slate-800">{doc.nama_dokumen}</p>
-                              {isUploaded ? (
-                                <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 w-fit">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-                                  ✓ Berkas Terunggah: {fileAttachment.file_name}
-                                </p>
-                              ) : (
-                                <p className="text-[10px] text-slate-500">Belum diunggah • Wajib dilengkapi</p>
-                              )}
-                            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Status select without Draft and Menunggu Validasi, and with Usulan Dikirim ke BKD */}
+                      <div className="space-y-1.5 text-left">
+                        <label className="text-xs font-bold text-slate-700 block text-left">Status Dokumen Usulan</label>
+                        <select
+                          value={newUsulanStatus}
+                          onChange={(e) => setNewUsulanStatus(e.target.value as StatusUsulan)}
+                          className="w-full p-2 border border-slate-200 rounded-lg text-xs bg-white text-slate-800 font-semibold focus:ring-1 focus:ring-teal-500 cursor-pointer"
+                        >
+                          <option value="Usulan Dikirim ke BKD">Usulan Dikirim ke BKD</option>
+                          <option value="Perbaikan Berkas">Perbaikan Berkas</option>
+                          <option value="Diproses">Diproses</option>
+                          <option value="Selesai">Selesai</option>
+                        </select>
+                      </div>
 
-                            <div className="flex items-center gap-2">
-                              {/* Hidden React Native / HTML uploader */}
-                              <input 
-                                type="file" 
-                                id={`real-file-input-${doc.id}`}
-                                accept=".pdf,image/jpeg,image/png,image/jpg"
-                                className="hidden"
-                                onChange={(e) => handleRealFileUpload(doc.id, e)}
-                              />
+                      {/* Phone Display */}
+                      <div className="space-y-1.5 text-left">
+                        <label className="text-xs font-bold text-slate-700 block text-left">Nomor WA Pegawai</label>
+                        <div className="p-2 border border-slate-100 rounded-lg bg-slate-50 font-mono text-slate-600 truncate text-xs">
+                          {selectedAsn.nomor_wa || '(Belum Terekam)'}
+                        </div>
+                      </div>
+                    </div>
 
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const btn = document.getElementById(`real-file-input-${doc.id}`);
-                                  if (btn) btn.click();
-                                }}
-                                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center space-x-1.5 transition duration-150 cursor-pointer ${isUploaded ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'}`}
-                              >
-                                <Upload size={12} />
-                                <span>{isUploaded ? 'Ganti File' : 'Unggah PDF/JPG'}</span>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-xs font-bold text-slate-700 block text-left">Catatan Keterangan Tambahan / Alasan Perbaikan</label>
+                      <textarea
+                        rows={2}
+                        value={newUsulanCatatan}
+                        onChange={(e) => setNewUsulanCatatan(e.target.value)}
+                        placeholder="Masukkan deskripsi detail, berkas pendukung, atau catatan penting lainnya..."
+                        className="w-full p-2.5 border border-slate-200 rounded-lg text-slate-800 focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Dual-Channel WhatsApp Message Sandbox preview */}
+                    <div className="bg-emerald-50/30 border border-emerald-100/50 rounded-xl p-4 space-y-2 text-left">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center space-x-1">
+                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse mr-1"></span>
+                          <span>Preview Pesan WhatsApp (Dual-Channel)</span>
+                        </span>
+                        <div className="text-[10px] text-emerald-600 font-bold bg-emerald-100 px-2 py-0.5 rounded">
+                          Live Auto-Generated Sync
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-emerald-100 p-3 rounded-lg text-xs text-slate-700 font-sans space-y-1 max-h-32 overflow-y-auto leading-relaxed shadow-3xs border-l-4 border-l-emerald-500">
+                        <p>Yth. Bapak/Ibu <strong>{selectedAsn.nama_lengkap}{selectedAsn.gelar_belakang ? `, ${selectedAsn.gelar_belakang}` : ''}</strong>,</p>
+                        <p className="text-slate-600 my-1">
+                          {selectedFitur?.slug === 'kenaikan-pangkat' && (
+                            <span>Usulan kenaikan pangkat Anda dari Golongan <strong>{selectedAsn.golongan_ruang}</strong> ke <strong>{pangkatBaru || 'IV/a'}</strong></span>
+                          )}
+                          {selectedFitur?.slug === 'cuti' && (
+                            <span>Usulan cuti tahunan Anda sebanyak <strong>{cutiDays || 3} Hari</strong>. Sisa hak cuti tahunan aktif Anda saat ini adalah <strong>{selectedAsn.sisa_cuti_tahunan} Hari Kerja</strong></span>
+                          )}
+                          {selectedFitur?.slug === 'usulan-jafung' && (
+                            <span>Usulan peningkatan jabatan dari jenjang <strong>{selectedAsn.jenjang_jafung || 'Ahli Pertama'}</strong> ke jenjang lanjut yaitu <strong>{jafungBaruLevel || 'Ahli Muda'}</strong></span>
+                          )}
+                          {selectedFitur?.slug === 'mutasi' && (
+                            <span>Usulan mutasi unit kerja Anda dari <strong>{getPuskesmasName(selectedAsn.id_puskesmas)}</strong> ke <strong>{puskesmasList.find(pl => pl.id === targetMutasiPuskesmasId)?.nama_puskesmas || 'Unit Terpilih'}</strong></span>
+                          )}
+                          {selectedFitur?.slug === 'pencantuman-gelar' && (
+                            <span>Usulan pencantuman gelar akademik baru Anda: <strong>{gelarBaru}</strong></span>
+                          )}
+                          {!['kenaikan-pangkat', 'cuti', 'usulan-jafung', 'mutasi', 'pencantuman-gelar'].includes(selectedFitur?.slug || '') && (
+                            <span>Usulan layanan <strong>{selectedFitur?.nama_fitur}</strong> Anda</span>
+                          )}
+                        </p>
+                        <p className="font-semibold text-emerald-700 my-1">Status Terbaru: 📌 {newUsulanStatus.toUpperCase()}</p>
+                        {newUsulanCatatan && <p className="text-slate-500 italic mt-1 leading-normal">*Catatan Admin*: "{newUsulanCatatan}"</p>}
+                      </div>
+
+                      <div className="pt-2 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                        <span className="text-[10px] text-slate-400">Pesan WA diformulasikan sesuai data profil & status usulan.</span>
+                        <button
+                          type="button"
+                          onClick={() => sendUsulanWhatsAppNotification(selectedAsn, newUsulanStatus, selectedFitur?.slug || '', {
+                            golonganLama: selectedAsn.golongan_ruang,
+                            golonganBaru: pangkatBaru,
+                            cutiDays: cutiDays,
+                            jenjangSekarang: selectedAsn.jenjang_jafung,
+                            jenjangSelanjutnya: jafungBaruLevel,
+                            catatan: newUsulanCatatan
+                          })}
+                          className="px-3 py-1.5 text-xs rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center space-x-1.5 transition cursor-pointer self-start md:self-auto shadow-2xs"
+                        >
+                          <MessageSquare size={12} className="text-white" />
+                          <span>Kirim Notifikasi WA</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Block Action Buttons */}
-                    <div className="mt-8 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center space-x-1 bg-amber-50 border border-amber-200 text-amber-800 p-2 rounded-lg text-[11px]">
-                        <AlertTriangle size={15} />
-                        <span>Kirim Terkunci jika target berkas belum lengkap.</span>
+                    <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center space-x-1.5 bg-sky-50 border border-sky-200 text-sky-800 p-2.5 rounded-lg text-[11px] text-left leading-relaxed max-w-sm">
+                        <Check size={16} className="text-sky-600 shrink-0" />
+                        <span>Kirim usulan ini untuk didaftarkan secara permanent ke sistem kepegawaian.</span>
                       </div>
 
                       <button
                         type="button"
-                        onClick={handleKirimUsulan}
-                        disabled={!isSubmissionCompleted}
-                        className={`px-5 py-2.5 rounded-xl font-semibold text-xs transition duration-200 ${isSubmissionCompleted ? 'bg-teal-800 text-white hover:bg-teal-950 cursor-pointer' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                        onClick={() => {
+                          handleKirimUsulan();
+                          sendUsulanWhatsAppNotification(selectedAsn, newUsulanStatus, selectedFitur?.slug || '', {
+                            golonganLama: selectedAsn.golongan_ruang,
+                            golonganBaru: pangkatBaru,
+                            cutiDays: cutiDays,
+                            jenjangSekarang: selectedAsn.jenjang_jafung,
+                            jenjangSelanjutnya: jafungBaruLevel,
+                            catatan: newUsulanCatatan
+                          });
+                        }}
+                        className="px-6 py-3 rounded-xl font-bold text-xs bg-teal-800 text-white hover:bg-teal-950 shadow-md transition duration-200 cursor-pointer"
                       >
                         Kirim Usulan Layanan
                       </button>
@@ -1430,7 +1568,7 @@ export default function LayananKepegawaian({
                 )}
 
                 {/* Status Filter */}
-                <div className="flex flex-col">
+                <div className="flex flex-col text-left">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status Berkas</span>
                   <select
                     className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-white text-slate-800 font-medium focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600/20 cursor-pointer"
@@ -1438,8 +1576,7 @@ export default function LayananKepegawaian({
                     onChange={(e) => setTrackingStatus(e.target.value)}
                   >
                     <option value="Semua">Semua Status</option>
-                    <option value="Draft">Draft</option>
-                    <option value="Menunggu Validasi">Menunggu Validasi</option>
+                    <option value="Usulan Dikirim ke BKD">Usulan Dikirim ke BKD</option>
                     <option value="Perbaikan Berkas">Perbaikan Berkas</option>
                     <option value="Diproses">Diproses</option>
                     <option value="Selesai">Selesai</option>
@@ -1493,6 +1630,7 @@ export default function LayananKepegawaian({
                           switch (st) {
                             case 'Draft': return 'bg-slate-100 text-slate-600';
                             case 'Menunggu Validasi': return 'bg-amber-100 text-amber-800';
+                            case 'Usulan Dikirim ke BKD': return 'bg-indigo-100 text-indigo-800 font-bold border border-indigo-200';
                             case 'Perbaikan Berkas': return 'bg-rose-100 text-rose-800 animate-pulse';
                             case 'Diproses': return 'bg-blue-100 text-blue-800';
                             case 'Selesai': return 'bg-emerald-100 text-emerald-800';
@@ -2125,23 +2263,22 @@ export default function LayananKepegawaian({
                     <p><strong>Unit Kerja:</strong> {unitName}</p>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-600 block">Status Dokumen Usulan</label>
+                  <div className="space-y-1.5 text-left">
+                    <label className="text-xs font-bold text-slate-600 block text-left">Status Dokumen Usulan</label>
                     <select
                       value={editUsulanStatus}
                       onChange={(e) => setEditUsulanStatus(e.target.value as StatusUsulan)}
-                      className="w-full p-2 border border-slate-200 rounded-lg text-xs bg-white text-slate-800 font-semibold focus:ring-1 focus:ring-teal-500"
+                      className="w-full p-2 border border-slate-200 rounded-lg text-xs bg-white text-slate-800 font-semibold focus:ring-1 focus:ring-teal-500 cursor-pointer"
                     >
-                      <option value="Draft">Draft</option>
-                      <option value="Menunggu Validasi">Menunggu Validasi</option>
+                      <option value="Usulan Dikirim ke BKD">Usulan Dikirim ke BKD</option>
                       <option value="Perbaikan Berkas">Perbaikan Berkas</option>
                       <option value="Diproses">Diproses</option>
                       <option value="Selesai">Selesai</option>
                     </select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-600 block">Catatan Pendukung / Perbaikan (Opsional)</label>
+                  <div className="space-y-1.5 text-left">
+                    <label className="text-xs font-bold text-slate-600 block text-left">Catatan Pendukung / Perbaikan (Opsional)</label>
                     <textarea
                       rows={3}
                       value={editUsulanCatatan}
@@ -2149,6 +2286,30 @@ export default function LayananKepegawaian({
                       placeholder="Masukkan catatan perbaikan berkas atau alasan penolakan sementara..."
                       className="w-full p-2.5 border border-slate-200 rounded-lg text-slate-800 focus:ring-1 focus:ring-teal-500"
                     />
+                  </div>
+
+                  {/* WA Notification trigger within Edit modal */}
+                  <div className="border border-emerald-100 bg-emerald-50/20 p-3 rounded-xl space-y-2 text-left">
+                    <div className="flex justify-between items-center text-[10px]">
+                      <span className="font-bold text-emerald-800 uppercase tracking-wide">WA Quick Channel Notify</span>
+                      <span className="font-mono text-emerald-600">{asm?.nomor_wa || 'No Phone'}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (asm) {
+                          sendUsulanWhatsAppNotification(asm, editUsulanStatus, ftr?.slug || '', {
+                            golonganLama: asm.golongan_ruang,
+                            // Grab local state payload values if any
+                            catatan: editUsulanCatatan
+                          });
+                        }
+                      }}
+                      className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center space-x-1 hover:shadow-xs transition font-bold text-[11px] cursor-pointer"
+                    >
+                      <MessageSquare size={12} className="text-white" />
+                      <span>Kirim WA Notifikasi Kemajuan ({editUsulanStatus})</span>
+                    </button>
                   </div>
 
                   {editUsulanStatus === 'Selesai' && (
