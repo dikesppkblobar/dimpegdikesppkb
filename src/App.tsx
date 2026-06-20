@@ -230,9 +230,14 @@ export default function App() {
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState<boolean>(false);
 
   // PWA & Notification API State & Logic
-  const [notifPermission, setNotifPermission] = useState<string>(
-    typeof Notification !== 'undefined' ? Notification.permission : 'default'
-  );
+  const [notifPermission, setNotifPermission] = useState<string>(() => {
+    try {
+      if (typeof Notification !== 'undefined') {
+        return Notification.permission;
+      }
+    } catch (_) {}
+    return 'default';
+  });
 
   // 1. Register Service Worker for PWA
   useEffect(() => {
@@ -249,65 +254,83 @@ export default function App() {
 
   // 2. Trigger native hardware/OS level notifications securely
   const triggerNativeNotification = (title: string, body: string) => {
-    if (!('Notification' in window)) {
-      console.warn("Device tidak mendukung Notification API.");
-      return;
-    }
+    try {
+      if (!('Notification' in window)) {
+        console.warn("Device tidak mendukung Notification API.");
+        return;
+      }
 
-    const showNotification = () => {
-      // Android / iOS standalone PWA require notifications through the registered service worker
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(reg => {
-          if (reg.active) {
-            reg.active.postMessage({
-              type: 'SHOW_NATIVE_NOTIFICATION',
-              payload: {
-                title,
-                body,
-                icon: '/icon.svg',
-                badge: '/icon.svg'
+      const showNotification = () => {
+        try {
+          // Android / iOS standalone PWA require notifications through the registered service worker
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(reg => {
+              if (reg.active) {
+                reg.active.postMessage({
+                  type: 'SHOW_NATIVE_NOTIFICATION',
+                  payload: {
+                    title,
+                    body,
+                    icon: '/icon.svg',
+                    badge: '/icon.svg'
+                  }
+                });
+              } else {
+                try {
+                  new Notification(title, { body, icon: '/icon.svg' });
+                } catch (_) {}
               }
+            }).catch(() => {
+              try {
+                new Notification(title, { body, icon: '/icon.svg' });
+              } catch (_) {}
             });
           } else {
-            new Notification(title, { body, icon: '/icon.svg' });
+            try {
+              new Notification(title, { body, icon: '/icon.svg' });
+            } catch (_) {}
           }
-        }).catch(() => {
-          new Notification(title, { body, icon: '/icon.svg' });
-        });
-      } else {
-        new Notification(title, { body, icon: '/icon.svg' });
-      }
-    };
+        } catch (_) {}
+      };
 
-    if (Notification.permission === 'granted') {
-      showNotification();
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then(permission => {
-        setNotifPermission(permission);
-        if (permission === 'granted') {
-          showNotification();
-        }
-      });
+      if (Notification.permission === 'granted') {
+        showNotification();
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+          setNotifPermission(permission);
+          if (permission === 'granted') {
+            showNotification();
+          }
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.warn("Notification API blocked or failed in sandbox iframe environment.", e);
     }
   };
 
   // 3. User permission requester
   const requestNotificationPermission = () => {
-    if (!('Notification' in window)) {
-      alert("Browser atau perangkat Anda tidak mendukung notifikasi sistem.");
-      return;
-    }
-    Notification.requestPermission().then(permission => {
-      setNotifPermission(permission);
-      if (permission === 'granted') {
-        triggerNativeNotification(
-          "🔔 Notifikasi Sistem Aktif", 
-          "Terima kasih! Anda sekarang akan menerima peringatan dinas dan usulan layanan SIMPEG secara real-time di perangkat ini."
-        );
-      } else if (permission === 'denied') {
-        alert("Notifikasi telah diblokir. Harap aktifkan izin notifikasi pada pengaturan browser Anda.");
+    try {
+      if (!('Notification' in window)) {
+        alert("Browser atau perangkat Anda tidak mendukung notifikasi sistem.");
+        return;
       }
-    });
+      Notification.requestPermission().then(permission => {
+        setNotifPermission(permission);
+        if (permission === 'granted') {
+          triggerNativeNotification(
+            "🔔 Notifikasi Sistem Aktif", 
+            "Terima kasih! Anda sekarang akan menerima peringatan dinas dan usulan layanan SIMPEG secara real-time di perangkat ini."
+          );
+        } else if (permission === 'denied') {
+          alert("Notifikasi telah diblokir. Harap aktifkan izin notifikasi pada pengaturan browser Anda.");
+        }
+      }).catch(() => {
+        alert("Izin notifikasi diblokir oleh kebijakan keamanan browser Anda.");
+      });
+    } catch (e) {
+      alert("Izin notifikasi diblokir oleh kebijakan keamanan browser Anda.");
+    }
   };
 
   // 4. Watch for hot new incoming notifications securely
