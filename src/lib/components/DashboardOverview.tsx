@@ -2002,7 +2002,7 @@ Informasi ini dikirim langsung dari Dashboard Sistem Monitoring SIMPEG Terintegr
                 onClick={() => {
                   const encoded = encodeURIComponent(waDraftMessage);
                   const cleanPhoneNum = waRecipientPhone.replace('+', '');
-                  window.open(`https://api.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`, '_blank', 'noopener,noreferrer');
+                  window.open(`https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`, 'whatsapp_window');
                   setWaModalOpen(false);
                 }}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-sm flex items-center space-x-1.5"
