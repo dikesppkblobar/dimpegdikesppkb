@@ -148,7 +148,7 @@ export default function App() {
           setSupabaseStatus('Gagal mengambil data dari Supabase. Menggunakan data lokal...');
         }
       } catch (err: any) {
-        console.error("Gagal memuat database Supabase pada startup:", err);
+        console.warn("Gagal memuat database Supabase pada startup (menggunakan offline mode):", err);
         setSupabaseStatus('Terjadi kesalahan memuat database dari Supabase. Menggunakan data lokal...');
       } finally {
         setIsLoadingSupabase(false);
@@ -173,7 +173,7 @@ export default function App() {
     // 3. Directly push ONLY updated records to Supabase in the background (reading synchronously from the updated localStorage)
     const keysToSync = Object.keys(changedState);
     pushClientDataToSupabase(null, keysToSync).catch(e => {
-      console.error("Kesalahan sinkronisasi data ke Supabase:", e);
+      console.warn("Kesalahan sinkronisasi data ke Supabase (menggunakan offline mode):", e);
     });
   };
 
