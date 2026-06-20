@@ -35,6 +35,7 @@ export default function DashboardKP4({
     currentRole === 'admin_dinkes' ? 'ALL' : selectedPuskesmasId
   );
   const [statusWarnFilter, setStatusWarnFilter] = useState<'ALL' | 'WARNING_ONLY' | 'CLEAN_ONLY'>('ALL');
+  const [selectedWarningCode, setSelectedWarningCode] = useState<string | null>(null);
 
   // get Puskesmas Name Helper
   const getPuskesmasName = (id: number) => {
@@ -193,19 +194,63 @@ export default function DashboardKP4({
     };
   };
 
-  // Filter & Audit Profiles
-  const rawAsnList = asnProfiles.filter(p => {
-    if (p.status_pegawai_detail === 'Non_ASN') return false; // Only ASN
-    
-    // Multi-tenant isolation: Units only see their own, Dinkes sees all
+  // 1. Get baseline list of ASNs matching the selected Dinkes / Unit database scope (ignores searchTerm)
+  const databaseAsnList = asnProfiles.filter(p => {
+    if (p.status_pegawai_detail === 'Non_ASN') return false; // Only ASN has families KP4
+
+    // Limit to tenant unit if role is admin_puskesmas
     if (currentRole !== 'admin_dinkes' && p.id_puskesmas !== selectedPuskesmasId) {
       return false;
     }
-    
-    if (unitFilter !== 'ALL' && p.id_puskesmas !== unitFilter) {
+
+    // Filter by selected Unit work if role is admin_dinkes
+    if (currentRole === 'admin_dinkes' && unitFilter !== 'ALL' && p.id_puskesmas !== unitFilter) {
       return false;
     }
 
+    return true;
+  });
+
+  // 2. Perform audits on complete database scope
+  const auditedDatabaseList = databaseAsnList.map(asn => {
+    const audit = auditASNProfile(asn);
+    return {
+      asn,
+      ...audit
+    };
+  });
+
+  // 3. Compute database-scoped global statistics
+  const totalASN = databaseAsnList.length;
+  const auditedDatabaseCleanList = auditedDatabaseList.filter(item => item.isClean);
+  const totalClean = auditedDatabaseCleanList.length;
+  const complianceRate = totalASN > 0 ? Math.round((totalClean / totalASN) * 100) : 100;
+
+  const totalWarnings = auditedDatabaseList.reduce((acc, item) => acc + item.issues.length, 0);
+  const totalErrors = auditedDatabaseList.reduce((acc, item) => acc + item.issues.filter(i => i.type === 'ERROR').length, 0);
+
+  const estimatedAllowanceSum = auditedDatabaseList.reduce((acc, item) => acc + item.estimatedAllowance, 0);
+  const totalPotentialFineSum = auditedDatabaseList.reduce((acc, item) => acc + item.totalPotentialFine, 0);
+
+  // Group Issues by categories for audit monitoring panel over the database scope
+  const groupCount = {
+    DOUBLE_ASN_CLAIM: 0,
+    OUTDATED_KP4: 0,
+    EXCESSIVE_KIDS_LIMIT: 0,
+    CHILD_OVERAGE_25: 0,
+    CHILD_MISSING_SKKS: 0,
+  };
+
+  auditedDatabaseList.forEach(item => {
+    item.issues.forEach(issue => {
+      if (issue.code in groupCount) {
+        groupCount[issue.code as keyof typeof groupCount]++;
+      }
+    });
+  });
+
+  // 4. Calculate searchable & table-filtered lists
+  const rawAsnList = databaseAsnList.filter(p => {
     const matchesSearch = p.nama_lengkap.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           p.nip.includes(searchTerm) || 
                           (p.nik || '').includes(searchTerm);
@@ -222,58 +267,34 @@ export default function DashboardKP4({
   });
 
   const finalFilteredList = auditedList.filter(item => {
-    if (statusWarnFilter === 'WARNING_ONLY') return !item.isClean;
-    if (statusWarnFilter === 'CLEAN_ONLY') return item.isClean;
+    // A. Audit status filter (WARNING_ONLY, CLEAN_ONLY)
+    if (statusWarnFilter === 'WARNING_ONLY' && item.isClean) return false;
+    if (statusWarnFilter === 'CLEAN_ONLY' && !item.isClean) return false;
+
+    // B. Interactive BPK critical warning tag filter
+    if (selectedWarningCode) {
+      const hasWarningOfSelectedType = item.issues.some(issue => issue.code === selectedWarningCode);
+      if (!hasWarningOfSelectedType) return false;
+    }
+
     return true;
-  });
-
-  // Global calculations
-  const totalASN = asnProfiles.filter(p => {
-    if (p.status_pegawai_detail === 'Non_ASN') return false;
-    if (currentRole !== 'admin_dinkes' && p.id_puskesmas !== selectedPuskesmasId) return false;
-    return true;
-  }).length;
-
-  const totalWarnings = auditedList.reduce((acc, item) => acc + item.issues.length, 0);
-  const totalErrors = auditedList.reduce((acc, item) => acc + item.issues.filter(i => i.type === 'ERROR').length, 0);
-  const totalClean = auditedList.filter(item => item.isClean).length;
-  const complianceRate = totalASN > 0 ? Math.round((totalClean / totalASN) * 100) : 100;
-  
-  const estimatedAllowanceSum = auditedList.reduce((acc, item) => acc + item.estimatedAllowance, 0);
-  const totalPotentialFineSum = auditedList.reduce((acc, item) => acc + item.totalPotentialFine, 0);
-
-  // Group Issues by categories for audit monitoring panel
-  const groupCount = {
-    DOUBLE_ASN_CLAIM: 0,
-    OUTDATED_KP4: 0,
-    EXCESSIVE_KIDS_LIMIT: 0,
-    CHILD_OVERAGE_25: 0,
-    CHILD_MISSING_SKKS: 0,
-  };
-
-  auditedList.forEach(item => {
-    item.issues.forEach(issue => {
-      if (issue.code in groupCount) {
-        groupCount[issue.code as keyof typeof groupCount]++;
-      }
-    });
   });
 
   return (
     <div className="space-y-6 text-slate-800 animate-in fade-in duration-200">
       
       {/* Title Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-700/40 pb-4">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div className="text-left py-1">
           <div className="flex items-center space-x-2">
-            <h2 className="text-xl font-display font-bold text-white">
+            <h2 className="text-xl font-display font-bold text-slate-800">
               Sistem Analisa KP4 &amp; Model DK ASN
             </h2>
-            <span className="bg-rose-500/10 text-rose-400 font-mono text-[10px] px-2 py-0.5 rounded border border-rose-500/20 font-bold block">
+            <span className="bg-rose-50 text-rose-700 font-mono text-[10px] px-2 py-0.5 rounded border border-rose-200 font-bold block">
               BPK Anti-Finding Engine v2.6
             </span>
           </div>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500 mt-1">
             {currentRole === 'admin_dinkes' 
               ? 'Panel Pengawasan Dinas Kesehatan Lombok Barat - Integrasi Data KP4 Terbuka dan Simulasi Validasi BPK.' 
               : `Pengawasan Internal ${getPuskesmasName(selectedPuskesmasId)} - Validasi Data Tunjangan Keluarga.`}
@@ -283,9 +304,9 @@ export default function DashboardKP4({
         {/* Export report button mockup */}
         <button
           onClick={() => alert("✓ Mengunduh Lembar Analisa Kepatuhan KP4 Lombok Barat Format XLSX untuk Auditor BPK...")}
-          className="px-4 py-2 bg-[#1b1c21] hover:bg-slate-800 text-slate-200 border border-white/5 font-semibold text-xs rounded-xl flex items-center space-x-2 transition p-3 cursor-pointer shadow-sm"
+          className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl flex items-center space-x-2 transition cursor-pointer shadow-sm min-h-[38px]"
         >
-          <FileDown size={14} className="text-rose-400" />
+          <FileDown size={14} className="text-rose-600 animate-pulse" />
           <span>Sertifikat Audit KP4 (XLSX)</span>
         </button>
       </div>
@@ -293,127 +314,185 @@ export default function DashboardKP4({
       {/* Bento Grid Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Compliance */}
-        <div className="bg-[#16161a] border border-white/5 rounded-2xl p-4 md:p-5 flex items-center justify-between shadow-xs">
-          <div className="space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase font-extrabold tracking-wider block">Kepatuhan Berkas</span>
-            <span className="text-2xl font-mono font-extrabold text-white block">{complianceRate}%</span>
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 flex items-center justify-between shadow-xs">
+          <div className="space-y-1 text-left">
+            <span className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider block">Kepatuhan Berkas</span>
+            <span className="text-2xl font-mono font-extrabold text-slate-900 block">{complianceRate}%</span>
             <span className="text-[10.5px] text-slate-500 font-medium block">
               {totalClean} dr {totalASN} ASN Bersih Audit
             </span>
           </div>
-          <div className={`h-11 w-11 rounded-full flex items-center justify-center ${complianceRate > 90 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+          <div className={`h-11 w-11 rounded-full flex items-center justify-center ${complianceRate > 90 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
             <CheckCircle2 size={20} />
           </div>
         </div>
 
         {/* Card 2: BPK Warnings */}
-        <div className="bg-[#16161a] border border-white/5 rounded-2xl p-4 md:p-5 flex items-center justify-between shadow-xs">
-          <div className="space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase font-extrabold tracking-wider block">Resiko Temuan</span>
-            <span className="text-2xl font-mono font-extrabold text-rose-500 block">
-              {totalWarnings} <span className="text-xs font-normal text-slate-400">Temuan</span>
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 flex items-center justify-between shadow-xs">
+          <div className="space-y-1 text-left">
+            <span className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider block">Resiko Temuan</span>
+            <span className="text-2xl font-mono font-extrabold text-rose-600 block">
+              {totalWarnings} <span className="text-xs font-normal text-slate-500">Temuan</span>
             </span>
             <span className="text-[10.5px] text-slate-500 font-medium block">
-              <span className="text-red-400 font-bold">{totalErrors} Mayor</span>, {totalWarnings - totalErrors} Minor (Administratif)
+              <span className="text-rose-600 font-bold">{totalErrors} Mayor</span>, <span className="text-amber-600 font-bold">{totalWarnings - totalErrors} Minor (Administratif)</span>
             </span>
           </div>
-          <div className="h-11 w-11 rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center">
+          <div className="h-11 w-11 rounded-full bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center">
             <ShieldAlert size={20} />
           </div>
         </div>
 
         {/* Card 3: Budget claimed */}
-        <div className="bg-[#16161a] border border-white/5 rounded-2xl p-4 md:p-5 flex items-center justify-between shadow-xs">
-          <div className="space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase font-extrabold tracking-wider block">Estimasi Beban Tunjangan</span>
-            <span className="text-xl font-mono font-extrabold text-teal-400 block">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 flex items-center justify-between shadow-xs">
+          <div className="space-y-1 text-left">
+            <span className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider block">Estimasi Beban Tunjangan</span>
+            <span className="text-xl font-mono font-extrabold text-teal-700 block">
               Rp {estimatedAllowanceSum.toLocaleString('id-ID')}
             </span>
             <span className="text-[10.5px] text-slate-500 font-medium block">
               Tunjangan Suami/Istri &amp; Anak / Bulan
             </span>
           </div>
-          <div className="h-11 w-11 rounded-full bg-teal-500/10 text-teal-400 flex items-center justify-center">
+          <div className="h-11 w-11 rounded-full bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center">
             <DollarSign size={20} />
           </div>
         </div>
 
         {/* Card 4: Potential recovery audit */}
-        <div className="bg-[#16161a] border border-white/5 rounded-2xl p-4 md:p-5 flex items-center justify-between shadow-xs">
-          <div className="space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase font-extrabold tracking-wider block">Potensi TGR (Setor Balik)</span>
-            <span className="text-xl font-mono font-extrabold text-amber-500 block">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 flex items-center justify-between shadow-xs">
+          <div className="space-y-1 text-left">
+            <span className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider block">Potensi TGR (Setor Balik)</span>
+            <span className="text-xl font-mono font-extrabold text-amber-700 block">
               Rp {totalPotentialFineSum.toLocaleString('id-ID')}
             </span>
             <span className="text-[10.5px] text-slate-500 font-medium block">
               Risiko Pengembalian Kas per Tahun (12 bln)
             </span>
           </div>
-          <div className="h-11 w-11 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
+          <div className="h-11 w-11 rounded-full bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center">
             <AlertTriangle size={20} />
           </div>
         </div>
       </div>
 
       {/* BPK Rules Protective Indicators Summary */}
-      <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-5 space-y-4">
-        <h3 className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center space-x-2">
-          <span>📋</span>
-          <span>Proteksi Temuan BPK: Indikator Peringatan Aktif</span>
-        </h3>
+      <div className="bg-white border border-slate-200/95 rounded-2xl p-6 space-y-4 shadow-sm text-left">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center space-x-2">
+            <span className="text-base text-rose-500">📋</span>
+            <span>Proteksi Temuan BPK: Indikator Peringatan Aktif</span>
+          </h3>
+          <p className="text-[10px] text-slate-400 font-medium">💡 Klik sub card indikator di bawah untuk memfilter daftar pegawai bersangkutan</p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-          <div className="p-3 bg-[#111115] border border-white/5 rounded-xl space-y-1">
-            <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Ganda Suami/Istri</span>
-            <div className="flex justify-between items-baseline">
-              <span className="text-lg font-mono font-extrabold text-yellow-400">{groupCount.DOUBLE_ASN_CLAIM} Orang</span>
-              <span className="text-[9px] text-rose-500 font-bold bg-rose-500/10 px-1 py-0.2 rounded border border-rose-500/20">Double ASN</span>
+          {/* 1. DOUBLE_ASN_CLAIM */}
+          <button
+            type="button"
+            onClick={() => setSelectedWarningCode(selectedWarningCode === 'DOUBLE_ASN_CLAIM' ? null : 'DOUBLE_ASN_CLAIM')}
+            className={`p-3.5 rounded-xl space-y-1.5 transition duration-150 cursor-pointer text-left w-full border ${
+              selectedWarningCode === 'DOUBLE_ASN_CLAIM'
+                ? 'bg-rose-50 border-rose-400 shadow-sm ring-2 ring-rose-400/25 text-slate-900'
+                : 'bg-slate-50/80 hover:bg-slate-100/90 border-slate-200 text-slate-700'
+            }`}
+          >
+            <span className="text-[9px] font-extrabold text-slate-500 uppercase block tracking-wider">Ganda Suami/Istri</span>
+            <div className="flex justify-between items-baseline gap-1">
+              <span className={`text-base font-mono font-extrabold ${selectedWarningCode === 'DOUBLE_ASN_CLAIM' ? 'text-rose-700' : 'text-slate-800'}`}>
+                {groupCount.DOUBLE_ASN_CLAIM} Orang
+              </span>
+              <span className="text-[8px] text-rose-700 font-extrabold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-250/50 shrink-0">Double ASN</span>
             </div>
-            <p className="text-[9px] text-slate-500">Pasangan sesama ASN dilarang saling klaim tunjangan</p>
-          </div>
+            <p className="text-[9px] text-slate-400 leading-normal">Pasangan sesama ASN dilarang saling klaim tunjangan</p>
+          </button>
 
-          <div className="p-3 bg-[#111115] border border-white/5 rounded-xl space-y-1">
-            <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Kedaluwarsa KP4</span>
-            <div className="flex justify-between items-baseline">
-              <span className="text-lg font-mono font-extrabold text-white">{groupCount.OUTDATED_KP4} Berkas</span>
-              <span className="text-[9px] text-amber-500 font-bold bg-amber-500/10 px-1 py-0.2 rounded border border-amber-500/20">Lama</span>
+          {/* 2. OUTDATED_KP4 */}
+          <button
+            type="button"
+            onClick={() => setSelectedWarningCode(selectedWarningCode === 'OUTDATED_KP4' ? null : 'OUTDATED_KP4')}
+            className={`p-3.5 rounded-xl space-y-1.5 transition duration-150 cursor-pointer text-left w-full border ${
+              selectedWarningCode === 'OUTDATED_KP4'
+                ? 'bg-rose-50 border-rose-400 shadow-sm ring-2 ring-rose-400/25 text-slate-900'
+                : 'bg-slate-50/80 hover:bg-slate-100/90 border-slate-200 text-slate-700'
+            }`}
+          >
+            <span className="text-[9px] font-extrabold text-slate-500 uppercase block tracking-wider">Kedaluwarsa KP4</span>
+            <div className="flex justify-between items-baseline gap-1">
+              <span className={`text-base font-mono font-extrabold ${selectedWarningCode === 'OUTDATED_KP4' ? 'text-rose-700' : 'text-slate-800'}`}>
+                {groupCount.OUTDATED_KP4} Berkas
+              </span>
+              <span className="text-[8px] text-amber-700 font-extrabold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-250/50 shrink-0">Lama</span>
             </div>
-            <p className="text-[9px] text-slate-500">Wajib update berkas tahun berjalan (Tahun 2026)</p>
-          </div>
+            <p className="text-[9px] text-slate-400 leading-normal">Wajib update berkas tahun berjalan (Tahun 2026)</p>
+          </button>
 
-          <div className="p-3 bg-[#111115] border border-white/5 rounded-xl space-y-1">
-            <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Melebihi Batas Usia</span>
-            <div className="flex justify-between items-baseline">
-              <span className="text-lg font-mono font-extrabold text-red-500">{groupCount.CHILD_OVERAGE_25} Anak</span>
-              <span className="text-[9px] text-red-500 font-bold bg-red-500/10 px-1 py-0.2 rounded border border-red-500/20">&gt;25 Th</span>
+          {/* 3. CHILD_OVERAGE_25 */}
+          <button
+            type="button"
+            onClick={() => setSelectedWarningCode(selectedWarningCode === 'CHILD_OVERAGE_25' ? null : 'CHILD_OVERAGE_25')}
+            className={`p-3.5 rounded-xl space-y-1.5 transition duration-150 cursor-pointer text-left w-full border ${
+              selectedWarningCode === 'CHILD_OVERAGE_25'
+                ? 'bg-rose-50 border-rose-400 shadow-sm ring-2 ring-rose-400/25 text-slate-900'
+                : 'bg-slate-50/80 hover:bg-slate-100/90 border-slate-200 text-slate-700'
+            }`}
+          >
+            <span className="text-[9px] font-extrabold text-slate-500 uppercase block tracking-wider">Melebihi Batas Usia</span>
+            <div className="flex justify-between items-baseline gap-1">
+              <span className={`text-base font-mono font-extrabold ${selectedWarningCode === 'CHILD_OVERAGE_25' ? 'text-rose-700' : 'text-slate-800'}`}>
+                {groupCount.CHILD_OVERAGE_25} Anak
+              </span>
+              <span className="text-[8px] text-red-700 font-extrabold bg-red-50 px-1.5 py-0.5 rounded border border-red-250/50 shrink-0">&gt;25 Th</span>
             </div>
-            <p className="text-[9px] text-slate-500">Anak di atas 25 tahun gugur hak secara undang-undang</p>
-          </div>
+            <p className="text-[9px] text-slate-400 leading-normal">Anak di atas 25 tahun gugur hak secara undang-undang</p>
+          </button>
 
-          <div className="p-3 bg-[#111115] border border-white/5 rounded-xl space-y-1">
-            <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Anak Absen SKKS</span>
-            <div className="flex justify-between items-baseline">
-              <span className="text-lg font-mono font-extrabold text-yellow-400">{groupCount.CHILD_MISSING_SKKS} Anak</span>
-              <span className="text-[9px] text-yellow-500 font-bold bg-yellow-500/10 px-1 py-0.2 rounded border border-yellow-500/20">No SKKS</span>
+          {/* 4. CHILD_MISSING_SKKS */}
+          <button
+            type="button"
+            onClick={() => setSelectedWarningCode(selectedWarningCode === 'CHILD_MISSING_SKKS' ? null : 'CHILD_MISSING_SKKS')}
+            className={`p-3.5 rounded-xl space-y-1.5 transition duration-150 cursor-pointer text-left w-full border ${
+              selectedWarningCode === 'CHILD_MISSING_SKKS'
+                ? 'bg-rose-50 border-rose-400 shadow-sm ring-2 ring-rose-400/25 text-slate-900'
+                : 'bg-slate-50/80 hover:bg-slate-100/90 border-slate-200 text-slate-700'
+            }`}
+          >
+            <span className="text-[9px] font-extrabold text-slate-500 uppercase block tracking-wider">Anak Absen SKKS</span>
+            <div className="flex justify-between items-baseline gap-1">
+              <span className={`text-base font-mono font-extrabold ${selectedWarningCode === 'CHILD_MISSING_SKKS' ? 'text-rose-700' : 'text-slate-800'}`}>
+                {groupCount.CHILD_MISSING_SKKS} Anak
+              </span>
+              <span className="text-[8px] text-yellow-700 font-extrabold bg-yellow-50 px-1.5 py-0.5 rounded border border-yellow-250/50 shrink-0">No SKKS</span>
             </div>
-            <p className="text-[9px] text-slate-500">Anak kuliah (21-25 Th) wajib melampirkan SKKS aktif</p>
-          </div>
+            <p className="text-[9px] text-slate-400 leading-normal">Anak kuliah (21-25 Th) wajib melampirkan SKKS aktif</p>
+          </button>
 
-          <div className="p-3 bg-[#111115] border border-white/5 rounded-xl space-y-1">
-            <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Melebihi 2 Anak</span>
-            <div className="flex justify-between items-baseline">
-              <span className="text-lg font-mono font-extrabold text-red-500">{groupCount.EXCESSIVE_KIDS_LIMIT} Orang</span>
-              <span className="text-[9px] text-red-500 font-bold bg-red-500/10 px-1 py-0.2 rounded border border-red-500/20">Max 2</span>
+          {/* 5. EXCESSIVE_KIDS_LIMIT */}
+          <button
+            type="button"
+            onClick={() => setSelectedWarningCode(selectedWarningCode === 'EXCESSIVE_KIDS_LIMIT' ? null : 'EXCESSIVE_KIDS_LIMIT')}
+            className={`p-3.5 rounded-xl space-y-1.5 transition duration-150 cursor-pointer text-left w-full border ${
+              selectedWarningCode === 'EXCESSIVE_KIDS_LIMIT'
+                ? 'bg-rose-50 border-rose-400 shadow-sm ring-2 ring-rose-400/25 text-slate-900'
+                : 'bg-slate-50/80 hover:bg-slate-100/90 border-slate-200 text-slate-700'
+            }`}
+          >
+            <span className="text-[9px] font-extrabold text-slate-500 uppercase block tracking-wider">Melebihi 2 Anak</span>
+            <div className="flex justify-between items-baseline gap-1">
+              <span className={`text-base font-mono font-extrabold ${selectedWarningCode === 'EXCESSIVE_KIDS_LIMIT' ? 'text-rose-700' : 'text-slate-800'}`}>
+                {groupCount.EXCESSIVE_KIDS_LIMIT} Orang
+              </span>
+              <span className="text-[8px] text-indigo-700 font-extrabold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-250/50 shrink-0">Max 2</span>
             </div>
-            <p className="text-[9px] text-slate-500">Regulasi PP 51/1992 melarang klaim di atas 2 anak</p>
-          </div>
+            <p className="text-[9px] text-slate-400 leading-normal">Regulasi PP 51/1992 melarang klaim di atas 2 anak</p>
+          </button>
         </div>
       </div>
 
       {/* Main Filter & Table area */}
-      <div className="bg-[#16161a] border border-white/5 rounded-2xl p-6 space-y-4">
+      <div className="bg-white border border-slate-200 shadow-md rounded-2xl p-6 space-y-4">
         
         {/* Navigation & Search toolbar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div className="flex flex-wrap items-center gap-3">
             {/* Search */}
             <div className="relative">
@@ -422,22 +501,22 @@ export default function DashboardKP4({
                 placeholder="Cari Nama / NIP / NIK..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-64 p-2 pl-8 border border-white/5 bg-[#1b1c21] text-xs text-white rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition"
+                className="w-64 p-2 pl-8 border border-slate-200 bg-slate-50 text-xs text-slate-800 rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-medium"
               />
-              <Search size={13} className="absolute left-2.5 top-3 text-slate-500" />
+              <Search size={13} className="absolute left-2.5 top-3.5 text-slate-400" />
             </div>
 
             {/* Unit Tenant Filter (only for Dinkes) */}
             {currentRole === 'admin_dinkes' && (
               <div className="flex items-center space-x-2">
-                <Building2 size={13} className="text-slate-400" />
+                <Building2 size={13} className="text-slate-500" />
                 <select
                   value={unitFilter}
                   onChange={(e) => {
                     const val = e.target.value;
                     setUnitFilter(val === 'ALL' ? 'ALL' : parseInt(val));
                   }}
-                  className="p-2 border border-white/5 bg-[#1b1c21] text-xs text-white rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-semibold"
+                  className="p-2 border border-slate-200 bg-slate-50 text-xs text-slate-700 rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-semibold cursor-pointer"
                 >
                   <option value="ALL">Semua Unit Kerja Lombok Barat</option>
                   {puskesmasList.map(p => (
@@ -451,7 +530,7 @@ export default function DashboardKP4({
             <select
               value={statusWarnFilter}
               onChange={(e) => setStatusWarnFilter(e.target.value as any)}
-              className="p-2 border border-white/5 bg-[#1b1c21] text-xs text-white rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-semibold"
+              className="p-2 border border-slate-200 bg-slate-50 text-xs text-slate-700 rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-semibold cursor-pointer"
             >
               <option value="ALL">Semua Hasil Audit</option>
               <option value="WARNING_ONLY">⚠️ Butuh Perhatian (Telah Terdeteksi Issue BPK)</option>
@@ -459,28 +538,53 @@ export default function DashboardKP4({
             </select>
           </div>
 
-          <div className="text-xs text-slate-400">
-            Menampilkan <strong className="text-white">{finalFilteredList.length}</strong> Pegawai ASN
+          <div className="text-xs text-slate-500 font-semibold">
+            Menampilkan <strong className="text-slate-800 font-mono font-extrabold">{finalFilteredList.length}</strong> Pegawai ASN
           </div>
         </div>
 
+        {/* Selected warning badge indicator */}
+        {selectedWarningCode && (
+          <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-center justify-between animate-in slide-in-from-top-1">
+            <div className="flex items-center space-x-2 text-rose-800 text-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping"></span>
+              <span>
+                Menyaring data dengan alarm: {' '}
+                <strong className="uppercase underline">
+                  {selectedWarningCode === 'DOUBLE_ASN_CLAIM' && 'Ganda Suami/Istri (Double ASN Claim)'}
+                  {selectedWarningCode === 'OUTDATED_KP4' && 'Kedaluwarsa KP4 (> 1 Tahun)'}
+                  {selectedWarningCode === 'CHILD_OVERAGE_25' && 'Anak Melebihi Batas Usia (> 25 Tahun)'}
+                  {selectedWarningCode === 'CHILD_MISSING_SKKS' && 'Anak Kerja / Kuliah Absen SKKS'}
+                  {selectedWarningCode === 'EXCESSIVE_KIDS_LIMIT' && 'Klaim Anak Melebihi Batas PP (Maks 2)'}
+                </strong>
+              </span>
+            </div>
+            <button
+              onClick={() => setSelectedWarningCode(null)}
+              className="text-[10px] font-bold bg-white text-rose-700 border border-rose-300 hover:bg-rose-100 rounded-lg px-2.5 py-1 cursor-pointer transition shadow-3xs"
+            >
+              Hapus saringan alarm
+            </button>
+          </div>
+        )}
+
         {/* Table Employee KP4 list */}
-        <div className="overflow-x-auto rounded-xl border border-white/5">
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-[#1c1d24] text-slate-400 font-bold border-b border-white/5 uppercase tracking-wider text-[10px]">
-                <th className="p-3">Pegawai / Identitas</th>
-                <th className="p-3">Puskesmas Unit</th>
-                <th className="p-3">Status Klaim KP4</th>
-                <th className="p-3">Estimasi Tunjangan</th>
-                <th className="p-3">Hasil Audit Anti-BPK</th>
-                <th className="p-3 text-center">Tindakan</th>
+              <tr className="bg-white text-slate-800 font-extrabold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+                <th className="p-3.5 bg-white text-slate-800 font-bold">Pegawai / Identitas</th>
+                <th className="p-3.5 bg-white text-slate-800 font-bold">Puskesmas Unit</th>
+                <th className="p-3.5 bg-white text-slate-800 font-bold">Status Klaim KP4</th>
+                <th className="p-3.5 bg-white text-slate-800 font-bold">Estimasi Tunjangan</th>
+                <th className="p-3.5 bg-white text-slate-800 font-bold">Hasil Audit Anti-BPK</th>
+                <th className="p-3.5 bg-white text-slate-800 font-bold text-center">Tindakan</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 bg-transparent text-slate-300">
+            <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
               {finalFilteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-500 italic">
+                  <td colSpan={6} className="p-8 text-center text-slate-400 italic">
                     Tidak ditemukan data pegawai ASN yang cocok dengan filter penelusuran.
                   </td>
                 </tr>
@@ -488,59 +592,67 @@ export default function DashboardKP4({
                 finalFilteredList.map((item) => {
                   const { asn, isClean, issues, spouseClaimed, childrenClaimedCount, estimatedAllowance, totalPotentialFine } = item;
                   return (
-                    <tr key={asn.id} className="hover:bg-white/[0.02] transition">
+                    <tr key={asn.id} className="hover:bg-slate-50/70 transition">
                       <td className="p-3">
-                        <p className="font-bold text-white text-xs">{asn.nama_lengkap}{asn.gelar_belakang ? `, ${asn.gelar_belakang}` : ''}</p>
-                        <p className="text-[10px] text-slate-400 font-mono">NIP. {asn.nip}</p>
-                        <p className="text-[10px] text-slate-500 font-mono">NIK. {asn.nik || 'Belum Diisi'}</p>
+                        <p className="font-bold text-slate-800 text-xs">{asn.nama_lengkap}{asn.gelar_belakang ? `, ${asn.gelar_belakang}` : ''}</p>
+                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">NIP. {asn.nip}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">NIK. {asn.nik || 'Belum Diisi'}</p>
                       </td>
-                      <td className="p-3 font-semibold text-slate-400">
+                      <td className="p-3 font-semibold text-slate-600">
                         {getPuskesmasName(asn.id_puskesmas)}
                       </td>
                       <td className="p-3">
                         <div className="space-y-1">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold block w-fit ${
+                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold block w-fit border ${
                             asn.kp4_status_pernikahan === 'Kawin' 
-                              ? 'bg-emerald-500/10 text-emerald-400' 
-                              : 'bg-slate-500/10 text-slate-400'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                              : 'bg-slate-50 text-slate-600 border-slate-200'
                           }`}>
                             {asn.kp4_status_pernikahan || 'Belum Kawin'}
                           </span>
-                          <span className="text-[10px] text-slate-500 block">
+                          <span className="text-[10px] text-slate-500 font-medium block">
                             Tunjangan: {spouseClaimed ? 'Suami/Istri (✓)' : 'Suami/Istri (✗)'} &amp; {childrenClaimedCount} Anak
                           </span>
                           <span className="text-[10px] text-slate-500 block">
-                            KP4 Validasi: <span className="font-mono text-slate-400">{asn.kp4_tahun_validasi || 'Belum'}</span>
+                            KP4 Validasi: <span className="font-mono text-slate-700 font-semibold">{asn.kp4_tahun_validasi || 'Belum'}</span>
                           </span>
                         </div>
                       </td>
                       <td className="p-3">
-                        <p className="font-mono font-bold text-teal-400">Rp {estimatedAllowance.toLocaleString('id-ID')}</p>
-                        <p className="text-[9px] text-slate-500">Estimasi Tunjangan/bln</p>
+                        <p className="font-mono font-bold text-teal-700">Rp {estimatedAllowance.toLocaleString('id-ID')}</p>
+                        <p className="text-[9px] text-slate-400">Estimasi Tunjangan/bln</p>
                       </td>
                       <td className="p-3">
                         {isClean ? (
-                          <div className="flex items-center space-x-1.5 text-emerald-400 text-[11px] font-bold">
-                            <CheckCircle2 size={14} />
-                            <span>100% Layak Audit (Bersih)</span>
+                          <div className="flex items-center space-x-1.5 text-emerald-800 bg-emerald-50 border border-emerald-250 px-2.5 py-1.5 rounded-lg text-[10.5px] font-bold w-fit shadow-3xs">
+                            <CheckCircle2 size={13} className="text-emerald-600" />
+                            <span>100% Bebas Temuan (Bersih)</span>
                           </div>
                         ) : (
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-1.5 text-amber-400 text-[11px] font-bold">
-                              <AlertTriangle size={14} className="flex-shrink-0" />
+                          <div className="space-y-1.5 py-1">
+                            <div className="flex items-center space-x-1.5 text-rose-800 bg-rose-50 border border-rose-250 p-2 rounded-lg text-[10.5px] font-bold w-fit shadow-3xs">
+                              <AlertTriangle size={13} className="text-rose-600 flex-shrink-0" />
                               <span>{issues.length} Risiko Temuan BPK</span>
                             </div>
                             
-                            <ul className="list-disc pl-3 text-[10px] text-rose-300 space-y-0.5 max-w-sm line-clamp-2 hover:line-clamp-none transition">
+                            <ul className="list-disc pl-4 text-[10px] text-slate-700 space-y-1 max-w-sm">
                               {issues.map((i, idx) => (
-                                <li key={idx} className={i.type === 'ERROR' ? 'text-red-300 font-medium' : 'text-amber-200'}>
-                                  {i.message}
+                                <li key={idx} className="leading-tight">
+                                  {i.type === 'ERROR' ? (
+                                    <span className="text-rose-700 font-bold bg-rose-50 px-1 py-0.2 rounded border border-rose-100">
+                                      {i.message}
+                                    </span>
+                                  ) : (
+                                    <span className="text-amber-800 font-semibold bg-amber-50 px-1 py-0.2 rounded border border-amber-100">
+                                      {i.message}
+                                    </span>
+                                  )}
                                 </li>
                               ))}
                             </ul>
 
                             {totalPotentialFine > 0 && (
-                              <p className="text-[10px] text-red-400 font-semibold bg-rose-500/10 px-1 rounded block w-fit">
+                              <p className="text-[10px] text-red-700 font-bold bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-md block w-fit shadow-2xs">
                                 Potensi TGR: Rp {totalPotentialFine.toLocaleString('id-ID')}
                               </p>
                             )}
@@ -550,7 +662,7 @@ export default function DashboardKP4({
                       <td className="p-3 text-center">
                         <button
                           onClick={() => onEditEmployee(asn)}
-                          className="px-2.5 py-1.5 bg-teal-800 hover:bg-teal-700 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 mx-auto cursor-pointer"
+                          className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 mx-auto cursor-pointer shadow-xs border border-teal-700/20"
                         >
                           <Sliders size={12} />
                           <span>Sesuaikan data</span>
