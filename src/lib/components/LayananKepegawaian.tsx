@@ -3137,15 +3137,15 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
 
         return (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-md animate-fade-in text-left">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-100">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 border border-slate-100">
               {/* Header */}
-              <div className="bg-gradient-to-r from-teal-800 to-emerald-900 px-6 py-4 text-white flex justify-between items-center">
+              <div className="bg-gradient-to-r from-teal-800 to-emerald-900 px-4 sm:px-6 py-3.5 sm:py-4 text-white flex justify-between items-center shrink-0">
                 <div>
-                  <h3 className="font-bold text-sm tracking-wide font-display flex items-center">
+                  <h3 className="font-bold text-xs sm:text-sm tracking-wide font-display flex items-center">
                     <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full inline-block mr-2 animate-pulse"></span>
                     Detail Status & Notifikasi Pegawai
                   </h3>
-                  <p className="text-[10px] text-teal-100 mt-0.5 opacity-80">Usulan #{previewStatusUsulan.id} &bull; {ftr?.nama_fitur}</p>
+                  <p className="text-[9px] sm:text-[10px] text-teal-100 mt-0.5 opacity-80">Usulan #{previewStatusUsulan.id} &bull; {ftr?.nama_fitur}</p>
                 </div>
                 <button
                   onClick={() => setPreviewStatusUsulan(null)}
@@ -3156,10 +3156,10 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
               </div>
 
               {/* Content */}
-              <div className="p-6 space-y-4">
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
                 {/* Meta Detail Info Grid */}
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2.5">
-                  <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-slate-50 rounded-xl p-3.5 sm:p-4 border border-slate-100 space-y-3 sm:space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Nama Pegawai</p>
                       <p className="font-semibold text-slate-800 mt-0.5">{asm?.nama_lengkap || 'Tidak Diketahui'}</p>
@@ -3170,7 +3170,7 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                     </div>
                   </div>
 
-                  <div className="border-t border-slate-200/60 pt-2.5 grid grid-cols-2 gap-3 text-xs">
+                  <div className="border-t border-slate-200/60 pt-3 sm:pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Layanan Kepegawaian</p>
                       <p className="font-semibold text-teal-900 mt-0.5">{ftr?.nama_fitur || 'Layanan Kepegawaian'}</p>
@@ -3178,7 +3178,7 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                     <div>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Status Berkas Saat Ini</p>
                       <div className="mt-1">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold ${
                           previewStatusUsulan.status === 'Draft' ? 'bg-slate-100 text-slate-600' :
                           previewStatusUsulan.status === 'Menunggu Validasi' ? 'bg-amber-100 text-amber-800' :
                           previewStatusUsulan.status === 'Usulan Dikirim ke BKD' ? 'bg-indigo-100 text-indigo-800 font-bold' :
@@ -3195,9 +3195,9 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                 </div>
 
                 {/* WhatsApp Chat Preview */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-slate-700 flex items-center space-x-1">
+                <div className="space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                    <label className="text-[11px] sm:text-xs font-bold text-slate-700 flex items-center space-x-1">
                       <span>💬 Notifikasi WhatsApp Dikirim ke Pegawai</span>
                     </label>
                     <button
@@ -3205,7 +3205,7 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                         navigator.clipboard.writeText(messageText);
                         alert("✓ Notifikasi pesan berhasil disalin ke clipboard!");
                       }}
-                      className="text-[10px] font-bold text-teal-800 hover:text-teal-950 flex items-center space-x-1 border border-teal-100 px-2 py-0.5 rounded bg-teal-50/50 hover:bg-teal-50 transition cursor-pointer"
+                      className="text-[10px] font-bold text-teal-800 hover:text-teal-950 flex items-center justify-center space-x-1 border border-teal-100 px-2 py-1 sm:py-0.5 rounded bg-teal-50/50 hover:bg-teal-50 transition cursor-pointer self-start sm:self-auto"
                     >
                       <Copy size={10} />
                       <span>Salin Pesan</span>
@@ -3213,14 +3213,14 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                   </div>
 
                   {/* High Fidelity WhatsApp UI style widget */}
-                  <div className="border border-emerald-100/80 rounded-xl bg-[#ece5dd] p-4 text-xs font-sans relative overflow-hidden">
+                  <div className="border border-emerald-100/80 rounded-xl bg-[#ece5dd] p-3 sm:p-4 text-xs font-sans relative overflow-hidden">
                     {/* Background pattern mask */}
                     <div className="absolute inset-0 bg-[radial-gradient(#dcf8c6_1px,transparent_1px)] [background-size:16px_16px] opacity-25 pointer-events-none"></div>
 
                     {/* Chat Bubble */}
-                    <div className="relative bg-white text-slate-800 rounded-lg p-3 shadow-md max-w-[92%] ml-1 border-r-4 border-r-emerald-500 rounded-tl-none">
+                    <div className="relative bg-white text-slate-800 rounded-lg p-3 shadow-md max-w-[95%] sm:max-w-[92%] ml-1 border-r-4 border-r-emerald-500 rounded-tl-none">
                       <div className="absolute top-0 -left-2 w-0 h-0 border-t-[8px] border-t-white border-l-[8px] border-l-transparent"></div>
-                      <p className="font-mono text-[11.5px] leading-relaxed whitespace-pre-wrap select-all">
+                      <p className="font-mono text-[10.5px] sm:text-[11.5px] leading-relaxed whitespace-pre-wrap select-all">
                         {messageText}
                       </p>
                       <div className="text-right text-[9px] text-slate-400 mt-1.5 font-semibold">
@@ -3230,17 +3230,17 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                   </div>
                 </div>
 
-                <p className="text-[10px] text-slate-400 italic text-center">
+                <p className="text-[9px] sm:text-[10px] text-slate-400 italic text-center">
                   * Status dokumen ini tersinkronisasi langsung dengan dashboard kepegawaian mandiri pegawai.
                 </p>
               </div>
 
               {/* Bottom Actions */}
-              <div className="bg-slate-50 px-6 py-4 flex justify-end">
+              <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 flex justify-end border-t border-slate-100 shrink-0">
                 <button
                   type="button"
                   onClick={() => setPreviewStatusUsulan(null)}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer w-full sm:w-auto text-center"
                 >
                   Tutup
                 </button>
