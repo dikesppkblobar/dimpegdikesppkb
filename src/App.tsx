@@ -246,10 +246,10 @@ export default function App() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then(reg => {
-          console.log('⚡ SIMPEG PWA Service Worker Registered:', reg.scope);
+          console.log('⚡ SAPA PWA Service Worker Registered:', reg.scope);
         })
         .catch(err => {
-          console.warn('❌ SIMPEG PWA Service Worker failure:', err);
+          console.warn('❌ SAPA PWA Service Worker failure:', err);
         });
     }
   }, []);
@@ -322,7 +322,7 @@ export default function App() {
         if (permission === 'granted') {
           triggerNativeNotification(
             "🔔 Notifikasi Sistem Aktif", 
-            "Terima kasih! Anda sekarang akan menerima peringatan dinas dan usulan layanan SIMPEG secara real-time di perangkat ini."
+            "Terima kasih! Anda sekarang akan menerima peringatan dinas dan usulan layanan SAPA secara real-time di perangkat ini."
           );
         } else if (permission === 'denied') {
           alert("Notifikasi telah diblokir. Harap aktifkan izin notifikasi pada pengaturan browser Anda.");
@@ -640,7 +640,7 @@ export default function App() {
 
         const nextId = currentArsip.length > 0 ? Math.max(...currentArsip.map(a => a.id)) + 1 : 1;
         const feature = dbState.fitur.find(f => f.id === usulan.id_fitur);
-        const featureName = feature ? feature.nama_fitur : "Layanan SIMPEG";
+        const featureName = feature ? feature.nama_fitur : "Layanan SAPA";
 
         let targetCategory: 'Dasar' | 'Mutasi' | 'Pendidikan' | 'Personal' | 'Kinerja' | 'PPPK_Khusus' | 'PKWT_Khusus' = 'Mutasi';
         if (feature?.slug === 'pencantuman-gelar' || feature?.slug === 'izin-belajar') {
@@ -749,7 +749,7 @@ export default function App() {
         // 2. Local unit notification (tampil di akun puskesmas masing-masing saat pengajuan)
         currentNotifications.unshift({
           id: nextNotifId + 1,
-          sender: "Sistem SIMPEG",
+          sender: "Sistem SAPA",
           time: new Date().toISOString(),
           title: `📤 Pengajuan Layanan Terkirim: ${featName}`,
           message: `Anda baru saja mengajukan layanan ${featName} atas nama ${asnName} (${puskesmasName}). Berkas Anda sedang menunggu verifikasi/validasi Dinkes PPKB.`,
@@ -850,7 +850,7 @@ export default function App() {
 
   // Reset database state back to original initial seeds helper
   const handleResetDatabase = () => {
-    if (confirm("⚠️ Apakah Anda yakin ingin menyetel ulang database SIMPEG ke data bawaan awal? Seluruh riwayat usulan baru, user kustom, dan perubahan branding visual akan dikembalikan.")) {
+    if (confirm("⚠️ Apakah Anda yakin ingin menyetel ulang database SAPA ke data bawaan awal? Seluruh riwayat usulan baru, user kustom, dan perubahan branding visual akan dikembalikan.")) {
       localStorage.clear();
       initializeDB();
       const fresh = getDB();
@@ -1094,14 +1094,14 @@ export default function App() {
         ["Nomor SIP", "Nomor Surat Izin Praktik dari Dinas Kesehatan setempat jika ada (Opsional).", "SIP-123/2026"]
       ];
 
-      const wsGuide = XLSX.utils.aoa_to_sheet([["PANDUAN ALUR IMPORT DATA PEGAWAI - SIMPEG LOMBOK BARAT"], [], ...[guideHeaders, ...guideRows]]);
+      const wsGuide = XLSX.utils.aoa_to_sheet([["PANDUAN ALUR IMPORT DATA PEGAWAI - SAPA PEGAWAI DIKES PPKB"], [], ...[guideHeaders, ...guideRows]]);
       wsGuide['!cols'] = [{ wch: 25 }, { wch: 65 }, { wch: 25 }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Sheet Template Pegawai");
       XLSX.utils.book_append_sheet(wb, wsGuide, "Petunjuk Pengisian");
 
-      XLSX.writeFile(wb, "Template_SIMPEG_Lombok_Barat.xlsx");
+      XLSX.writeFile(wb, "Template_SAPA_Pegawai_Dikes_PPKB.xlsx");
       alert("✓ Template Excel (.xlsx) sukses diunduh! Silakan isi lalu unggah kembali.");
     } catch (err: any) {
       console.error(err);
@@ -1302,7 +1302,7 @@ export default function App() {
     setExcelParsedPreview([]);
     setExcelImportMessage('');
     setShowAddForm(false);
-    alert(`✨ Sukses! ${finalAsns.length} data pegawai baru berhasil diimpor & disimpan ke database SIMPEG.`);
+    alert(`✨ Sukses! ${finalAsns.length} data pegawai baru berhasil diimpor & disimpan ke database SAPA pegawai Dikes PPKB.`);
   };
 
   // --- IN-APP NOTIFICATION CENTER CONTROL LOGIC ---
@@ -1349,7 +1349,7 @@ export default function App() {
             <Database size={24} className="text-emerald-400 absolute top-5 animate-bounce" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-bold font-display tracking-wide uppercase">Sistem SIMPEG Lombok Barat</h3>
+            <h3 className="text-lg font-bold font-display tracking-wide uppercase">Sistem SAPA pegawai Dikes PPKB</h3>
             <p className="text-xs text-slate-400 font-mono">{supabaseStatus}</p>
           </div>
           <div className="p-4 bg-slate-950/80 border border-white/5 rounded-2xl">
@@ -1384,11 +1384,11 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-sm font-display font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <span>SIMPEG Dinkes PPKB</span>
-                <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-full uppercase">Lobar</span>
+                <span>SAPA pegawai Dikes PPKB</span>
+                <span className="text-[9px] bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 px-1.5 py-0.5 rounded-full uppercase">Lobar</span>
               </h1>
               <p className="text-[9.5px] text-slate-500 font-medium">
-                Sistem Layanan Kepegawaian & Penataan SDMK Terintegrasi
+                Sistem Arsip, Pemberitahuan, & Analisis Kepegawaian Dinas Kesehatan PPKB Kab. Lombok Barat
               </p>
             </div>
           </div>
@@ -1461,7 +1461,7 @@ export default function App() {
               <button
                 onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
                 className={`relative p-2.5 rounded-xl border transition flex items-center justify-center cursor-pointer ${showNotificationsDropdown ? 'bg-teal-50 text-teal-600 border-teal-200 shadow-xs animate-pulse' : 'bg-[#16161a] border-white/5 text-slate-300 hover:text-white hover:bg-slate-900'}`}
-                title="Pusat Notifikasi SIMPEG"
+                title="Pusat Notifikasi SAPA"
                 id="header-notification-bell-btn"
               >
                 <Bell size={15} />
@@ -1584,7 +1584,7 @@ export default function App() {
           <div className="space-y-1.5 pb-2 border-b border-white/5">
             <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Menu Utama</p>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              SIMPEG Lombok Barat terintegrasi Dashboard alerts & penataan fasyankes
+              SAPA pegawai Dikes PPKB • Sistem Arsip, Pemberitahuan, & Analisis Kepegawaian terintegrasi
             </p>
           </div>
 
@@ -2764,7 +2764,7 @@ export default function App() {
                              </div>
                              <p className="font-bold text-white">Unduh &amp; Buka Template</p>
                              <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
-                               Klik tombol hijau di atas untuk mengunduh berkas <code className="text-emerald-400">Template_SIMPEG_Lombok_Barat.xlsx</code>. Buka menggunakan Excel atau WPS.
+                               Klik tombol hijau di atas untuk mengunduh berkas <code className="text-emerald-400">Template_SAPA_Pegawai_Dikes_PPKB.xlsx</code>. Buka menggunakan Excel atau WPS.
                              </p>
                            </div>
 
@@ -5049,7 +5049,7 @@ export default function App() {
       {/* Footer copyright */}
       <footer className="bg-[#0f0f12] text-slate-500 py-6 text-center text-xs mt-12 border-t border-white/5 block">
         <p>© 2026 Pemerintah Kabupaten Lombok Barat • Dinas Kesehatan PPKB</p>
-        <p className="text-[10px] text-slate-600 mt-1">Sistem Informasi Manajemen Kepegawaian (SIMPEG) v1.0.0 • Decision Support System & Digital Management Platform</p>
+        <p className="text-[10px] text-slate-600 mt-1">SAPA pegawai Dikes PPKB v1.0.0 (Sistem Arsip, Pemberitahuan, & Analisis Kepegawaian Dinas Kesehatan Pengendalian Penduduk dan Keluarga Berencana Kab. Lombok Barat) • Decision Support System & Digital Management Platform</p>
       </footer>
 
     </div>
