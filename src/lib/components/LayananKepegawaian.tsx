@@ -856,6 +856,45 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
   const selectedAsn = asnProfiles.find(p => p.id === selectedAsnId);
   const selectedFitur = masterFitur.find(f => f.id === selectedFiturId);
 
+  // Automatically suggest pangkat/golongan or jafung level one level higher
+  React.useEffect(() => {
+    if (selectedAsn) {
+      if (selectedFitur?.slug === 'kenaikan-pangkat') {
+        const currentGolongan = selectedAsn.golongan_ruang || '';
+        const LIST_GOLONGAN_PNS = [
+          "I/a", "I/b", "I/c", "I/d",
+          "II/a", "II/b", "II/c", "II/d",
+          "III/a", "III/b", "III/c", "III/d",
+          "IV/a", "IV/b", "IV/c", "IV/d", "IV/e"
+        ];
+        const idx = LIST_GOLONGAN_PNS.findIndex(g => g.toLowerCase() === currentGolongan.trim().toLowerCase());
+        if (idx !== -1 && idx < LIST_GOLONGAN_PNS.length - 1) {
+          const nextGolongan = LIST_GOLONGAN_PNS[idx + 1];
+          const matchedOpt = pangkatOptions.find(opt => opt.toLowerCase().includes(nextGolongan.toLowerCase()));
+          if (matchedOpt) {
+            setPangkatBaru(matchedOpt);
+          }
+        }
+      } else if (selectedFitur?.slug === 'usulan-jafung') {
+        const currentJenjang = selectedAsn.jenjang_jafung || '';
+        const jenjangOrder = ["Terampil", "Mahir", "Penyelia", "Ahli Pertama", "Ahli Muda", "Ahli Madya", "Ahli Utama"];
+        const currentIdx = jenjangOrder.findIndex(j => j.toLowerCase() === currentJenjang.trim().toLowerCase());
+        if (currentIdx !== -1 && currentIdx < jenjangOrder.length - 1) {
+          const nextJenjang = jenjangOrder[currentIdx + 1];
+          const matchedOpt = jafungOptions.find(opt => opt.toLowerCase() === nextJenjang.toLowerCase());
+          if (matchedOpt) {
+            setJafungBaruLevel(matchedOpt);
+          } else {
+            const partialMatched = jafungOptions.find(opt => opt.toLowerCase().includes(nextJenjang.toLowerCase()));
+            if (partialMatched) {
+              setJafungBaruLevel(partialMatched);
+            }
+          }
+        }
+      }
+    }
+  }, [selectedAsnId, selectedFiturId, pangkatOptions, jafungOptions, selectedAsn, selectedFitur]);
+
   React.useEffect(() => {
     if (selectedAsn && selectedFitur) {
       const msg = generateLayananWhatsAppMessage(selectedAsn, newUsulanStatus, selectedFitur.slug, {
