@@ -469,7 +469,7 @@ export const SEED_ARSIP_KEPEGAWAIAN: ArsipKepegawaian[] = [
 export const SEED_NOTIFICATIONS: InAppNotification[] = [
   {
     id: 1,
-    sender: "Sistem SIMPEG",
+    sender: "Sistem SAPA",
     time: "2026-06-15T01:00:00Z",
     title: "Sistem Peringatan Aktif",
     message: "Peringatan Dini otomatis mendeteksi 1 STR pegawai yang akan segera kedaluwarsa dalam 60 hari.",
@@ -479,7 +479,7 @@ export const SEED_NOTIFICATIONS: InAppNotification[] = [
   },
   {
     id: 2,
-    sender: "Sistem SIMPEG",
+    sender: "Sistem SAPA",
     time: "2026-06-15T01:00:00Z",
     title: "Sinkronisasi SatuSehat Terpadu",
     message: "Verifikasi integrasi Supabase & SatuSehat SDMK Kemenkes telah didaftarkan untuk kelayakan nakes.",
