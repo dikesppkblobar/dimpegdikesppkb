@@ -3837,11 +3837,14 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
             {alerts.map((alert) => {
               const isPensiun = alert.type === 'pensiun';
               const isPangkat = alert.type === 'pangkat';
+              const isKP4 = alert.type === 'kp4';
               const pillColor = isPensiun 
                 ? "bg-rose-950/20 text-rose-200 border-rose-500/20" 
                 : isPangkat 
                   ? "bg-amber-950/20 text-amber-200 border-amber-500/20" 
-                  : "bg-emerald-950/20 text-emerald-200 border-emerald-500/20";
+                  : isKP4
+                    ? "bg-violet-950/20 text-violet-200 border-violet-500/20"
+                    : "bg-emerald-950/20 text-emerald-200 border-emerald-500/20";
 
               return (
                 <div key={alert.id} className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border ${pillColor} transition-all space-y-4 sm:space-y-0`}>
@@ -3871,7 +3874,13 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
                     </button>
                     <button
                       onClick={() => {
-                        const routeSlug = alert.type === 'pensiun' ? 'pensiun' : alert.type === 'pangkat' ? 'kenaikan-pangkat' : 'gaji-berkala';
+                        const routeSlug = alert.type === 'pensiun' 
+                          ? 'pensiun' 
+                          : alert.type === 'pangkat' 
+                            ? 'kenaikan-pangkat' 
+                            : alert.type === 'kp4'
+                              ? 'gaji-berkala' // KP4 is verified as part of the periodic allowance process
+                              : 'gaji-berkala';
                         onNavigateToService(alert.id_asn, routeSlug);
                       }}
                       className="flex items-center space-x-1 text-xs font-bold px-3 py-1.5 rounded-lg bg-white/10 text-white hover:bg-white/20 border border-white/5 transition cursor-pointer"
