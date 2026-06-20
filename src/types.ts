@@ -19,6 +19,9 @@ export interface User {
   nama_lengkap: string;
   role: RoleType;
   id_puskesmas: number | null; // NULL if Dinkes
+  username?: string;
+  password?: string;
+  nomor_wa?: string;
 }
 
 export type JenisPegawai = 'Struktural' | 'Jafung_Kesehatan' | 'Staf_Umum';
