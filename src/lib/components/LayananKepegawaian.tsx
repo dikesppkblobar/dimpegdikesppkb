@@ -19,7 +19,8 @@ import {
   Trash,
   Eye,
   MessageSquare,
-  Settings
+  Settings,
+  Copy
 } from 'lucide-react';
 import { 
   ASNProfile, 
@@ -705,6 +706,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
 
   // File Preview & Download handlers for Usulan Documents
   const [activeUsulanFilePreview, setActiveUsulanFilePreview] = useState<{ file: UsulanDokumenFile; usulan: UsulanLayanan } | null>(null);
+  const [previewStatusUsulan, setPreviewStatusUsulan] = useState<UsulanLayanan | null>(null);
   const [usulanPreviewUrl, setUsulanPreviewUrl] = React.useState<string | null>(null);
   const [usulanPreviewType, setUsulanPreviewType] = React.useState<'PDF' | 'IMAGE' | 'FALLBACK'>('FALLBACK');
   const usulanUrlRef = React.useRef<string | null>(null);
@@ -2011,7 +2013,11 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                               {getPuskesmasName(usulan.id_puskesmas_pengusul)}
                             </td>
                             <td className="p-3">
-                              <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${getStatusBadge(usulan.status)}`}>
+                              <span 
+                                onClick={() => setPreviewStatusUsulan(usulan)}
+                                className={`px-2 py-1 rounded-full text-[10px] font-bold ${getStatusBadge(usulan.status)} cursor-pointer hover:opacity-85 active:scale-95 transition inline-block`}
+                                title="Klik untuk lihat preview pesan & status dokumen"
+                              >
                                 {usulan.status}
                               </span>
                               {usulan.catatan_perbaikan && (
@@ -3081,6 +3087,134 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
           </div>
         </div>
       )}
+
+      {/* ======================= STATUS PREVIEW & NOTIFICATION POPUP ======================= */}
+      {previewStatusUsulan && (() => {
+        const asm = asnProfiles.find(a => a.id === previewStatusUsulan.id_asn);
+        const ftr = masterFitur.find(f => f.id === previewStatusUsulan.id_fitur);
+        
+        let messageText = 'Gagal memuat preview pesan.';
+        if (asm && ftr) {
+          messageText = generateLayananWhatsAppMessage(asm, previewStatusUsulan.status, ftr.slug, {
+            golonganLama: asm.golongan_ruang,
+            catatan: previewStatusUsulan.catatan_perbaikan || undefined
+          });
+        }
+
+        return (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-md animate-fade-in text-left">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-100">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-teal-800 to-emerald-900 px-6 py-4 text-white flex justify-between items-center">
+                <div>
+                  <h3 className="font-bold text-sm tracking-wide font-display flex items-center">
+                    <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full inline-block mr-2 animate-pulse"></span>
+                    Detail Status & Notifikasi Pegawai
+                  </h3>
+                  <p className="text-[10px] text-teal-100 mt-0.5 opacity-80">Usulan #{previewStatusUsulan.id} &bull; {ftr?.nama_fitur}</p>
+                </div>
+                <button
+                  onClick={() => setPreviewStatusUsulan(null)}
+                  className="bg-white/10 hover:bg-white/20 text-white rounded-lg p-1.5 transition cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-4">
+                {/* Meta Detail Info Grid */}
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2.5">
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Nama Pegawai</p>
+                      <p className="font-semibold text-slate-800 mt-0.5">{asm?.nama_lengkap || 'Tidak Diketahui'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">NIP / Identitas</p>
+                      <p className="font-mono text-slate-700 mt-0.5">{asm?.nip || '-'}</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-200/60 pt-2.5 grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Layanan Kepegawaian</p>
+                      <p className="font-semibold text-teal-900 mt-0.5">{ftr?.nama_fitur || 'Layanan Kepegawaian'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Status Berkas Saat Ini</p>
+                      <div className="mt-1">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          previewStatusUsulan.status === 'Draft' ? 'bg-slate-100 text-slate-600' :
+                          previewStatusUsulan.status === 'Menunggu Validasi' ? 'bg-amber-100 text-amber-800' :
+                          previewStatusUsulan.status === 'Usulan Dikirim ke BKD' ? 'bg-indigo-100 text-indigo-800 font-bold' :
+                          previewStatusUsulan.status === 'Perbaikan Berkas' ? 'bg-rose-100 text-rose-800 animate-pulse' :
+                          previewStatusUsulan.status === 'Diproses' ? 'bg-blue-100 text-blue-800' :
+                          previewStatusUsulan.status === 'Selesai' ? 'bg-emerald-100 text-emerald-800' :
+                          'bg-slate-100 text-slate-700'
+                        }`}>
+                          {previewStatusUsulan.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* WhatsApp Chat Preview */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-slate-700 flex items-center space-x-1">
+                      <span>💬 Notifikasi WhatsApp Dikirim ke Pegawai</span>
+                    </label>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(messageText);
+                        alert("✓ Notifikasi pesan berhasil disalin ke clipboard!");
+                      }}
+                      className="text-[10px] font-bold text-teal-800 hover:text-teal-950 flex items-center space-x-1 border border-teal-100 px-2 py-0.5 rounded bg-teal-50/50 hover:bg-teal-50 transition cursor-pointer"
+                    >
+                      <Copy size={10} />
+                      <span>Salin Pesan</span>
+                    </button>
+                  </div>
+
+                  {/* High Fidelity WhatsApp UI style widget */}
+                  <div className="border border-emerald-100/80 rounded-xl bg-[#ece5dd] p-4 text-xs font-sans relative overflow-hidden">
+                    {/* Background pattern mask */}
+                    <div className="absolute inset-0 bg-[radial-gradient(#dcf8c6_1px,transparent_1px)] [background-size:16px_16px] opacity-25 pointer-events-none"></div>
+
+                    {/* Chat Bubble */}
+                    <div className="relative bg-white text-slate-800 rounded-lg p-3 shadow-md max-w-[92%] ml-1 border-r-4 border-r-emerald-500 rounded-tl-none">
+                      <div className="absolute top-0 -left-2 w-0 h-0 border-t-[8px] border-t-white border-l-[8px] border-l-transparent"></div>
+                      <p className="font-mono text-[11.5px] leading-relaxed whitespace-pre-wrap select-all">
+                        {messageText}
+                      </p>
+                      <div className="text-right text-[9px] text-slate-400 mt-1.5 font-semibold">
+                        {formatDate(previewStatusUsulan.tanggal_pengusulan.split('T')[0])} ✓✓
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-slate-400 italic text-center">
+                  * Status dokumen ini tersinkronisasi langsung dengan dashboard kepegawaian mandiri pegawai.
+                </p>
+              </div>
+
+              {/* Bottom Actions */}
+              <div className="bg-slate-50 px-6 py-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setPreviewStatusUsulan(null)}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ======================= IN-APP SUCCESS TOAST ======================= */}
       {successToast && (
