@@ -29,6 +29,7 @@ import {
   MasterProfesiSDMK, 
   LaporanSDMKBulanan 
 } from '../../types';
+import { getFallbackProfesiId } from '../../mockData';
 
 interface LaporanSDMKProps {
   currentRole: 'admin_dinkes' | 'admin_puskesmas';
@@ -255,7 +256,7 @@ export default function LaporanSDMK({
       : asnProfiles.filter(p => p.id_puskesmas === activePuskesmasForReport && p.status_kepegawaian === 'Aktif');
 
     profesiSdmk.forEach(prof => {
-      const dbMatches = activeStaffInPK.filter(p => p.id_profesi === prof.id);
+      const dbMatches = activeStaffInPK.filter(p => (p.id_profesi || getFallbackProfesiId(p.nama_lengkap, p.gelar_belakang)) === prof.id);
 
       let pns_l = 0, pns_p = 0;
       let p3k_pn_l = 0, p3k_pn_p = 0;
@@ -356,7 +357,7 @@ export default function LaporanSDMK({
     let totalReported = 0;
     let totalDatabase = activeStaffInPK.length;
 
-    // We check matches across the clinical professions
+    // We check matches across the clinical professions based on their designated id_profesi!
     profesiSdmk.forEach(prof => {
       const profName = prof.nama_profesi;
       const data: any = inputMatrix[prof.id] || { pns_l: 0, pns_p: 0, p3k_pn_l: 0, p3k_pn_p: 0, p3k_pw_l: 0, p3k_pw_p: 0, non_asn_l: 0, non_asn_p: 0 };
@@ -365,18 +366,8 @@ export default function LaporanSDMK({
       const rowEntered = Object.values(data).reduce((a: any, b: any) => a + b, 0) as number;
       totalReported += rowEntered;
 
-      // Filter active profiles representing this clinical subgroup
-      // E.g. dr. for "Dokter", drg. for "Dokter Gigi", Kep. for "Perawat", Keb. for "Bidan", Farm. for "Apoteker"
-      // Or by types
-      const dbMatches = activeStaffInPK.filter(p => {
-        const text = (p.nama_lengkap + " " + (p.gelar_belakang || '')).toLowerCase();
-        if (profName === "Dokter" && text.includes("dr. ")) return true;
-        if (profName === "Dokter Gigi" && text.includes("drg. ")) return true;
-        if (profName === "Perawat" && (text.includes("kep") || text.includes("perawat"))) return true;
-        if (profName === "Bidan" && (text.includes("keb") || text.includes("bidan"))) return true;
-        if (profName === "Apoteker" && (text.includes("farm") || text.includes("apt"))) return true;
-        return false;
-      });
+      // Filter active profiles representing this clinical subgroup by id_profesi and fallback matching name/gelar
+      const dbMatches = activeStaffInPK.filter(p => (p.id_profesi || getFallbackProfesiId(p.nama_lengkap, p.gelar_belakang)) === prof.id);
 
       const actualDbCount = dbMatches.length;
 
@@ -410,15 +401,8 @@ export default function LaporanSDMK({
       : asnProfiles.filter(p => p.id_puskesmas === activePuskesmasForReport && p.status_kepegawaian === 'Aktif');
 
     profesiSdmk.forEach(prof => {
-      const dbMatches = activeStaffInPK.filter(p => {
-        const text = (p.nama_lengkap + " " + (p.gelar_belakang || '')).toLowerCase();
-        if (prof.nama_profesi === "Dokter" && text.includes("dr. ")) return true;
-        if (prof.nama_profesi === "Dokter Gigi" && text.includes("drg. ")) return true;
-        if (prof.nama_profesi === "Perawat" && (text.includes("kep") || text.includes("perawat"))) return true;
-        if (prof.nama_profesi === "Bidan" && (text.includes("keb") || text.includes("bidan"))) return true;
-        if (prof.nama_profesi === "Apoteker" && (text.includes("farm") || text.includes("apt"))) return true;
-        return false;
-      });
+      // Filter active staff matching the exact id_profesi or fallback matching name/gelar
+      const dbMatches = activeStaffInPK.filter(p => (p.id_profesi || getFallbackProfesiId(p.nama_lengkap, p.gelar_belakang)) === prof.id);
 
       // Split matches by gender and statuses
       let pns_l = 0, pns_p = 0;
@@ -444,7 +428,7 @@ export default function LaporanSDMK({
     });
 
     setInputMatrix(loadedMatrix);
-    alert("✨ Autofill Berhasil! Nilai matriks ditarik real-time dari data biografi pegawai SIMPEG.");
+    alert("✨ Autofill Berhasil! Nilai matriks ditarik real-time dari data biografi pegawai SIMPEG sejalan dengan profesi terdaftar.");
   };
 
   // Dinkes Global / Unit aggregate stats based on actual active employee profiles (realita)
