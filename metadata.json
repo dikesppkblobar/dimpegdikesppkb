@@ -1,6 +1,6 @@
 {
-  "name": "Remix: SIMPEG Dinkes PPKB Lombok Barat",
-  "description": "Sistem Informasi Manajemen Kepegawaian Dinkes PPKB Kab. Lombok Barat dengan Dasbor Analisis Kesenjangan Formasi Renbut Kemenkes, Pelaporan SDMK Bulanan, dan Peringatan Dini.",
+  "name": "SAPA pegawai Dikes PPKB Lombok Barat",
+  "description": "Sapa Pegawai Dikes PPKB: Sistem Arsip, Pemberitahuan, & Analisis Kepegawaian Dinas Kesehatan Pengendalian Penduduk dan Keluarga Berencana Kab. Lombok Barat.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
