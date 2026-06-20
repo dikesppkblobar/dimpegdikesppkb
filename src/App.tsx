@@ -414,6 +414,7 @@ export default function App() {
   const [newGolongan, setNewGolongan] = useState('III/a');
   const [newTanggalLahir, setNewTanggalLahir] = useState('1990-01-01');
   const [newUnitId, setNewUnitId] = useState<number>(1);
+  const [newNomorWa, setNewNomorWa] = useState('+62');
 
   // === Detail Inputs for PNS ===
   const [newPangkatNama, setNewPangkatNama] = useState('Penata Muda');
@@ -550,6 +551,7 @@ export default function App() {
     setNewPkwtPembiayaan('BLUD');
     setNewPkwtJabatan('');
     setNewSisaCuti(12);
+    setNewNomorWa('+62');
 
     setNewNoStr('');
     setNewTanggalTerbitStr('');
@@ -939,6 +941,7 @@ export default function App() {
       status_kepegawaian: 'Aktif',
       jenis_kelamin: newGender,
       status_pegawai_detail: newStatusDetail,
+      nomor_wa: newNomorWa,
 
       // PNS Detailed Values
       pangkat_nama: newStatusDetail === 'PNS' ? newPangkatNama : undefined,
@@ -2007,6 +2010,29 @@ export default function App() {
                       </div>
 
                       <div className="space-y-1.5">
+                        <label className="text-slate-400 font-semibold flex items-center gap-1">
+                          Nomor WhatsApp Aktif <span className="text-rose-500 font-bold">*</span>
+                        </label>
+                        <div className="flex rounded-lg overflow-hidden border border-white/5 bg-[#16161a]">
+                          <span className="inline-flex items-center px-3 bg-slate-850 text-slate-400 border-r border-white/5 font-mono text-xs select-none">
+                            +62
+                          </span>
+                          <input
+                            type="text"
+                            required
+                            placeholder="81234567890"
+                            value={newNomorWa.startsWith('+62') ? newNomorWa.substring(3) : newNomorWa}
+                            onChange={(e) => {
+                              const digitsOnly = e.target.value.replace(/\D/g, '');
+                              setNewNomorWa('+62' + digitsOnly);
+                            }}
+                            className="flex-1 p-2 bg-[#16161a] text-white outline-none focus:ring-1 focus:ring-emerald-500 text-sm font-semibold font-mono"
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-mono">Format terkunci +62 (wajib terisi angka aktif)</p>
+                      </div>
+
+                      <div className="space-y-1.5">
                         <label className="text-emerald-400 font-bold">Rumpun Profesi Kesehatan (SDMK)</label>
                         <select
                           value={newProfesiId}
@@ -3043,6 +3069,12 @@ export default function App() {
                               {asn.nama_lengkap}{asn.gelar_belakang ? `, ${asn.gelar_belakang}` : ''}
                             </button>
                             <div className="text-[10.5px] text-black font-mono mt-0.5 font-bold">NIP {asn.nip}</div>
+                            {asn.nomor_wa && (
+                              <div className="text-[10px] text-emerald-800 font-mono mt-0.5 font-bold flex items-center gap-1 leading-none">
+                                <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                                WA: {asn.nomor_wa}
+                              </div>
+                            )}
                             {(asn.no_str || asn.no_sip) && (
                               <div className="mt-1.5 flex flex-wrap gap-1">
                                 {asn.no_str && (
@@ -3238,13 +3270,36 @@ export default function App() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-slate-600 font-semibold block mb-1">Gelar Belakang (Optional)</label>
+                      <label className="text-slate-600 font-semibold block mb-1 font-sans">Gelar Belakang (Optional)</label>
                       <input
                         type="text"
                         value={editingAsn.gelar_belakang || ''}
                         onChange={(e) => setEditingAsn({ ...editingAsn, gelar_belakang: e.target.value || null })}
                         className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-medium shadow-xs"
                       />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-slate-600 font-semibold block mb-1">
+                        No. WhatsApp Aktif <span className="text-rose-500 font-bold">*</span>
+                      </label>
+                      <div className="flex rounded-lg overflow-hidden border border-slate-300 bg-white">
+                        <span className="inline-flex items-center px-3 bg-slate-100 text-slate-505 text-slate-500 border-r border-slate-300 font-mono text-xs select-none">
+                          +62
+                        </span>
+                        <input
+                          type="text"
+                          required
+                          placeholder="81234567890"
+                          value={editingAsn.nomor_wa && editingAsn.nomor_wa.startsWith('+62') ? editingAsn.nomor_wa.substring(3) : (editingAsn.nomor_wa || '').replace(/^\+?6?2?/, '')}
+                          onChange={(e) => {
+                            const digitsOnly = e.target.value.replace(/\D/g, '');
+                            setEditingAsn({ ...editingAsn, nomor_wa: '+62' + digitsOnly });
+                          }}
+                          className="flex-1 p-2 bg-white text-slate-900 outline-none focus:ring-1 focus:ring-teal-500 text-sm font-semibold font-mono"
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-mono">Format terkunci +62 (wajib terisi angka aktif)</p>
                     </div>
 
                     <div className="space-y-1.5">
@@ -4455,6 +4510,18 @@ export default function App() {
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping mr-1"></span>
                         <span>{selectedProfileForDetail.status_kepegawaian.replace('_', ' ')}</span>
                       </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">No. WhatsApp Aktif</span>
+                      {selectedProfileForDetail.nomor_wa ? (
+                        <div className="flex items-center space-x-1 mt-0.5">
+                          <span className="text-xs font-bold text-slate-900 bg-emerald-55 border border-slate-200 px-2 py-0.5 rounded font-mono">
+                            {selectedProfileForDetail.nomor_wa}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs font-semibold text-slate-400">Belum diinput</span>
+                      )}
                     </div>
                   </div>
                 </div>
