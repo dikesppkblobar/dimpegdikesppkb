@@ -221,7 +221,10 @@ CREATE TABLE IF NOT EXISTS users (
     nip VARCHAR(50) UNIQUE NOT NULL,
     nama_lengkap VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'admin_puskesmas', -- 'admin_dinkes' | 'admin_puskesmas'
-    id_puskesmas INT REFERENCES puskesmas(id) ON DELETE SET NULL
+    id_puskesmas INT REFERENCES puskesmas(id) ON DELETE SET NULL,
+    username VARCHAR(100) UNIQUE,
+    password VARCHAR(255),
+    nomor_wa VARCHAR(50)
 );
 
 -- Create fast query lookup Indexes
@@ -1102,7 +1105,10 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
           nip: String(u.nip || ""),
           nama_lengkap: String(u.nama_lengkap || ""),
           role: String(u.role || "admin_puskesmas"),
-          id_puskesmas: u.id_puskesmas && !isNaN(Number(u.id_puskesmas)) ? Number(u.id_puskesmas) : null
+          id_puskesmas: u.id_puskesmas && !isNaN(Number(u.id_puskesmas)) ? Number(u.id_puskesmas) : null,
+          username: u.username ? String(u.username) : null,
+          password: u.password ? String(u.password) : null,
+          nomor_wa: u.nomor_wa ? String(u.nomor_wa) : null
         }));
         if (sanitizedUsrs.length > 0) {
           const { error } = await supabase.from('users').upsert(sanitizedUsrs, { onConflict: 'nip' });
