@@ -468,7 +468,7 @@ export default function LayananKepegawaian({
       descriptionText = `Usulan pencantuman gelar akademik baru Anda: *${gelarBaru}*`;
     } else {
       const ftr = masterFitur.find(f => f.slug === serviceSlug);
-      serviceLabel = ftr?.nama_fitur || 'Layanan Kepegawaian SIMPEG';
+      serviceLabel = ftr?.nama_fitur || 'Layanan Kepegawaian SAPA';
       descriptionText = `Usulan layanan *${serviceLabel}* Anda`;
     }
 
@@ -488,14 +488,14 @@ Kami menginformasikan perkembangan usulan berkas kepegawaian Anda di *Dinas Kese
  
 *Detail Usulan*: ${descriptionText}
 *Status Terbaru*: 📌 *PEMBERITAHUAN PERSYARATAN WAJIB*
-
+ 
 Berdasarkan manajemen dokumen kepegawaian, usulan ini membutuhkan kelengkapan dokumen persyaratan berikut yang wajib dilengkapi segera:
 ${docStr}
 ${details.catatan ? `\n*Catatan Keterangan*: _"${details.catatan}"_` : ''}
  
-Mohon segera melengkapi berkas ini melalui portal mandiri SIMPEG atau menyerahkan kepada pengelola kepegawaian unit kerja Anda.
+Mohon segera melengkapi berkas ini melalui portal mandiri SAPA atau menyerahkan kepada pengelola kepegawaian unit kerja Anda.
 
-_Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
+_Notifikasi ini dikirim via Dashboard Terintegrasi SAPA pegawai Dikes PPKB Kab. Lombok Barat._`;
     } else {
       const catatanText = details.catatan ? `\n*Catatan Admin*: _"${details.catatan}"_` : '';
       messageContent = 
@@ -507,7 +507,7 @@ Kami menginformasikan perkembangan usulan berkas kepegawaian Anda di *Dinas Kese
 *Status Terbaru*: 📌 *${status.toUpperCase()}*
 ${catatanText}
  
-_Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
+_Notifikasi ini dikirim via Dashboard Terintegrasi SAPA pegawai Dikes PPKB Kab. Lombok Barat._`;
     }
 
     return messageContent;
@@ -1040,8 +1040,8 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
         : `*Yth. Admin Dinas Kesehatan PPKB Kabupaten Lombok Barat*,`;
         
       const introMessage = isDinkes
-        ? `Kami menginformasikan bahwa berkas usulan layanan kepegawaian Anda sedang diproses oleh Dinas Kesehatan PPKB Kabupaten Lombok Barat di SIMPEG:`
-        : `Kami menginformasikan bahwa Unit Kerja *${unitKerjaName}* telah mengajukan usulan layanan baru di SIMPEG:`;
+        ? `Kami menginformasikan bahwa berkas usulan layanan kepegawaian Anda sedang diproses oleh Dinas Kesehatan PPKB Kabupaten Lombok Barat di SAPA pegawai Dikes PPKB:`
+        : `Kami menginformasikan bahwa Unit Kerja *${unitKerjaName}* telah mengajukan usulan layanan baru di SAPA pegawai Dikes PPKB:`;
 
       const concludingMessage = isDinkes
         ? `Mohon agar berkas usulan Anda dapat dipantau secara berkala melalui dashboard mandiri pegawai. Terima kasih.`
@@ -1064,7 +1064,7 @@ ${introMessage}
  
 ${concludingMessage}
  
-_Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok Barat._`;
+_Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SAPA pegawai Dikes PPKB Kab. Lombok Barat._`;
 
       setEditedWaMessage(msg);
     }
@@ -1844,7 +1844,7 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                     <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center space-x-1.5 bg-teal-50 border border-teal-200 text-teal-800 p-2.5 rounded-lg text-[11px] text-left leading-relaxed max-w-sm">
                         <Check size={16} className="text-teal-600 shrink-0" />
-                        <span>Kirim usulan ini ke SIMPEG Dinkes sekaligus mengirimkan notifikasi rincian data pegawai ke WhatsApp {currentRole === 'admin_dinkes' ? 'Pegawai' : 'Admin Dinkes'} untuk segera diproses.</span>
+                        <span>Kirim usulan ini ke SAPA pegawai Dikes PPKB sekaligus mengirimkan notifikasi rincian data pegawai ke WhatsApp {currentRole === 'admin_dinkes' ? 'Pegawai' : 'Admin Dinkes'} untuk segera diproses.</span>
                       </div>
 
                       <button
