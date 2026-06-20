@@ -3284,7 +3284,7 @@ export default function App() {
                         No. WhatsApp Aktif <span className="text-rose-500 font-bold">*</span>
                       </label>
                       <div className="flex rounded-lg overflow-hidden border border-slate-300 bg-white">
-                        <span className="inline-flex items-center px-3 bg-slate-100 text-slate-505 text-slate-500 border-r border-slate-300 font-mono text-xs select-none">
+                        <span className="inline-flex items-center px-3 bg-slate-100 text-slate-500 border-r border-slate-300 font-mono text-xs select-none">
                           +62
                         </span>
                         <input
