@@ -527,9 +527,9 @@ export default function DashboardOverview({
   });
 
   // D. SISA CUTI TAHUNAN
-  // Active employees who have any remaining annual leaves in 2026.
+  // Active employees who have remaining annual leaves under 4 days in 2026.
   const cuti2026List = visibleAsn.filter(p => {
-    return p.status_kepegawaian === 'Aktif' && (p.sisa_cuti_tahunan || 0) > 0;
+    return p.status_kepegawaian === 'Aktif' && (p.sisa_cuti_tahunan || 0) > 0 && (p.sisa_cuti_tahunan || 0) < 4;
   }).map(p => {
     // Generate a beautiful, distributed proposed month inside second half of 2026
     const months = ['Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -629,6 +629,109 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
     } else {
       window.alert(
         `✓ Peringatan dini berhasil disimpan ke In-App.\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirimkan pesan otomatis ke nomor WhatsApp Pegawai (${cleanPhone}) berisi informasi Berkas Wajib Hubungkan ke Layanan.\n\nTekan OK untuk melanjutkan...`
+      );
+      window.open(whatsappApiUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const sendWhatsAppDirectly = (p: ASNProfile, tipe: 'pangkat' | 'jafung' | 'kgb' | 'cuti' | 'str' | 'sip') => {
+    // Clean phone number
+    const rawWaNum = p.nomor_wa || '';
+    let cleanPhone = rawWaNum.replace(/[^0-9+]/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '+62' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('62') && !cleanPhone.startsWith('+62')) {
+      cleanPhone = '+' + cleanPhone;
+    } else if (!cleanPhone.startsWith('+62') && cleanPhone !== '') {
+      cleanPhone = '+62' + cleanPhone;
+    }
+
+    let serviceName = '';
+    let messageBody = '';
+    let requiredDocs: string[] = [];
+
+    switch (tipe) {
+      case 'pangkat':
+        serviceName = 'Layanan Kenaikan Pangkat/Golongan';
+        requiredDocs = [
+          '- Surat Pengantar UPT UPT Puskesmas',
+          '- SK Pangkat Terakhir',
+          '- PAK (Penetapan Angka Kredit) Terakhir',
+          '- Sasaran Kinerja Pegawai (SKP) 2 Tahun Terakhir'
+        ];
+        messageBody = `menghimbau bahwa Anda teranalisa berpotensi mengajukan kenaikan pangkat/golongan untuk Tahun Berjalan 2026 (TAT: ${p.tmt_pangkat_terakhir ? formatDate(p.tmt_pangkat_terakhir) : '-'}).`;
+        break;
+      case 'jafung':
+        serviceName = 'Layanan Peningkatan Jabatan (Jafung)';
+        requiredDocs = [
+          '- Surat Pengantar UPT UPT Puskesmas',
+          '- SK Jabatan Fungsional Terakhir',
+          '- Sertifikat Uji Kompetensi (jika ada)',
+          '- Penilaian Prestasi Kerja Terakhir'
+        ];
+        messageBody = `menghimbau Anda untuk mempersiapkan usulan peningkatan jabatan fungsional kesehatan Anda.`;
+        break;
+      case 'kgb':
+        serviceName = 'Layanan Kenaikan Gaji Berkala (KGB)';
+        requiredDocs = [
+          '- Surat Pengantar UPT UPT Puskesmas',
+          '- SK Kenaikan Gaji Berkala (KGB) Terakhir'
+        ];
+        messageBody = `menghimbau bahwa Anda teranalisa berpotensi mengajukan Kenaikan Gaji Berkala (KGB) periode berikutnya (TAT: ${p.tmt_berkala_terakhir ? formatDate(p.tmt_berkala_terakhir) : '-'}).`;
+        break;
+      case 'cuti':
+        serviceName = 'Layanan Cuti Pegawai';
+        requiredDocs = [
+          '- Formulir Permohonan Cuti Tahunan',
+          '- Rekomendasi/Persetujuan Kepala Puskesmas'
+        ];
+        messageBody = `menginformasikan sisa cuti tahunan aktif Anda tahun berjalan adalah ${p.sisa_cuti_tahunan || 0} hari kerja. Silakan koordinasikan pengambilan hak cuti Anda dengan atasan atau UPT terkait.`;
+        break;
+      case 'str':
+        serviceName = 'Pemantauan Kelayakan STR';
+        requiredDocs = [
+          '- STR Lama (Asli)',
+          '- Ijazah & Serkom Terakhir',
+          '- Surat Rekomendasi Profesi / Kecukupan SKP'
+        ];
+        messageBody = `mengingatkan bahwa masa berlaku STR Kesehatan Anda berakhir pada ${p.tanggal_akhir_str ? formatDate(p.tanggal_akhir_str) : '-'} (No STR: ${p.no_str || '-'}). Segera lakukan perpanjangan/penginputan STR baru seumur hidup di Portal SatuSehat SDMK.`;
+        break;
+      case 'sip':
+        serviceName = 'Pemantauan Surat Izin Praktik (SIP)';
+        requiredDocs = [
+          '- SIP Lama (Asli)',
+          '- STR Aktif Terlegalisir',
+          '- Surat Rekomendasi Profesi',
+          '- Surat Keterangan Tempat Praktik/Bekerja'
+        ];
+        messageBody = `mengingatkan bahwa Surat Izin Praktik (SIP) Anda berakhir pada ${p.tanggal_akhir_sip ? formatDate(p.tanggal_akhir_sip) : '-'} (No SIP: ${p.no_sip || '-'}). Segera ajukan permohonan SIP baru Anda melalui Dinas Kesehatan PPKB.`;
+        break;
+    }
+
+    const docListText = requiredDocs.join('\n');
+    const messageContent = 
+`Yth. Bapak/Ibu *${p.nama_lengkap}${p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}*,
+ 
+Kami dari *Dinas Kesehatan PPKB Kabupaten Lombok Barat* ${messageBody}
+ 
+*Layanan Terkait*: ${serviceName}
+*NIP / Identitas*: ${p.nip || '-'}
+ 
+*Daftar Dokumen/Persyaratan Rekomendasi*:
+${docListText || '-'}
+ 
+Informasi ini dikirim langsung dari Dashboard Sistem Monitoring SIMPEG Terintegrasi Dinas Kesehatan PPKB Lombok Barat untuk memastikan kelancaran administrasi kepegawaian Anda. Terima kasih.`;
+
+    const encodedMessage = encodeURIComponent(messageContent);
+    const whatsappApiUrl = `https://api.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encodedMessage}`;
+
+    if (!rawWaNum) {
+      window.alert(
+        `⚠️ Nomor WhatsApp untuk pegawai "${p.nama_lengkap}" belum terekam di database pegawai. Silakan lengkapi "No. WhatsApp Aktif" (dengan awalan +62 atau 08) di menu Direktori Pegawai.`
+      );
+    } else {
+      window.alert(
+        `✓ Menyiapkan notifikasi WA untuk: ${p.nama_lengkap} (${cleanPhone})\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirimkan pesan otomatis terkait ${serviceName}.\n\nTekan OK untuk melanjutkan...`
       );
       window.open(whatsappApiUrl, '_blank', 'noopener,noreferrer');
     }
@@ -752,7 +855,7 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
       case 'pangkat':
         return {
           title: "Analisa Rincian Usul Kenaikan GOLONGAN / PANGKAT (Tahun Berjalan 2026)",
-          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Bulan Pengajuan", "TMT Terakhir/Golongan", "Target TMT Baru (TAT Pangkat)"],
+          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Bulan Pengajuan", "TMT Terakhir/Golongan", "Target TMT Baru (TAT Pangkat)", "Aksi"],
           list: pangkat2026List,
           renderRow: (p: any, idx: number) => (
             <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700 text-xs text-left">
@@ -768,13 +871,23 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
                   {formatDate(p.tatDate)}
                 </span>
               </td>
+              <td className="p-3">
+                <button
+                  type="button"
+                  onClick={() => sendWhatsAppDirectly(p, 'pangkat')}
+                  className="inline-flex items-center space-x-1 px-2 py-1 rounded bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 transition font-bold text-[10px] cursor-pointer"
+                >
+                  <MessageSquare size={11} className="text-emerald-600" />
+                  <span>Kirim WA</span>
+                </button>
+              </td>
             </tr>
           )
         };
       case 'jafung':
         return {
           title: "Analisa Rincian Usul Peningkatan JABATAN (JAFUNG) (Tahun Berjalan 2026)",
-          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Bulan Pengajuan", "TMT Jabatan Terakhir", "Target/TAT Jabatan Baru"],
+          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Bulan Pengajuan", "TMT Jabatan Terakhir", "Target/TAT Jabatan Baru", "Aksi"],
           list: jafung2026List,
           renderRow: (p: any, idx: number) => (
             <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700 text-xs text-left">
@@ -790,13 +903,23 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
                   {formatDate(p.tatDate)}
                 </span>
               </td>
+              <td className="p-3">
+                <button
+                  type="button"
+                  onClick={() => sendWhatsAppDirectly(p, 'jafung')}
+                  className="inline-flex items-center space-x-1 px-2 py-1 rounded bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 transition font-bold text-[10px] cursor-pointer"
+                >
+                  <MessageSquare size={11} className="text-emerald-600" />
+                  <span>Kirim WA</span>
+                </button>
+              </td>
             </tr>
           )
         };
       case 'kgb':
         return {
           title: "Analisa Rincian Usul Kenaikan GAJI BERKALA (KGB) (Tahun Berjalan 2026)",
-          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Bulan Pengajuan", "TMT Berkala Terakhir", "Target/TAT KGB Baru"],
+          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Bulan Pengajuan", "TMT Berkala Terakhir", "Target/TAT KGB Baru", "Aksi"],
           list: kgb2026List,
           renderRow: (p: any, idx: number) => (
             <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700 text-xs text-left">
@@ -812,13 +935,23 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
                   {formatDate(p.tatDate)}
                 </span>
               </td>
+              <td className="p-3">
+                <button
+                  type="button"
+                  onClick={() => sendWhatsAppDirectly(p, 'kgb')}
+                  className="inline-flex items-center space-x-1 px-2 py-1 rounded bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 transition font-bold text-[10px] cursor-pointer"
+                >
+                  <MessageSquare size={11} className="text-emerald-600" />
+                  <span>Kirim WA</span>
+                </button>
+              </td>
             </tr>
           )
         };
       case 'cuti':
         return {
-          title: "Analisa &amp; Sisa Hari SISA CUTI TAHUNAN Pegawai (Tahun Berjalan 2026)",
-          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Rekomendasi / Bulan Pengajuan", "Sisa Cuti Aktif", "Keterangan"],
+          title: "Analisa & Sisa Hari SISA CUTI TAHUNAN Pegawai (Tahun Berjalan 2026)",
+          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Rekomendasi / Bulan Pengajuan", "Sisa Cuti Aktif", "Keterangan", "Aksi"],
           list: cuti2026List,
           renderRow: (p: any, idx: number) => (
             <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700 text-xs text-left">
@@ -833,6 +966,16 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
                 <span className="px-2 py-1 bg-slate-100 font-semibold rounded text-[10px] text-slate-500">
                   Sisa Kuota Aktif
                 </span>
+              </td>
+              <td className="p-3">
+                <button
+                  type="button"
+                  onClick={() => sendWhatsAppDirectly(p, 'cuti')}
+                  className="inline-flex items-center space-x-1 px-2 py-1 rounded bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 transition font-bold text-[10px] cursor-pointer"
+                >
+                  <MessageSquare size={11} className="text-emerald-600" />
+                  <span>Kirim WA</span>
+                </button>
               </td>
             </tr>
           )
@@ -850,24 +993,34 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
       case 'str_dekat':
         rawResult = {
           title: "Rincian Pegawai: STR Mendekati Kadaluarsa (< 60 Hari)",
-          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Nomor STR", "Tanggal Terbit STR", "Tanggal Berakhir STR", "Sisa Hari (Tenggat)"],
+          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Nomor STR", "Tanggal Terbit STR", "Tanggal Berakhir STR", "Sisa Hari (Tenggat)", "Aksi"],
           list: strMetrics.criticalList,
           renderRow: (item: any, idx: number) => {
             const p = item.profile;
             return (
               <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700 text-xs">
-                <td className="p-3 font-semibold text-slate-800">
+                <td className="p-3 font-semibold text-slate-800 text-left">
                   <div>{p.nama_lengkap}{p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}</div>
                   <div className="text-[10px] text-slate-400 font-mono">NIP {p.nip}</div>
                 </td>
-                <td className="p-3 text-slate-650 font-medium">{getPuskesmasName(p.id_puskesmas)}</td>
-                <td className="p-3 font-mono text-amber-700 font-semibold">{p.no_str}</td>
-                <td className="p-3 font-mono text-slate-500">{formatDate(p.tanggal_terbit_str)}</td>
-                <td className="p-3 font-mono text-slate-600">{formatDate(p.tanggal_akhir_str)}</td>
-                <td className="p-3 text-amber-700 font-bold font-mono">
+                <td className="p-3 text-slate-650 font-medium text-left">{getPuskesmasName(p.id_puskesmas)}</td>
+                <td className="p-3 font-mono text-amber-700 font-semibold text-left">{p.no_str}</td>
+                <td className="p-3 font-mono text-slate-500 text-left">{formatDate(p.tanggal_terbit_str)}</td>
+                <td className="p-3 font-mono text-slate-600 text-left">{formatDate(p.tanggal_akhir_str)}</td>
+                <td className="p-3 text-amber-700 font-bold font-mono text-left">
                   <span className="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg border border-amber-200">
                     {getDaysRemainingStr(p.tanggal_akhir_str)}
                   </span>
+                </td>
+                <td className="p-3 text-left">
+                  <button
+                    type="button"
+                    onClick={() => sendWhatsAppDirectly(p, 'str')}
+                    className="inline-flex items-center space-x-1 px-2 py-1 rounded bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 transition font-bold text-[10px] cursor-pointer"
+                  >
+                    <MessageSquare size={11} className="text-emerald-600" />
+                    <span>Kirim WA</span>
+                  </button>
                 </td>
               </tr>
             );
@@ -877,24 +1030,34 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
       case 'str_kadaluarsa':
         rawResult = {
           title: "Rincian Pegawai: STR Telah Kadaluarsa (Perlu Perpanjangan Segera)",
-          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Nomor STR", "Tanggal Terbit STR", "Tanggal Berakhir STR", "Status Kelayakan"],
+          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Nomor STR", "Tanggal Terbit STR", "Tanggal Berakhir STR", "Status Kelayakan", "Aksi"],
           list: strMetrics.expiredList,
           renderRow: (item: any, idx: number) => {
             const p = item.profile;
             return (
               <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700 text-xs">
-                <td className="p-3 font-semibold text-slate-800">
+                <td className="p-3 font-semibold text-slate-800 text-left">
                   <div>{p.nama_lengkap}{p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}</div>
                   <div className="text-[10px] text-slate-400 font-mono">NIP {p.nip}</div>
                 </td>
-                <td className="p-3 text-slate-650 font-medium">{getPuskesmasName(p.id_puskesmas)}</td>
-                <td className="p-3 font-mono text-rose-700 font-semibold">{p.no_str}</td>
-                <td className="p-3 font-mono text-slate-500">{formatDate(p.tanggal_terbit_str)}</td>
-                <td className="p-3 font-mono text-rose-700 font-bold">{formatDate(p.tanggal_akhir_str)}</td>
-                <td className="p-3 text-rose-700 font-bold">
+                <td className="p-3 text-slate-650 font-medium text-left">{getPuskesmasName(p.id_puskesmas)}</td>
+                <td className="p-3 font-mono text-rose-700 font-semibold text-left">{p.no_str}</td>
+                <td className="p-3 font-mono text-slate-500 text-left">{formatDate(p.tanggal_terbit_str)}</td>
+                <td className="p-3 font-mono text-rose-700 font-bold text-left">{formatDate(p.tanggal_akhir_str)}</td>
+                <td className="p-3 text-rose-700 font-bold text-left">
                   <span className="bg-rose-50 text-rose-800 px-2.5 py-1 rounded-lg border border-rose-200 uppercase tracking-wider text-[9px] font-extrabold text-center inline-block">
                     KADALUARSA
                   </span>
+                </td>
+                <td className="p-3 text-left">
+                  <button
+                    type="button"
+                    onClick={() => sendWhatsAppDirectly(p, 'str')}
+                    className="inline-flex items-center space-x-1 px-2 py-1 rounded bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 transition font-bold text-[10px] cursor-pointer"
+                  >
+                    <MessageSquare size={11} className="text-emerald-600" />
+                    <span>Kirim WA</span>
+                  </button>
                 </td>
               </tr>
             );
@@ -904,12 +1067,12 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
       case 'sip_dekat':
         rawResult = {
           title: "Rincian Pegawai: SIP Mendekati Kadaluarsa (< 60 Hari)",
-          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Nomor SIP", "Tanggal Terbit SIP", "Tanggal Berakhir SIP", "Sisa Hari (Tenggat)"],
+          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Nomor SIP", "Tanggal Terbit SIP", "Tanggal Berakhir SIP", "Sisa Hari (Tenggat)", "Aksi"],
           list: sipMetrics.criticalList,
           renderRow: (item: any, idx: number) => {
             const p = item.profile;
             return (
-              <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700 text-xs">
+              <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700 text-xs text-left">
                 <td className="p-3 font-semibold text-slate-800">
                   <div>{p.nama_lengkap}{p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}</div>
                   <div className="text-[10px] text-slate-400 font-mono">NIP {p.nip}</div>
@@ -923,6 +1086,16 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
                     {getDaysRemainingStr(p.tanggal_akhir_sip)}
                   </span>
                 </td>
+                <td className="p-3 text-left">
+                  <button
+                    type="button"
+                    onClick={() => sendWhatsAppDirectly(p, 'sip')}
+                    className="inline-flex items-center space-x-1 px-2 py-1 rounded bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 transition font-bold text-[10px] cursor-pointer"
+                  >
+                    <MessageSquare size={11} className="text-emerald-600" />
+                    <span>Kirim WA</span>
+                  </button>
+                </td>
               </tr>
             );
           }
@@ -931,12 +1104,12 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
       case 'sip_kadaluarsa':
         rawResult = {
           title: "Rincian Pegawai: SIP Telah Kadaluarsa (Masa Berlaku Berakhir)",
-          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Nomor SIP", "Tanggal Terbit SIP", "Tanggal Berakhir SIP", "Status Surat Izin"],
+          headers: ["Nama Pegawai / NIP", "Unit Kerja", "Nomor SIP", "Tanggal Terbit SIP", "Tanggal Berakhir SIP", "Status Surat Izin", "Aksi"],
           list: sipMetrics.expiredList,
           renderRow: (item: any, idx: number) => {
             const p = item.profile;
             return (
-              <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700 text-xs">
+              <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700 text-xs text-left">
                 <td className="p-3 font-semibold text-slate-800">
                   <div>{p.nama_lengkap}{p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}</div>
                   <div className="text-[10px] text-slate-400 font-mono">NIP {p.nip}</div>
@@ -949,6 +1122,16 @@ Pesan ini disusun secara otomatis oleh Sistem Monitoring SIMPEG Terintegrasi Din
                   <span className="bg-rose-50 text-rose-800 px-2.5 py-1 rounded-lg border border-rose-200 uppercase tracking-wider text-[9px] font-extrabold text-center inline-block">
                     IZIN HABIS
                   </span>
+                </td>
+                <td className="p-3 text-left">
+                  <button
+                    type="button"
+                    onClick={() => sendWhatsAppDirectly(p, 'sip')}
+                    className="inline-flex items-center space-x-1 px-2 py-1 rounded bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 transition font-bold text-[10px] cursor-pointer"
+                  >
+                    <MessageSquare size={11} className="text-emerald-600" />
+                    <span>Kirim WA</span>
+                  </button>
                 </td>
               </tr>
             );
