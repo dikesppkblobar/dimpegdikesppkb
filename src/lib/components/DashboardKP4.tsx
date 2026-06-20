@@ -38,6 +38,23 @@ export default function DashboardKP4({
   const [statusWarnFilter, setStatusWarnFilter] = useState<'ALL' | 'WARNING_ONLY' | 'CLEAN_ONLY'>('ALL');
   const [selectedWarningCode, setSelectedWarningCode] = useState<string | null>(null);
 
+  // WhatsApp Preview Modal States
+  const [waModalOpen, setWaModalOpen] = useState(false);
+  const [waRecipientName, setWaRecipientName] = useState('');
+  const [waRecipientPhone, setWaRecipientPhone] = useState('');
+  const [waDraftMessage, setWaDraftMessage] = useState('');
+  const [waCatatanInput, setWaCatatanInput] = useState('');
+  const [waOriginalBaseMsg, setWaOriginalBaseMsg] = useState('');
+
+  const handleCatatanChange = (newVal: string) => {
+    setWaCatatanInput(newVal);
+    if (newVal.trim() !== '') {
+      setWaDraftMessage(`${waOriginalBaseMsg}\n\n*Catatan Tambahan*: _"${newVal}"_`);
+    } else {
+      setWaDraftMessage(waOriginalBaseMsg);
+    }
+  };
+
   // get Puskesmas Name Helper
   const getPuskesmasName = (id: number) => {
     return puskesmasList.find(p => p.id === id)?.nama || `Puskesmas ID ${id}`;
@@ -327,24 +344,94 @@ ${issuesListStr}
 _Notifikasi otomatis dikirim via Sistem Analisa KP4 Dinkes Lombok Barat_`;
     }
 
-    const encodedMessage = encodeURIComponent(messageContent);
-    const whatsappApiUrl = `https://api.whatsapp.com/send?phone=${cleanPhone.replace('+', '')}&text=${encodedMessage}`;
-
     if (!rawWaNum) {
       window.alert(
         `⚠️ Nomor WhatsApp untuk pegawai "${p.nama_lengkap}" belum terekam di database pegawai.\n\nHarap edit profil pegawai terlebih dahulu untuk menambahkan nomor WhatsApp.`
       );
     } else {
-      window.alert(
-        `✓ Menyiapkan draf notifikasi audit BPK untuk: ${p.nama_lengkap} (${cleanPhone})\n\nSistem akan mengarahkan ke WhatsApp Web.\n\nTekan OK untuk melanjutkan...`
-      );
-      window.open(whatsappApiUrl, '_blank', 'noopener,noreferrer');
+      setWaRecipientName(`${p.nama_lengkap}${p.gelar_belakang ? `, ${p.gelar_belakang}` : ''}`);
+      setWaRecipientPhone(cleanPhone);
+      setWaOriginalBaseMsg(messageContent);
+      setWaDraftMessage(messageContent);
+      setWaCatatanInput('');
+      setWaModalOpen(true);
     }
   };
 
   return (
     <div className="space-y-6 text-slate-800 animate-in fade-in duration-200">
       
+      {/* WhatsApp Modal Dialog */}
+      {waModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl text-left space-y-4">
+            <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <span className="text-emerald-600 text-base">💬</span>
+                  Pratinjau Kirim WhatsApp
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Kepada: <strong className="text-slate-700">{waRecipientName}</strong> ({waRecipientPhone})
+                </p>
+              </div>
+              <button
+                onClick={() => setWaModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">Edit Draft Format Pesan</label>
+              <textarea
+                rows={10}
+                value={waDraftMessage}
+                onChange={(e) => setWaDraftMessage(e.target.value)}
+                className="w-full p-3 border border-slate-200 bg-slate-50 rounded-lg text-xs text-slate-700 font-mono focus:ring-1 focus:ring-slate-450 focus:outline-none focus:bg-white leading-relaxed resize-y"
+                placeholder="Tulis pesan..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">Catatan Tambahan (Opsional)</label>
+              <input
+                type="text"
+                value={waCatatanInput}
+                onChange={(e) => handleCatatanChange(e.target.value)}
+                placeholder="e.g. Harap segera diserahkan sebelum hari Jumat ini."
+                className="w-full p-2 border border-slate-200 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-teal-500 focus:outline-none"
+              />
+              <p className="text-[10px] text-slate-400">Catatan akan ditambahkan otomatis di bagian bawah draf pesan di atas.</p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setWaModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const encoded = encodeURIComponent(waDraftMessage);
+                  const cleanPhoneNum = waRecipientPhone.replace('+', '');
+                  window.open(`https://api.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`, '_blank', 'noopener,noreferrer');
+                  setWaModalOpen(false);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-sm flex items-center space-x-1.5"
+              >
+                <MessageSquare size={13} />
+                <span>Kirim</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Title Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div className="text-left py-1">
