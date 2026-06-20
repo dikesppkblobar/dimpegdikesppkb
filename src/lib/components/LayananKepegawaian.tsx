@@ -897,14 +897,62 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
 
   React.useEffect(() => {
     if (selectedAsn && selectedFitur) {
-      const msg = generateLayananWhatsAppMessage(selectedAsn, newUsulanStatus, selectedFitur.slug, {
-        golonganLama: selectedAsn.golongan_ruang,
-        golonganBaru: pangkatBaru,
-        cutiDays: cutiDays,
-        jenjangSekarang: selectedAsn.jenjang_jafung,
-        jenjangSelanjutnya: jafungBaruLevel,
-        catatan: newUsulanCatatan
-      });
+      // Find the unit kerja (puskesmas) name of this pegawai
+      const pusk = puskesmasList.find(pk => pk.id === selectedAsn.id_puskesmas);
+      const unitKerjaName = pusk ? pusk.nama_puskesmas : 'Puskesmas Pengusul';
+      
+      let serviceLabel = '';
+      let descriptionText = '';
+
+      const golLama = selectedAsn.golongan_ruang || 'III/a';
+      const golBaru = pangkatBaru || 'IV/a';
+      const jfSekarang = selectedAsn.jenjang_jafung || 'Ahli Pertama';
+      const jfSelanjutnya = jafungBaruLevel || 'Ahli Muda';
+      const cutiAmount = typeof cutiDays === 'number' ? cutiDays : 1;
+
+      if (selectedFitur.slug === 'kenaikan-pangkat') {
+        serviceLabel = 'Kenaikan Pangkat/Golongan';
+        descriptionText = `Kenaikan pangkat dari Golongan ${golLama} ke ${golBaru}`;
+      } else if (selectedFitur.slug === 'cuti') {
+        serviceLabel = 'Permohonan Cuti Pegawai';
+        descriptionText = `Cuti tahunan sebanyak ${cutiAmount} Hari`;
+      } else if (selectedFitur.slug === 'usulan-jafung') {
+        serviceLabel = 'Peningkatan Jabatan Fungsional (Jafung)';
+        descriptionText = `Peningkatan jabatan dari jenjang ${jfSekarang} ke jenjang ${jfSelanjutnya}`;
+      } else if (selectedFitur.slug === 'mutasi') {
+        serviceLabel = 'Mutasi Unit Fasyankes';
+        const targetPk = puskesmasList.find(pl => pl.id === targetMutasiPuskesmasId)?.nama_puskesmas || 'Unit Terpilih';
+        descriptionText = `Mutasi unit dari ${getPuskesmasName(selectedAsn.id_puskesmas)} ke ${targetPk}`;
+      } else if (selectedFitur.slug === 'pencantuman-gelar') {
+        serviceLabel = 'Pencantuman Gelar Akademik';
+        descriptionText = `Pencantuman gelar akademik baru: ${gelarBaru}`;
+      } else {
+        serviceLabel = selectedFitur.nama_fitur;
+        descriptionText = `Layanan ${serviceLabel}`;
+      }
+
+      const notesText = newUsulanCatatan ? `\n- Catatan Tambahan: "${newUsulanCatatan}"` : '';
+
+      const msg = 
+`*Yth. Admin Dinas Kesehatan PPKB Kabupaten Lombok Barat*,
+ 
+Kami menginformasikan bahwa Unit Kerja *${unitKerjaName}* telah mengajukan usulan layanan baru di SIMPEG:
+ 
+*IDENTITAS PEGAWAI*:
+- Nama: *${selectedAsn.nama_lengkap}${selectedAsn.gelar_belakang ? `, ${selectedAsn.gelar_belakang}` : ''}*
+- NIP: *${selectedAsn.nip}*
+- Golongan Sekarang: *${selectedAsn.golongan_ruang || '-'}*
+- Jabatan: *${selectedAsn.jenjang_jafung || 'Struktural / Staf'}*
+ 
+*DETAIL USULAN*:
+- Layanan: *${serviceLabel}*
+- Deskripsi: *${descriptionText}*
+- Status Dokumen: 📌 *${newUsulanStatus.toUpperCase()}*${notesText}
+ 
+Mohon agar berkas usulan tersebut segera diproses dan diverifikasi lebih lanjut. Terima kasih.
+ 
+_Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok Barat._`;
+
       setEditedWaMessage(msg);
     }
   }, [
@@ -917,6 +965,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
     jafungBaruLevel,
     targetMutasiPuskesmasId,
     gelarBaru,
+    puskesmasList,
     masterDokumen,
     syaratFiturMap
   ]);
@@ -1603,13 +1652,18 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                         </select>
                       </div>
 
-                      {/* Phone Display */}
-                      <div className="space-y-1.5 text-left">
-                        <label className="text-xs font-bold text-slate-700 block text-left">Nomor WA Pegawai</label>
-                        <div className="p-2 border border-slate-100 rounded-lg bg-slate-50 font-mono text-slate-600 truncate text-xs">
-                          {selectedAsn.nomor_wa || '(Belum Terekam)'}
-                        </div>
-                      </div>
+                      {/* Phone Display updated to Admin Dinkes as per dual-channel dinkes requirement */}
+                      {(() => {
+                        const adminDinkesProfile = asnProfiles.find(p => p.nip === "198004122005011003" || p.id === 1);
+                        return (
+                          <div className="space-y-1.5 text-left">
+                            <label className="text-xs font-bold text-slate-700 block text-left">Penerima WhatsApp (Admin Dinkes PPKB)</label>
+                            <div className="p-2 border border-teal-100 rounded-lg bg-teal-50/20 font-semibold text-teal-850 truncate text-[11px]">
+                              {adminDinkesProfile ? `${adminDinkesProfile.nama_lengkap} (${adminDinkesProfile.nomor_wa || '+628123456781'})` : 'dr. Wahyu Darizki (+628123456781)'}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {newUsulanStatus === 'Pemberitahuan' && (
@@ -1645,7 +1699,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                       <div className="flex justify-between items-center">
                         <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center space-x-1">
                           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse mr-1"></span>
-                          <span>Preview Pesan WhatsApp (Dual-Channel)</span>
+                          <span>Preview Pesan WhatsApp ke Admin Dinkes (Dual-Channel)</span>
                         </span>
                         <div className="text-[10px] text-emerald-600 font-bold bg-emerald-100 px-2 py-0.5 rounded">
                           Live Auto-Generated Sync
@@ -1660,15 +1714,15 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                           className="w-full p-3 border border-emerald-200 bg-white rounded-lg text-xs text-slate-705 font-mono leading-relaxed shadow-3xs focus:outline-none focus:ring-1 focus:ring-emerald-505 resize-y"
                           placeholder="Hasil sinkronisasi pesan WhatsApp otomatis..."
                         />
-                        <p className="text-[10px] text-slate-400">Pesan di atas ter-sinkronisasi langsung dengan isian form, dan dapat Anda edit/sesuaikan secara bebas.</p>
+                        <p className="text-[10px] text-slate-400">Pesan di atas disinkronkan otomatis dengan isian unit pengaju &amp; identitas pegawai, untuk dikirimkan langsung ke Admin Dinkes.</p>
                       </div>
                     </div>
 
                     {/* Block Action Buttons with Consolidated Button */}
                     <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center space-x-1.5 bg-sky-50 border border-sky-200 text-sky-800 p-2.5 rounded-lg text-[11px] text-left leading-relaxed max-w-sm">
-                        <Check size={16} className="text-sky-600 shrink-0" />
-                        <span>Kirim usulan ini untuk didaftarkan secara permanent ke sistem kepegawaian sekaligus mengirimkan notifikasi WhatsApp ke pegawai yang bersangkutan.</span>
+                      <div className="flex items-center space-x-1.5 bg-teal-50 border border-teal-200 text-teal-800 p-2.5 rounded-lg text-[11px] text-left leading-relaxed max-w-sm">
+                        <Check size={16} className="text-teal-600 shrink-0" />
+                        <span>Kirim usulan ini ke SIMPEG Dinkes sekaligus mengirimkan notifikasi rincian data pegawai ke WhatsApp Admin Dinkes untuk segera diproses.</span>
                       </div>
 
                       <button
@@ -1676,8 +1730,9 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                         onClick={() => {
                           handleKirimUsulan();
                           
-                          // Auto trigger WA send with the customized text
-                          const rawWaNum = selectedAsn.nomor_wa || '';
+                          // Find Admin Dinkes profile & trigger WhatsApp Web notify
+                          const adminDinkesProfile = asnProfiles.find(p => p.nip === "198004122005011003" || p.id === 1);
+                          const rawWaNum = adminDinkesProfile?.nomor_wa || '+628123456781';
                           let cleanPhone = rawWaNum.replace(/[^0-9+]/g, '');
                           if (cleanPhone.startsWith('0')) {
                             cleanPhone = '+62' + cleanPhone.substring(1);
@@ -1687,24 +1742,18 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
                             cleanPhone = '+62' + cleanPhone;
                           }
 
-                          if (!rawWaNum) {
-                            window.alert(
-                              `✓ Usulan layanan kepegawaian berhasil dikirim ke database.\n\n⚠️ Nomor WhatsApp untuk pegawai "${selectedAsn.nama_lengkap}" tidak terdaftar di direktori, sehingga notifikasi WA ditiadakan.`
-                            );
-                          } else {
-                            window.alert(
-                              `✓ Usulan layanan kepegawaian berhasil dikirim ke database.\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirim pesan kepada: ${selectedAsn.nama_lengkap} (${cleanPhone}).`
-                            );
-                            const encoded = encodeURIComponent(editedWaMessage);
-                            const cleanPhoneNum = cleanPhone.replace('+', '');
-                            const targetUrl = `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
-                            window.open(targetUrl, 'whatsapp_window');
-                          }
+                          window.alert(
+                            `✓ Usulan layanan kepegawaian berhasil diajukan dan masuk ke aplikasi SIMPEG.\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirim pesan kepada Admin Dinkes PPKB: ${adminDinkesProfile?.nama_lengkap || 'dr. Wahyu Darizki'} (${cleanPhone}).`
+                          );
+                          const encoded = encodeURIComponent(editedWaMessage);
+                          const cleanPhoneNum = cleanPhone.replace('+', '');
+                          const targetUrl = `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
+                          window.open(targetUrl, 'whatsapp_window');
                         }}
                         className="px-6 py-3 rounded-xl font-bold text-xs bg-teal-850 hover:bg-teal-950 text-white shadow-md transition duration-200 cursor-pointer flex items-center space-x-2"
                       >
                         <MessageSquare size={14} />
-                        <span>Kirim Usulan &amp; Notifikasi WA</span>
+                        <span>Kirim Usulan &amp; Notif WA Admin Dinkes</span>
                       </button>
                     </div>
                   </div>
