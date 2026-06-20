@@ -30,7 +30,8 @@ import {
   UsulanDokumenFile,
   RiwayatAngkaKredit,
   PredikatSKP,
-  StatusUsulan
+  StatusUsulan,
+  User
 } from '../../types';
 import { 
   KOEFISIEN_TAHUNAN_JAFUNG, 
@@ -230,6 +231,7 @@ interface LayananKepegawaianProps {
   syaratFiturMap: Record<string, number[]>;
   usulanDokumenFile: UsulanDokumenFile[];
   riwayatAk: RiwayatAngkaKredit[];
+  usersList?: User[];
   onUpdateAsnProfiles: (updated: ASNProfile[]) => void;
   onUpdateUsulanLayanan: (updated: UsulanLayanan[]) => void;
   onUpdateUsulanDokumenFile: (updated: any[]) => void;
@@ -249,6 +251,7 @@ export default function LayananKepegawaian({
   syaratFiturMap,
   usulanDokumenFile,
   riwayatAk,
+  usersList = [],
   onUpdateAsnProfiles,
   onUpdateUsulanLayanan,
   onUpdateUsulanDokumenFile,
@@ -376,6 +379,27 @@ export default function LayananKepegawaian({
       setEditUsulanWaMessage('');
     }
   }, [editingUsulan, editUsulanStatus, editUsulanCatatan, asnProfiles, masterFitur]);
+
+  const getActiveAdminDinkes = () => {
+    const userAdmin = (usersList || []).find(u => u.role === 'admin_dinkes');
+    if (userAdmin) {
+      return {
+        nama_lengkap: userAdmin.nama_lengkap,
+        nomor_wa: userAdmin.nomor_wa || '+628123456781'
+      };
+    }
+    const profileAdmin = asnProfiles.find(p => p.nip === "198004122005011003" || p.id === 1);
+    if (profileAdmin) {
+      return {
+        nama_lengkap: profileAdmin.nama_lengkap,
+        nomor_wa: profileAdmin.nomor_wa || '+628123456781'
+      };
+    }
+    return {
+      nama_lengkap: 'dr. Wahyu Darizki (Kadin)',
+      nomor_wa: '+628123456781'
+    };
+  };
 
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [usulanToDelete, setUsulanToDelete] = useState<{ id: number; serviceName: string } | null>(null);
@@ -1656,12 +1680,12 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
 
                       {/* Phone Display updated to Admin Dinkes as per dual-channel dinkes requirement */}
                       {(() => {
-                        const adminDinkesProfile = asnProfiles.find(p => p.nip === "198004122005011003" || p.id === 1);
+                        const adminDinkes = getActiveAdminDinkes();
                         return (
                           <div className="space-y-1.5 text-left">
                             <label className="text-xs font-bold text-slate-700 block text-left">Penerima WhatsApp (Admin Dinkes PPKB)</label>
                             <div className="p-2 border border-teal-100 rounded-lg bg-teal-50/20 font-semibold text-teal-850 truncate text-[11px]">
-                              {adminDinkesProfile ? `${adminDinkesProfile.nama_lengkap} (${adminDinkesProfile.nomor_wa || '+628123456781'})` : 'dr. Wahyu Darizki (+628123456781)'}
+                              {adminDinkes.nama_lengkap} ({adminDinkes.nomor_wa})
                             </div>
                           </div>
                         );
@@ -1732,9 +1756,9 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                         onClick={() => {
                           handleKirimUsulan();
                           
-                          // Find Admin Dinkes profile & trigger WhatsApp Web notify
-                          const adminDinkesProfile = asnProfiles.find(p => p.nip === "198004122005011003" || p.id === 1);
-                          const rawWaNum = adminDinkesProfile?.nomor_wa || '+628123456781';
+                          // Find Admin Dinkes dynamically & trigger WhatsApp Web notify
+                          const adminDinkes = getActiveAdminDinkes();
+                          const rawWaNum = adminDinkes.nomor_wa;
                           let cleanPhone = rawWaNum.replace(/[^0-9+]/g, '');
                           if (cleanPhone.startsWith('0')) {
                             cleanPhone = '+62' + cleanPhone.substring(1);
@@ -1745,7 +1769,7 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                           }
 
                           window.alert(
-                            `✓ Usulan layanan kepegawaian berhasil diajukan dan masuk ke aplikasi SIMPEG.\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirim pesan kepada Admin Dinkes PPKB: ${adminDinkesProfile?.nama_lengkap || 'dr. Wahyu Darizki'} (${cleanPhone}).`
+                            `✓ Usulan layanan kepegawaian berhasil diajukan dan masuk ke aplikasi SIMPEG.\n\nSistem sekarang akan membuka WhatsApp Web untuk mengirim pesan kepada Admin Dinkes PPKB: ${adminDinkes.nama_lengkap} (${cleanPhone}).`
                           );
                           const encoded = encodeURIComponent(editedWaMessage);
                           const cleanPhoneNum = cleanPhone.replace('+', '');
