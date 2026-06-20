@@ -955,6 +955,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SIMPEG Dikes Lombok Barat._`;
         descriptionText = `Layanan ${serviceLabel}`;
       }
 
+      const statusLine = currentRole === 'admin_dinkes' ? `\n- Status Dokumen: 📌 *${newUsulanStatus.toUpperCase()}*` : '';
       const notesText = newUsulanCatatan ? `\n- Catatan Tambahan: "${newUsulanCatatan}"` : '';
 
       const msg = 
@@ -970,8 +971,7 @@ Kami menginformasikan bahwa Unit Kerja *${unitKerjaName}* telah mengajukan usula
  
 *DETAIL USULAN*:
 - Layanan: *${serviceLabel}*
-- Deskripsi: *${descriptionText}*
-- Status Dokumen: 📌 *${newUsulanStatus.toUpperCase()}*${notesText}
+- Deskripsi: *${descriptionText}*${statusLine}${notesText}
  
 Mohon agar berkas usulan tersebut segera diproses dan diverifikasi lebih lanjut. Terima kasih.
  
@@ -991,7 +991,8 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
     gelarBaru,
     puskesmasList,
     masterDokumen,
-    syaratFiturMap
+    syaratFiturMap,
+    currentRole
   ]);
 
   // Requirements list for selected feature slug 
