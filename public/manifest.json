@@ -1,7 +1,7 @@
 {
-  "name": "SIMPEG Dinkes PPKB Lombok Barat",
-  "short_name": "SIMPEG Lombok Barat",
-  "comment": "Sistem Informasi Manajemen Kepegawaian terintegrasi PWA dengan notifikasi real-time",
+  "name": "SAPA pegawai Dikes PPKB Lombok Barat",
+  "short_name": "SAPA Pegawai",
+  "comment": "Sistem Arsip, Pemberitahuan, & Analisis Kepegawaian terintegrasi PWA dengan notifikasi real-time",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#16161a",
