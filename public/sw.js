@@ -1,4 +1,4 @@
-const CACHE_NAME = 'simpeg-dinkes-v1';
+const CACHE_NAME = 'sapa-dinkes-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -77,12 +77,12 @@ self.addEventListener('message', (event) => {
       body: body || '',
       icon: icon || '/icon.svg',
       badge: badge || '/icon.svg',
-      tag: 'simpeg-notif-tag',
+      tag: 'sapa-notif-tag',
       renotify: true,
       data: data || {},
       vibrate: [100, 50, 100],
       actions: [
-        { action: 'open', title: 'Buka SIMPEG' }
+        { action: 'open', title: 'Buka SAPA' }
       ]
     };
     
