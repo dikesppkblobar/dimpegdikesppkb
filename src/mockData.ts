@@ -571,6 +571,14 @@ export const getDB = () => {
     if (!updated.nomor_wa) {
       updated.nomor_wa = `+62812345678${updated.id}`;
     }
+
+    // Auto-heal missing NIK with 16-digit compliant numeric string
+    if (!updated.nik) {
+      const idStr = String(updated.id).padStart(2, '0');
+      const nipCleasened = String(updated.nip || '').replace(/\D/g, '');
+      const prefix = nipCleasened.length >= 8 ? nipCleasened.slice(0, 8) : '19900101';
+      updated.nik = ("520102" + prefix + "00" + idStr).padEnd(16, '1').slice(0, 16);
+    }
     
     // Auto-heal Hj. Baiq Sumiati (id: 2) or anyone named Baiq Sumiati
     if (updated.nama_lengkap && updated.nama_lengkap.includes("Baiq Sumiati")) {
