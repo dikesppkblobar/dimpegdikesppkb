@@ -1635,22 +1635,24 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SIMPEG Dikes Lombok
                       <span>Konfigurasi Status Usulan & Saluran Komunikasi</span>
                     </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Status select without Draft and Menunggu Validasi, and with Usulan Dikirim ke BKD and Pemberitahuan */}
-                      <div className="space-y-1.5 text-left">
-                        <label className="text-xs font-bold text-slate-700 block text-left">Status Dokumen Usulan</label>
-                        <select
-                          value={newUsulanStatus}
-                          onChange={(e) => setNewUsulanStatus(e.target.value as StatusUsulan)}
-                          className="w-full p-2 border border-slate-200 rounded-lg text-xs bg-white text-slate-800 font-semibold focus:ring-1 focus:ring-teal-500 cursor-pointer"
-                        >
-                          <option value="Usulan Dikirim ke BKD">Usulan Dikirim ke BKD</option>
-                          <option value="Perbaikan Berkas">Perbaikan Berkas</option>
-                          <option value="Diproses">Diproses</option>
-                          <option value="Selesai">Selesai</option>
-                          <option value="Pemberitahuan">Pemberitahuan</option>
-                        </select>
-                      </div>
+                    <div className={`grid grid-cols-1 ${currentRole === 'admin_dinkes' ? 'md:grid-cols-2' : ''} gap-4`}>
+                      {/* Status select without Draft and Menunggu Validasi, and with Usulan Dikirim ke BKD and Pemberitahuan (Only visible for admin_dinkes) */}
+                      {currentRole === 'admin_dinkes' && (
+                        <div className="space-y-1.5 text-left">
+                          <label className="text-xs font-bold text-slate-700 block text-left">Status Dokumen Usulan</label>
+                          <select
+                            value={newUsulanStatus}
+                            onChange={(e) => setNewUsulanStatus(e.target.value as StatusUsulan)}
+                            className="w-full p-2 border border-slate-200 rounded-lg text-xs bg-white text-slate-800 font-semibold focus:ring-1 focus:ring-teal-500 cursor-pointer"
+                          >
+                            <option value="Usulan Dikirim ke BKD">Usulan Dikirim ke BKD</option>
+                            <option value="Perbaikan Berkas">Perbaikan Berkas</option>
+                            <option value="Diproses">Diproses</option>
+                            <option value="Selesai">Selesai</option>
+                            <option value="Pemberitahuan">Pemberitahuan</option>
+                          </select>
+                        </div>
+                      )}
 
                       {/* Phone Display updated to Admin Dinkes as per dual-channel dinkes requirement */}
                       {(() => {
