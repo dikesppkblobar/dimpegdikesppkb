@@ -10,7 +10,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 /**
  * SQL Schema script to create tables in Supabase Console
  */
-export const SUPABASE_SQL_SCHEMA = `-- DATABASE SCHEMA FOR SIMPEG & LAPORAN SDMK KABUPATEN LOMBOK BARAT
+export const SUPABASE_SQL_SCHEMA = `-- DATABASE SCHEMA FOR SAPA PEGAWAI DIKES PPKB & LAPORAN SDMK KABUPATEN LOMBOK BARAT
 
 -- 1. Table Puskesmas
 CREATE TABLE IF NOT EXISTS puskesmas (
@@ -323,7 +323,7 @@ INSERT INTO fitur (id, nama_fitur, slug, warning_threshold_bulan, is_active, kon
 (4, 'Cuti Kepegawaian', 'cuti', 0, true, 'Pengurangan Sisa Hari Hak Cuti Tahunan Pegawai'),
 (5, 'Izin Belajar', 'izin-belajar', 0, true, 'Persetujuan Melanjutkan Pendidikan Formal bagi PNS/TKN'),
 (6, 'Mutasi Internal', 'mutasi', 0, true, 'Alih Tugas Penempatan Pelayanan Puskesmas Lombok Barat'),
-(7, 'Pencantuman Gelar', 'pencantuman-gelar', 0, true, 'Penyetaraan Ijazah Pendidikan Formal Tenaga Kesehatan di SIMPEG'),
+(7, 'Pencantuman Gelar', 'pencantuman-gelar', 0, true, 'Penyetaraan Ijazah Pendidikan Formal Tenaga Kesehatan di SAPA'),
 (8, 'Uji Kompetensi', 'uji-kompetensi', 0, true, 'Sertifikasi Jenjang Tingkat Karir ASN'),
 (9, 'Usulan Jafung & Angka Kredit', 'usulan-jafung', 0, true, 'Sertifikasi Jenjang Fungsional Baru (Uji Kompetensi BKN)'),
 (11, 'Pelaporan Keadaan SDMK Bulanan', 'keadaan-sdmk', 0, true, 'Rekapitulasi SDMK Bulanan')
@@ -534,8 +534,8 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
       logs.push(`✅ Relasi syarat dokumen berhasil disatukan (Virtual-Link).`);
     }
     if (shouldSync('asnProfiles') && latestDb.asnProfiles) {
-      logs.push(`📤 Mengirim ${latestDb.asnProfiles.length} data biografi pegawai SIMPEG...`);
-      logs.push(`✅ Biografi pegawai SIMPEG berhasil disatukan (Virtual-Link).`);
+      logs.push(`📤 Mengirim ${latestDb.asnProfiles.length} data biografi pegawai SAPA...`);
+      logs.push(`✅ Biografi pegawai SAPA berhasil disatukan (Virtual-Link).`);
     }
     if (shouldSync('usulanLayanan') && latestDb.usulanLayanan) {
       logs.push(`📤 Mengirim ${latestDb.usulanLayanan.length} riwayat usulan masuk...`);
@@ -774,7 +774,7 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
     // 6. ASN Profiles
     if (shouldSync('asnProfiles') && latestDb.asnProfiles) {
       try {
-        logs.push(`📤 Mengirim ${latestDb.asnProfiles.length} data biografi pegawai SIMPEG...`);
+        logs.push(`📤 Mengirim ${latestDb.asnProfiles.length} data biografi pegawai SAPA...`);
         
         const sanitizedAsn = latestDb.asnProfiles.map((p: any) => ({
           id: Number(p.id),
@@ -895,7 +895,7 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
             if (delErr) logs.push(`⚠️ Info membersihkan data terhapus di cloud: ${delErr.message}`);
           }
         }
-        logs.push(`✅ Biografi pegawai SIMPEG berhasil disatukan.`);
+        logs.push(`✅ Biografi pegawai SAPA berhasil disatukan.`);
       } catch (err: any) {
         hasAnyFailure = true;
         logs.push(`❌ Gagal sinkronisasi ASN Profiles: ${err.message}`);
