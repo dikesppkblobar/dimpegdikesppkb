@@ -2249,502 +2249,9 @@ Informasi ini dikirim langsung dari Dashboard Sistem Monitoring SIMPEG Terintegr
 
         {/* Unified Real-time Operational Board */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Analisa Dokumen in Left Column */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
-            
-            {/* Analisa Unit Kerja Belum Melengkapi Arsip Card */}
-            <div 
-              onClick={() => {
-                setActiveArsipAnalysis(!activeArsipAnalysis);
-                if (activeArsipAnalysis) {
-                  setSelectedAnalysisUnitId(null);
-                }
-              }}
-              className={`p-5 rounded-2xl border cursor-pointer select-none transition-all duration-200 flex flex-col justify-between text-left ${
-                activeArsipAnalysis 
-                  ? 'bg-amber-50 border-amber-400 text-amber-950 shadow-sm' 
-                  : 'bg-slate-50/50 border-slate-200 hover:border-amber-500 hover:bg-slate-50'
-              }`}
-            >
-              <div>
-                <div className="flex justify-between items-center">
-                  <h3 className="text-xs font-bold font-display uppercase tracking-wider text-slate-600 font-sans">Analisa Dokumen Arsip</h3>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                    totalUnitsWithIncomplete > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
-                  }`}>
-                    {totalUnitsWithIncomplete > 0 ? 'Tinjauan Penting' : 'Kepatuhan 100%'}
-                  </span>
-                </div>
-                <div className="flex items-baseline space-x-2 mt-4">
-                  <span className="text-4xl font-display font-extrabold text-slate-900">
-                    {avgCompletionRate}%
-                  </span>
-                  <span className="text-slate-500 text-xs font-bold font-sans">Rasio Kepatuhan</span>
-                </div>
-                <p className="text-[10px] text-slate-550 text-slate-500 mt-2 leading-relaxed">
-                  Terdapat <strong className="text-amber-700 font-extrabold">{totalUnitsWithIncomplete} Unit Kerja</strong> penempatan yang ditarik secara real-time. Kelengkapan arsip dihitung berdasarkan kelengkapan berkas kualifikasi (arsip harus lengkap 100% untuk kategori Dasar, Personal, dan Pendidikan).
-                </p>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between">
-                <span className="text-[10px] text-slate-400">Klik card untuk analisis drill-down</span>
-                <span className="text-xs font-bold text-amber-600 flex items-center gap-1">
-                  Detail Unit Kerja ({totalUnitsWithIncomplete}) →
-                </span>
-              </div>
-            </div>
-
-            {/* ABK Workload Calculator Card */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 text-slate-800 text-left shadow-3xs transition duration-250 hover:shadow-2xs">
-              <div className="flex justify-between items-center border-b border-slate-105 pb-3">
-                <div className="flex items-center space-x-2.5">
-                  <div className="p-2 bg-indigo-50 rounded-xl border border-indigo-105 text-indigo-600">
-                    <Calculator size={18} />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-black font-display uppercase tracking-wider text-slate-800 leading-none">
-                      Kalkulator ABK Kemenkes
-                    </h4>
-                    <span className="text-[9.5px] text-slate-400 font-bold block mt-1">
-                      Standar PMK No. 33/2015 &amp; PMK 2024 tentang ILP
-                    </span>
-                  </div>
-                </div>
-                <span className="text-[8px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full font-bold uppercase font-mono tracking-wider shrink-0">
-                  ILP WISN Model
-                </span>
-              </div>
-
-              <div className="mt-4 space-y-4">
-                {/* Select Profession Dropdown */}
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block font-sans">
-                    Jabatan Fungsional Nakes
-                  </label>
-                  <select
-                    value={abkProfession}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setAbkProfession(val);
-                      // set default presets under PMK 2024 & WISN primary care
-                      if (val === 'dokter') {
-                        setAbkTimePerPatient(15);
-                        setAbkAnnualVisits(4500);
-                        setAbkExtraHours(4);
-                      } else if (val === 'dokter_gigi') {
-                        setAbkTimePerPatient(20);
-                        setAbkAnnualVisits(3000);
-                        setAbkExtraHours(3);
-                      } else if (val === 'perawat') {
-                        setAbkTimePerPatient(20);
-                        setAbkAnnualVisits(8000);
-                        setAbkExtraHours(5);
-                      } else if (val === 'bidan') {
-                        setAbkTimePerPatient(25);
-                        setAbkAnnualVisits(6000);
-                        setAbkExtraHours(5);
-                      } else if (val === 'apoteker') {
-                        setAbkTimePerPatient(6);
-                        setAbkAnnualVisits(11000);
-                        setAbkExtraHours(6);
-                      } else if (val === 'ttk') {
-                        setAbkTimePerPatient(8);
-                        setAbkAnnualVisits(9000);
-                        setAbkExtraHours(4);
-                      } else if (val === 'sanitasi_lingkungan') {
-                        setAbkTimePerPatient(40);
-                        setAbkAnnualVisits(1200);
-                        setAbkExtraHours(8);
-                      } else if (val === 'nutrisionis') {
-                        setAbkTimePerPatient(30);
-                        setAbkAnnualVisits(1500);
-                        setAbkExtraHours(3);
-                      } else if (val === 'dietisien') {
-                        setAbkTimePerPatient(30);
-                        setAbkAnnualVisits(1800);
-                        setAbkExtraHours(4);
-                      } else if (val === 'atlm') {
-                        setAbkTimePerPatient(10);
-                        setAbkAnnualVisits(12000);
-                        setAbkExtraHours(3);
-                      } else if (val === 'epidemiolog') {
-                        setAbkTimePerPatient(90);
-                        setAbkAnnualVisits(800);
-                        setAbkExtraHours(10);
-                      } else if (val === 'entomolog') {
-                        setAbkTimePerPatient(120);
-                        setAbkAnnualVisits(400);
-                        setAbkExtraHours(10);
-                      } else if (val === 'promkes') {
-                        setAbkTimePerPatient(45);
-                        setAbkAnnualVisits(2000);
-                        setAbkExtraHours(12);
-                      } else if (val === 'pembimbing_kerja') {
-                        setAbkTimePerPatient(90);
-                        setAbkAnnualVisits(500);
-                        setAbkExtraHours(6);
-                      } else if (val === 'adminkes') {
-                        setAbkTimePerPatient(60);
-                        setAbkAnnualVisits(1200);
-                        setAbkExtraHours(15);
-                      } else if (val === 'perekam_medis') {
-                        setAbkTimePerPatient(5);
-                        setAbkAnnualVisits(15000);
-                        setAbkExtraHours(4);
-                      } else if (val === 'fisioterapis') {
-                        setAbkTimePerPatient(30);
-                        setAbkAnnualVisits(2500);
-                        setAbkExtraHours(3);
-                      } else if (val === 'radiografer') {
-                        setAbkTimePerPatient(15);
-                        setAbkAnnualVisits(4000);
-                        setAbkExtraHours(3);
-                      } else if (val === 'elektromedis') {
-                        setAbkTimePerPatient(60);
-                        setAbkAnnualVisits(1000);
-                        setAbkExtraHours(6);
-                      } else if (val === 'refraksionis') {
-                        setAbkTimePerPatient(20);
-                        setAbkAnnualVisits(1500);
-                        setAbkExtraHours(3);
-                      } else if (val === 'terapi_wicara') {
-                        setAbkTimePerPatient(45);
-                        setAbkAnnualVisits(800);
-                        setAbkExtraHours(4);
-                      } else if (val === 'okupasiterapis') {
-                        setAbkTimePerPatient(45);
-                        setAbkAnnualVisits(1000);
-                        setAbkExtraHours(4);
-                      } else if (val === 'ortotis') {
-                        setAbkTimePerPatient(60);
-                        setAbkAnnualVisits(600);
-                        setAbkExtraHours(4);
-                      } else if (val === 'teknisi_gigi') {
-                        setAbkTimePerPatient(45);
-                        setAbkAnnualVisits(1200);
-                        setAbkExtraHours(3);
-                      } else if (val === 'pelayanan_darah') {
-                        setAbkTimePerPatient(15);
-                        setAbkAnnualVisits(5000);
-                        setAbkExtraHours(4);
-                      } else if (val === 'kardiovaskuler') {
-                        setAbkTimePerPatient(30);
-                        setAbkAnnualVisits(1000);
-                        setAbkExtraHours(3);
-                      } else if (val === 'psikolog_klinis') {
-                        setAbkTimePerPatient(45);
-                        setAbkAnnualVisits(1200);
-                        setAbkExtraHours(5);
-                      } else if (val === 'penata_anestesi') {
-                        setAbkTimePerPatient(30);
-                        setAbkAnnualVisits(2000);
-                        setAbkExtraHours(4);
-                      } else if (val === 'asisten_anestesi') {
-                        setAbkTimePerPatient(25);
-                        setAbkAnnualVisits(2500);
-                        setAbkExtraHours(3);
-                      } else if (val === 'pendidik_klinis') {
-                        setAbkTimePerPatient(30);
-                        setAbkAnnualVisits(1500);
-                        setAbkExtraHours(8);
-                      } else if (val === 'fisikawan_medis') {
-                        setAbkTimePerPatient(60);
-                        setAbkAnnualVisits(800);
-                        setAbkExtraHours(6);
-                      }
-                    }}
-                    className="text-xs bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-300 font-sans font-bold w-full p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer transition"
-                  >
-                    <option value="dokter">Dokter Umum / Spesialis (Ahli)</option>
-                    <option value="dokter_gigi">Dokter Gigi</option>
-                    <option value="perawat">Perawat (Terampil / Ahli)</option>
-                    <option value="bidan">Bidan (Terampil / Ahli)</option>
-                    <option value="apoteker">Apoteker</option>
-                    <option value="ttk">Tenaga Teknis Kefarmasian (TTK)</option>
-                    <option value="sanitasi_lingkungan">Tenaga Sanitasi Lingkungan</option>
-                    <option value="nutrisionis">Nutrisionis</option>
-                    <option value="dietisien">Dietisien</option>
-                    <option value="atlm">Ahli Teknologi Laboratorium Medik (ATLM)</option>
-                    <option value="epidemiolog">Epidemiolog Kesehatan</option>
-                    <option value="entomolog">Entomolog Kesehatan</option>
-                    <option value="promkes">Promotor Kesehatan &amp; Ilmu Perilaku</option>
-                    <option value="pembimbing_kerja">Pembimbing Kesehatan Kerja</option>
-                    <option value="adminkes">Administrator Kesehatan</option>
-                    <option value="perekam_medis">Perekam Medis</option>
-                    <option value="fisioterapis">Fisioterapis</option>
-                    <option value="radiografer">Radiografer</option>
-                    <option value="elektromedis">Elektromedis</option>
-                    <option value="refraksionis">Refraksionis Optisien / Optometris</option>
-                    <option value="terapi_wicara">Terapi Wicara</option>
-                    <option value="okupasiterapis">Okupasiterapis</option>
-                    <option value="ortotis">Ortotis Prostetis</option>
-                    <option value="teknisi_gigi">Teknisi Gigi</option>
-                    <option value="pelayanan_darah">Teknisi Pelayanan Darah</option>
-                    <option value="kardiovaskuler">Teknisi Kardiovaskuler</option>
-                    <option value="psikolog_klinis">Psikolog Klinis</option>
-                    <option value="penata_anestesi">Penata Anestesi</option>
-                    <option value="asisten_anestesi">Asisten Penata Anestesi</option>
-                    <option value="pendidik_klinis">Dokter Pendidik Klinis</option>
-                    <option value="fisikawan_medis">Fisikawan Medis</option>
-                  </select>
-                </div>
-
-                {/* Volume annual visits input with quick sliders */}
-                <div className="space-y-1 font-sans">
-                  <div className="flex justify-between items-center text-[9px] font-black text-slate-400 uppercase tracking-wider">
-                    <span>Volume Tindakan / Tahun</span>
-                    <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded">
-                      {abkAnnualVisits.toLocaleString('id-ID')} Tindakan
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="500"
-                    max="20000"
-                    step="500"
-                    value={abkAnnualVisits}
-                    onChange={(e) => setAbkAnnualVisits(Number(e.target.value))}
-                    className="w-full accent-indigo-600 h-1 bg-slate-100 rounded-lg cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[8px] text-slate-400 font-mono">
-                    <span>500</span>
-                    <span>10.000</span>
-                    <span>20.000</span>
-                  </div>
-                </div>
-
-                {/* Average service minutes per patient */}
-                <div className="space-y-1 font-sans">
-                  <div className="flex justify-between items-center text-[9px] font-black text-slate-400 uppercase tracking-wider">
-                    <span>Waktu Tindakan / Pasien</span>
-                    <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-55 border border-indigo-150 px-2 py-0.5 rounded">
-                      {abkTimePerPatient} Menit
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="2"
-                    max="65"
-                    step="1"
-                    value={abkTimePerPatient}
-                    onChange={(e) => setAbkTimePerPatient(Number(e.target.value))}
-                    className="w-full accent-indigo-600 h-1 bg-slate-100 rounded-lg cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[8px] text-slate-400 font-mono">
-                    <span>2 m</span>
-                    <span>30 m</span>
-                    <span>65 m</span>
-                  </div>
-                </div>
-
-                {/* Duties/Meeting hours per week */}
-                <div className="space-y-1 font-sans">
-                  <div className="flex justify-between items-center text-[9px] font-black text-slate-400 uppercase tracking-wider">
-                    <span>Tugas Tambahan &amp; Rapat</span>
-                    <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-55 border border-indigo-150 px-2 py-0.5 rounded">
-                      {abkExtraHours} Jam/Minggu
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="20"
-                    step="0.5"
-                    value={abkExtraHours}
-                    onChange={(e) => setAbkExtraHours(Number(e.target.value))}
-                    className="w-full accent-indigo-600 h-1 bg-slate-100 rounded-lg cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[8px] text-slate-400 font-mono">
-                    <span>0 Jam</span>
-                    <span>10 Jam</span>
-                    <span>20 Jam</span>
-                  </div>
-                </div>
-
-                {/* Preset Effective Working Time (WKE) */}
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block font-sans">
-                    Waktu Kerja Efektif (WKE) Standard
-                  </label>
-                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setAbkWke(75000)}
-                      className={`text-[9px] font-sans font-extrabold py-1 px-2 rounded-lg border text-center transition cursor-pointer ${
-                        abkWke === 75000
-                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-3xs'
-                          : 'bg-slate-50 border-slate-200 text-slate-650 hover:bg-slate-100'
-                      }`}
-                    >
-                      1.250 Jam (75K Menit)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAbkWke(90000)}
-                      className={`text-[9px] font-sans font-extrabold py-1 px-2 rounded-lg border text-center transition cursor-pointer ${
-                        abkWke === 90000
-                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-3xs'
-                          : 'bg-slate-50 border-slate-200 text-slate-650 hover:bg-slate-100'
-                      }`}
-                    >
-                      1.500 Jam (90K Menit)
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Live Real-time ABK Calculation Results */}
-              {(() => {
-                const bebanPokok = abkAnnualVisits * abkTimePerPatient;
-                const bebanTambahan = abkExtraHours * 60 * 50; // 50 working weeks
-                const totalBeban = bebanPokok + bebanTambahan;
-                const kebutuhanSdm = Number((totalBeban / abkWke).toFixed(2));
-                const roundedNakes = Math.max(1, Math.round(kebutuhanSdm));
-
-                // Workload level designation
-                let levelTitle = "Seimbang / Ideal";
-                let levelColor = "text-emerald-750 bg-emerald-50 border-emerald-150";
-                let colorBar = "bg-emerald-500";
-                if (kebutuhanSdm <= 0.8) {
-                  levelTitle = "Ringan / Underloaded";
-                  levelColor = "text-indigo-750 bg-indigo-50 border-indigo-150";
-                  colorBar = "bg-indigo-500";
-                } else if (kebutuhanSdm > 1.2 && kebutuhanSdm <= 1.8) {
-                  levelTitle = "Padat / Tinggi";
-                  levelColor = "text-amber-755 bg-amber-50 border-amber-150";
-                  colorBar = "bg-amber-500";
-                } else if (kebutuhanSdm > 1.8) {
-                  levelTitle = "Overloaded / Kelebihan";
-                  levelColor = "text-rose-750 bg-rose-50 border-rose-150";
-                  colorBar = "bg-rose-500";
-                }
-
-                return (
-                  <div className="mt-5 space-y-4 pt-4 border-t border-slate-100">
-                    {/* Results grid */}
-                    <div className="p-3.5 bg-slate-50 border border-slate-150 rounded-xl space-y-2.5">
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider font-sans">Hasil Riil Kebutuhan:</span>
-                        <span className="text-xl font-black text-slate-800 font-mono leading-none">
-                          {kebutuhanSdm} <span className="text-[10px] font-bold font-sans text-slate-400">SDM</span>
-                        </span>
-                      </div>
-
-                      {/* Progress load slider */}
-                      <div className="space-y-1 font-sans">
-                        <div className="h-1.5 w-full bg-slate-200/70 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full transition-all duration-300 ${colorBar}`} style={{ width: `${Math.min(100, (kebutuhanSdm / 3) * 100)}%` }} />
-                        </div>
-                        <div className="flex justify-between items-center text-[9px]">
-                          <span className="text-slate-450 font-semibold text-slate-400">Beban Unit Kerja:</span>
-                          <span className={`px-2 py-0.2 rounded font-black uppercase text-[8px] border shrink-0 ${levelColor}`}>
-                            {levelTitle}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="border-t border-slate-200/55 pt-2 ml-0.5 mr-0.5 flex justify-between items-center text-xs">
-                        <span className="text-slate-500 font-extrabold font-sans">Rekomendasi Formasi:</span>
-                        <span className="font-extrabold text-indigo-750 font-sans bg-indigo-50 border border-indigo-150 px-2.5 py-0.5 rounded-lg text-[10.5px]">
-                          🎯 {roundedNakes} Formasi Kemenkes
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Simulation persistence triggers */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const mapping: Record<string, string> = {
-                          dokter: 'Dokter Umum / Spesialis',
-                          dokter_gigi: 'Dokter Gigi',
-                          perawat: 'Perawat',
-                          bidan: 'Bidan',
-                          apoteker: 'Apoteker',
-                          ttk: 'Tenaga Teknis Kefarmasian',
-                          sanitasi_lingkungan: 'Tenaga Sanitasi Lingkungan',
-                          nutrisionis: 'Nutrisionis',
-                          dietisien: 'Dietisien',
-                          atlm: 'Ahli Teknologi Laboratorium Medik',
-                          epidemiolog: 'Epidemiolog Kesehatan',
-                          entomolog: 'Entomolog Kesehatan',
-                          promkes: 'Promotor Kesehatan & Ilmu Perilaku',
-                          pembimbing_kerja: 'Pembimbing Kesehatan Kerja',
-                          adminkes: 'Administrator Kesehatan',
-                          perekam_medis: 'Perekam Medis',
-                          fisioterapis: 'Fisioterapis',
-                          radiografer: 'Radiografer',
-                          elektromedis: 'Elektromedis',
-                          refraksionis: 'Refraksionis Optisien / Optometris',
-                          terapi_wicara: 'Terapi Wicara',
-                          okupasiterapis: 'Okupasiterapis',
-                          ortotis: 'Ortotis Prostetis',
-                          teknisi_gigi: 'Teknisi Gigi',
-                          pelayanan_darah: 'Teknisi Pelayanan Darah',
-                          kardiovaskuler: 'Teknisi Kardiovaskuler',
-                          psikolog_klinis: 'Psikolog Klinis',
-                          penata_anestesi: 'Penata Anestesi',
-                          asisten_anestesi: 'Asisten Penata Anestesi',
-                          pendidik_klinis: 'Dokter Pendidik Klinis',
-                          fisikawan_medis: 'Fisikawan Medis'
-                        };
-                        const name = mapping[abkProfession] || abkProfession;
-                        const newSim = {
-                          id: String(Date.now()),
-                          profession: name,
-                          visits: abkAnnualVisits,
-                          time: abkTimePerPatient,
-                          extra: abkExtraHours,
-                          needed: kebutuhanSdm
-                        };
-                        setAbkSimulations([newSim, ...abkSimulations].slice(0, 4)); // cap simulations
-                      }}
-                      className="bg-indigo-600 hover:bg-indigo-750 text-white font-black text-[10px] py-2 px-3 rounded-lg uppercase tracking-wider transition-all w-full text-center hover:shadow-3xs cursor-pointer block border-none font-sans"
-                    >
-                      💾 Simpan Riset Simulasi
-                    </button>
-
-                    {/* Simulation Lists */}
-                    {abkSimulations.length > 0 && (
-                      <div className="space-y-1.5 pt-1">
-                        <span className="text-[9px] font-black text-slate-405 text-slate-400 uppercase tracking-wider block font-sans">
-                          Daftar Hasil Riset Simulasi
-                        </span>
-                        <div className="space-y-1.5 max-h-[145px] overflow-y-auto pr-1">
-                          {abkSimulations.map((sim) => (
-                            <div key={sim.id} className="flex justify-between items-center bg-slate-50/70 p-2 rounded-lg border border-slate-150 text-[9px] font-sans">
-                              <div className="truncate max-w-[170px]">
-                                <strong className="text-slate-700 font-extrabold block leading-tight">{sim.profession}</strong>
-                                <span className="text-slate-400 text-[8.5px] font-mono block mt-0.5">{sim.visits.toLocaleString('id-ID')} act/thn ({sim.time}m)</span>
-                              </div>
-                              <div className="flex items-center space-x-1.5 shrink-0">
-                                <span className="font-extrabold text-indigo-700 font-mono bg-indigo-50/50 border border-indigo-150 px-1.5 py-0.5 rounded">
-                                  {sim.needed} SDM
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setAbkSimulations(abkSimulations.filter(s => s.id !== sim.id))}
-                                  className="text-slate-400 hover:text-rose-600 font-bold px-1 py-0.5 cursor-pointer block text-[10.5px]"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                  </div>
-                );
-              })()}
-            </div>
-
-          </div>
 
             {/* Filter and Analyze ASN & Position Panel */}
-            <div className="lg:col-span-8 flex flex-col gap-6">
+            <div className="lg:col-span-12 flex flex-col gap-6">
               {(() => {
                 // Determine base set of profiles which are accessible to the current role
                 const roleFilteredProfiles = currentRole === 'admin_puskesmas'
@@ -3917,6 +3424,66 @@ Informasi ini dikirim langsung dari Dashboard Sistem Monitoring SIMPEG Terintegr
 
           </div>
         )}
+
+        {/* Card Analisa Dokumen Arsip (Moved to Bottom above early warning and drill-down analytics) */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 text-slate-800 text-left shadow-sm mt-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-amber-600">
+                <FileText size={20} />
+              </div>
+              <div>
+                <h4 className="text-sm font-black font-display uppercase tracking-wider text-slate-800 leading-none">
+                  Analisa Dokumen Arsip Digital Kepegawaian
+                </h4>
+                <p className="text-xs text-slate-400 mt-1.5 font-sans">
+                  Sistem pemantauan digital kepatuhan upload 3 kelompok berkas dasar (Dasar, Personal, Pendidikan) oleh ASN Unit Kerja
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveArsipAnalysis(!activeArsipAnalysis)}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl border border-amber-600 shrink-0 cursor-pointer shadow-3xs hover:shadow-2xs transition duration-200"
+            >
+              {activeArsipAnalysis ? '📊 Sembunyikan Evaluasi Detail' : '🔍 Lihat Evaluasi Detail Unit'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-150">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Kepatuhan Berkas Digital</span>
+              <div className="flex items-baseline space-x-1.5 mt-1.5">
+                <span className="text-2xl font-black font-mono text-emerald-600">{avgCompletionRate}%</span>
+                <span className="text-xs text-slate-400">Rata-rata fasyankes</span>
+              </div>
+              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mt-3.5">
+                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${avgCompletionRate}%` }} />
+              </div>
+            </div>
+
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-150">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Puskesmas Belum Lengkap</span>
+              <div className="flex items-baseline space-x-1.5 mt-1.5">
+                <span className="text-2xl font-black font-mono text-amber-600">{totalUnitsWithIncomplete}</span>
+                <span className="text-xs text-slate-400">Unit kerja terdeteksi</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-4">
+                Memiliki pegawai yang belum melengkapi 3 berkas dasar.
+              </p>
+            </div>
+
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-150">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Pegawai Berkas Belum Lengkap</span>
+              <div className="flex items-baseline space-x-1.5 mt-1.5">
+                <span className="text-2xl font-black font-mono text-rose-600">{totalIncompletePegawai}</span>
+                <span className="text-xs text-slate-400">Orang / ASN</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-4">
+                Diperlukan tindak lanjut di masing-masing unit kerja fasyankes.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Dynamic Interactive Drill-Down Panel: Analisa Unit Kerja Belum Melengkapi Arsip */}
         {activeArsipAnalysis && (
