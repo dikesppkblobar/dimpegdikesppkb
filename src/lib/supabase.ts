@@ -449,8 +449,7 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
           id: Number(pk.id),
           kode_puskesmas: pk.kode_puskesmas,
           nama_puskesmas: pk.nama_puskesmas,
-          alamat: pk.alamat || null,
-          total_penduduk: pk.total_penduduk ? Number(pk.total_penduduk) : 0
+          alamat: pk.alamat || null
         }));
         if (sanitizedPusk.length > 0) {
           const { error } = await supabase.from('puskesmas').upsert(sanitizedPusk);
@@ -611,14 +610,19 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
       try {
         logs.push(`📤 Mengirim relasi syarat dokumen per fitur...`);
         const mapRows: any[] = [];
+        const seenMapKeys = new Set<string>();
         Object.entries(latestDb.syaratFiturMap).forEach(([slug, docIds]) => {
           const feature = latestDb.fitur.find((f: any) => f.slug === slug);
           if (feature && Array.isArray(docIds)) {
             docIds.forEach((docId: any) => {
-              mapRows.push({
-                id_fitur: Number(feature.id),
-                id_dokumen: Number(docId)
-              });
+              const key = `${feature.id}-${docId}`;
+              if (!seenMapKeys.has(key)) {
+                seenMapKeys.add(key);
+                mapRows.push({
+                  id_fitur: Number(feature.id),
+                  id_dokumen: Number(docId)
+                });
+              }
             });
           }
         });
@@ -965,25 +969,25 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
     if (shouldSync('users') && latestDb.users) {
       try {
         logs.push(`📤 Mengirim ${latestDb.users.length} akun akses multi-tenant...`);
+        // Omit id from payload and upsert matching by unique 'nip' to bypass mismatching id-conflict
         const sanitizedUsrs = latestDb.users.map((u: any) => ({
-          id: Number(u.id),
           nip: String(u.nip || ""),
           nama_lengkap: String(u.nama_lengkap || ""),
           role: String(u.role || "admin_puskesmas"),
           id_puskesmas: u.id_puskesmas && !isNaN(Number(u.id_puskesmas)) ? Number(u.id_puskesmas) : null
         }));
         if (sanitizedUsrs.length > 0) {
-          const { error } = await supabase.from('users').upsert(sanitizedUsrs);
+          const { error } = await supabase.from('users').upsert(sanitizedUsrs, { onConflict: 'nip' });
           if (error) throw new Error(`Users error: ${error.message}`);
         }
 
-        // Handle deletions
-        const { data: existing, error: fetchErr } = await supabase.from('users').select('id');
+        // Handle deletions by unique 'nip' instead of 'id'
+        const { data: existing, error: fetchErr } = await supabase.from('users').select('nip');
         if (!fetchErr && existing) {
-          const localIds = new Set(sanitizedUsrs.map((u: any) => u.id));
-          const toDelete = existing.map((r: any) => r.id).filter(id => !localIds.has(id));
+          const localNips = new Set(sanitizedUsrs.map((u: any) => u.nip));
+          const toDelete = existing.map((r: any) => r.nip).filter(nip => !localNips.has(nip));
           if (toDelete.length > 0) {
-            const { error: delErr } = await supabase.from('users').delete().in('id', toDelete);
+            const { error: delErr } = await supabase.from('users').delete().in('nip', toDelete);
             if (delErr) logs.push(`⚠️ Info membersihkan data terhapus di cloud: ${delErr.message}`);
           }
         }
@@ -1071,6 +1075,20 @@ export async function pullCloudDataFromSupabase(): Promise<{ success: boolean; d
     const arsips = resArsips.data;
     const usrs = resUsrs.data;
 
+    // Merge back any local-only fields (like total_penduduk) to prevent losing them during pull
+    let localPuskesmas: any[] = [];
+    try {
+      localPuskesmas = JSON.parse(localStorage.getItem('simpeg_puskesmas') || '[]');
+    } catch (_) {}
+
+    const mergedPusk = pusk?.map((p: any) => {
+      const localItem = localPuskesmas.find((lp: any) => Number(lp.id) === Number(p.id));
+      return {
+        ...p,
+        total_penduduk: localItem && localItem.total_penduduk !== undefined ? localItem.total_penduduk : 50000
+      };
+    }) || pusk;
+
     // Reconstruct syaratFiturMap Record<string, number[]>
     const syaratFiturMap: Record<string, number[]> = {};
     if (mapRows && fits) {
@@ -1088,7 +1106,7 @@ export async function pullCloudDataFromSupabase(): Promise<{ success: boolean; d
       success: true,
       log: logs,
       data: {
-        puskesmas: pusk,
+        puskesmas: mergedPusk,
         profesiSdmk: profs,
         fitur: fits,
         dokumen: docs,
