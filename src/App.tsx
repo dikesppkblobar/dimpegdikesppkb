@@ -1804,6 +1804,7 @@ export default function App() {
               syaratFiturMap={dbState.syaratFiturMap}
               usulanDokumenFile={dbState.usulanDokumenFile}
               riwayatAk={dbState.riwayatAk}
+              usersList={dbState.users}
               onUpdateAsnProfiles={updateProfiles}
               onUpdateUsulanLayanan={updateUsulanLayanan}
               onUpdateUsulanDokumenFile={updateUsulanDokumenFile}
