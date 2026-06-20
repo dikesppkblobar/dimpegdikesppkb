@@ -154,7 +154,7 @@ export interface SyaratFitur {
   id_dokumen: number;
 }
 
-export type StatusUsulan = 'Draft' | 'Menunggu Validasi' | 'Perbaikan Berkas' | 'Diproses' | 'Selesai' | 'Usulan Dikirim ke BKD';
+export type StatusUsulan = 'Draft' | 'Menunggu Validasi' | 'Perbaikan Berkas' | 'Diproses' | 'Selesai' | 'Usulan Dikirim ke BKD' | 'Pemberitahuan';
 
 export interface UsulanLayanan {
   id: number;
