@@ -46,11 +46,6 @@ export default function DashboardKP4({
   const [waCatatanInput, setWaCatatanInput] = useState('');
   const [waOriginalBaseMsg, setWaOriginalBaseMsg] = useState('');
 
-  // WhatsApp Channel preference to reuse tab or open native app
-  const [waChannel, setWaChannel] = useState<'app' | 'web'>(() => {
-    return (localStorage.getItem('simpeg_wa_channel_preference') as 'app' | 'web') || 'app';
-  });
-
   const handleCatatanChange = (newVal: string) => {
     setWaCatatanInput(newVal);
     if (newVal.trim() !== '') {
@@ -411,45 +406,6 @@ _Notifikasi otomatis dikirim via Sistem Analisa KP4 Dinkes Lombok Barat_`;
               <p className="text-[10px] text-slate-400">Catatan akan ditambahkan otomatis di bagian bawah draf pesan di atas.</p>
             </div>
 
-            <div className="space-y-1.5 p-3 bg-slate-50 rounded-xl border border-slate-150">
-              <label className="text-xs font-bold text-slate-750 block mb-1">
-                ⚙️ Opsi Saluran Pengiriman (Membantu Menghindari Tab Berulang)
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWaChannel('app');
-                    localStorage.setItem('simpeg_wa_channel_preference', 'app');
-                  }}
-                  className={`px-3 py-2 rounded-lg text-xs font-semibold border text-center transition cursor-pointer flex flex-col items-center justify-center gap-1 ${
-                    waChannel === 'app'
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-850 font-bold'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <span className="text-sm font-bold">📱 Aplikasi WhatsApp</span>
-                  <span className="text-[10px] text-slate-400 font-normal leading-tight font-sans">Terhubung langsung ke aplikasi WA tanpa buka tab baru</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWaChannel('web');
-                    localStorage.setItem('simpeg_wa_channel_preference', 'web');
-                  }}
-                  className={`px-3 py-2 rounded-lg text-xs font-semibold border text-center transition cursor-pointer flex flex-col items-center justify-center gap-1 ${
-                    waChannel === 'web'
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-850 font-bold'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <span className="text-sm font-bold">💻 WhatsApp Web (1 Tab)</span>
-                  <span className="text-[10px] text-slate-400 font-normal leading-tight font-sans">Menggunakan & memperbarui kembali 1 tab browser seragam</span>
-                </button>
-              </div>
-            </div>
-
             <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
@@ -463,9 +419,7 @@ _Notifikasi otomatis dikirim via Sistem Analisa KP4 Dinkes Lombok Barat_`;
                 onClick={() => {
                   const encoded = encodeURIComponent(waDraftMessage);
                   const cleanPhoneNum = waRecipientPhone.replace('+', '');
-                  const targetUrl = waChannel === 'app'
-                    ? `whatsapp://send?phone=${cleanPhoneNum}&text=${encoded}`
-                    : `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
+                  const targetUrl = `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
                   
                   window.open(targetUrl, 'whatsapp_window');
                   setWaModalOpen(false);
