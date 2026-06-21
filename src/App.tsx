@@ -1051,56 +1051,84 @@ export default function App() {
   const downloadExcelTemplate = () => {
     try {
       const headers = [
-        "NIP / Identitas (NIP Resmi / NIK KTP)",
+        "NIP (Wajib untuk PNS/PPPK)",
+        "NIK (Nomor Induk Kependudukan - Wajib 16 Digit)",
         "Nama Lengkap (Tanpa Gelar)",
         "Gelar Belakang (Misalnya: amd.kep, s.kep, dr)",
         "Jenis Kelamin (L/P)",
         "Status Pegawai (PNS / PPPK Penuh Waktu / PPPK Paruh Waktu / Non ASN)",
         "Rumpun Jabatan (Struktural / Jafung Kesehatan / Staf Umum)",
+        "Rumpun Profesi SDMK (contoh: Perawat, Dokter, Bidan, Apoteker, Umum & Kepeg)",
+        "Nomor WhatsApp Aktif (contoh: 81234567890)",
         "Golongan Ruang (contoh: III/a, Golongan IX, dll)",
         "Tanggal Lahir (Format: YYYY-MM-DD)",
         "Sisa Cuti Tahunan (contoh: 12)",
         "Nomor STR (Optional untuk Jafung Kesehatan)",
-        "Nomor SIP (Optional untuk Jafung Kesehatan)"
+        "Tanggal Terbit STR (Format: YYYY-MM-DD. Optional)",
+        "Tanggal Akhir STR (Format: YYYY-MM-DD atau Seumur Hidup. Optional)",
+        "Nomor SIP (Optional untuk Jafung Kesehatan)",
+        "Tanggal Terbit SIP (Format: YYYY-MM-DD. Optional)",
+        "Tanggal Akhir SIP (Format: YYYY-MM-DD. Optional)"
       ];
       
       const sampleRows = [
         [
           "199005122020121004",
-          "dr. Wahyu Darizki",
-          "M.Kes",
+          "5201021205900004",
+          "Wahyu Darizki",
+          "dr.",
           "L",
           "PNS",
           "Jafung Kesehatan",
+          "Dokter",
+          "81234567890",
           "III/b",
           "1990-05-12",
           "12",
           "STR-123456",
-          "SIP-654321"
+          "2020-05-12",
+          "Seumur Hidup",
+          "SIP-654321",
+          "2021-01-15",
+          "2026-01-15"
         ],
         [
           "199508152023212009",
+          "5201021508950002",
           "Siti Aminah",
           "Amd.Kep",
           "P",
           "PPPK Penuh Waktu",
           "Jafung Kesehatan",
+          "Perawat",
+          "81987654321",
           "Golongan IX",
           "1995-08-15",
           "12",
           "",
+          "",
+          "",
+          "",
+          "",
           ""
         ],
         [
+          "",
           "5201020412990001",
           "Slamet Mulyadi",
           "",
           "L",
           "Non ASN",
           "Staf Umum",
+          "Umum & Kepeg",
+          "85338884422",
           "-",
           "1999-12-04",
           "0",
+          "",
+          "",
+          "",
+          "",
           "",
           ""
         ]
@@ -1116,21 +1144,28 @@ export default function App() {
       // Panduan Pengisian Sheet
       const guideHeaders = ["KANDUNGAN KOLOM", "ATURAN FORMAT / PILIHAN", "CONTOH VALID"];
       const guideRows = [
-        ["NIP / Identitas", "Masukkan NIP 18 Digit untuk PNS/PPPK atau NIK KTP (16 Digit) untuk Non-ASN.", "199005122020121004"],
+        ["NIP (Nomor Induk Pegawai)", "NIP 18 Digit untuk PNS/PPPK. Kosongkan jika Non-ASN.", "199005122020121004"],
+        ["NIK (Nomor Induk Kependudukan)", "Wajib 16 digit angka kependudukan KTP.", "5201020412990001"],
         ["Nama Lengkap", "Tulis nama lengkap karyawan tanpa gelar belakang.", "Romi Hidayat"],
-        ["Gelar Belakang", "Tulis gelar akademik / profesi, dipisahkan koma jika lebih dari satu (tanpa spasi di awal).", "S.Kep, Ners"],
-        ["Jenis Kelamin", "Isi dengan huruf 'L' untuk Laki-Laki, atau 'P' untuk Perempuan.", "L"],
+        ["Gelar Belakang", "Tulis gelar akademik / profesi (Dipisah koma jika lebih dari satu).", "S.Kep, Ners"],
+        ["Jenis Kelamin", "Huruf 'L' untuk Laki-Laki, atau 'P' untuk Perempuan.", "L"],
         ["Status Pegawai", "PILIHAN VALID: PNS / PPPK Penuh Waktu / PPPK Paruh Waktu / Non ASN", "PNS / PPPK Penuh Waktu"],
         ["Rumpun Jabatan", "PILIHAN VALID: Struktural / Jafung Kesehatan / Staf Umum", "Jafung Kesehatan"],
+        ["Rumpun Profesi SDMK", "PILIHAN VALID: Perawat / Dokter / Dokter Gigi / Bidan / Apoteker / Tenaga Teknik Kefarmasian / Promkes & Ilmu Perilaku / Sanitarian / Nutrisionis / Ahli Teknologi Lab Medik / Rekam Medis / Terapis Gigi & Mulut / Umum & Kepeg / Tenaga Adm. Keuangan / Tenaga Sistem Informasi Kes.", "Dokter"],
+        ["Nomor WhatsApp Aktif", "Nomor ponsel aktif WA (angka saja tanpa lambang + , contoh: 81234567890).", "81234567890"],
         ["Golongan Ruang", "PNS: III/a, III/b, IV/a. PPPK: Golongan IX, Golongan VII. Non-ASN: isi '-' saja.", "III/b"],
         ["Tanggal Lahir", "Harus berformat YYYY-MM-DD (Tahun-Bulan-Tanggal) sesuai standar.", "1992-06-25"],
         ["Sisa Cuti Tahunan", "Isi angka sisa cuti (0 s/d 30). Pegawai Non ASN wajib diisi 0.", "12"],
-        ["Nomor STR", "Nomor Registrasi Surat Tanda Registrasi jika ada (Opsional).", "STR-987654"],
-        ["Nomor SIP", "Nomor Surat Izin Praktik dari Dinas Kesehatan setempat jika ada (Opsional).", "SIP-123/2026"]
+        ["Nomor STR", "Nomor Surat Tanda Registrasi jika ada (Opsional).", "STR-987654"],
+        ["Tanggal Terbit STR", "Format YYYY-MM-DD jika ada STR.", "2021-03-22"],
+        ["Tanggal Akhir STR", "Format YYYY-MM-DD atau 'Seumur Hidup' jika ada STR.", "Seumur Hidup"],
+        ["Nomor SIP", "Nomor Surat Izin Praktik jika ada (Opsional).", "SIP-123/2026"],
+        ["Tanggal Terbit SIP", "Format YYYY-MM-DD jika ada SIP.", "2021-04-12"],
+        ["Tanggal Akhir SIP", "Format YYYY-MM-DD jika ada SIP.", "2026-04-12"]
       ];
 
       const wsGuide = XLSX.utils.aoa_to_sheet([["PANDUAN ALUR IMPORT DATA PEGAWAI - SAPA PEGAWAI DIKES PPKB"], [], ...[guideHeaders, ...guideRows]]);
-      wsGuide['!cols'] = [{ wch: 25 }, { wch: 65 }, { wch: 25 }];
+      wsGuide['!cols'] = [{ wch: 30 }, { wch: 65 }, { wch: 25 }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Sheet Template Pegawai");
@@ -1168,14 +1203,15 @@ export default function App() {
             const parsed: ASNProfile[] = [];
             
             dataRows.forEach((row, index) => {
-              const nip = String(row[0] || "").trim() || `GEN-${Date.now()}-${index}`;
-              const nama_lengkap = String(row[1] || "").trim() || `Staf Excel ${index + 1}`;
-              const gelar_belakang = row[2] ? String(row[2]).trim() : null;
+              const nipVal = row[0] ? String(row[0]).trim() : '';
+              const nikVal = row[1] ? String(row[1]).trim().replace(/\D/g, '') : '';
+              const nama_lengkap = row[2] ? String(row[2]).trim() : `Staf Excel ${index + 1}`;
+              const gelar_belakang = row[3] ? String(row[3]).trim() : null;
               
-              const sexValue = String(row[3] || "").trim().toUpperCase();
+              const sexValue = String(row[4] || "").trim().toUpperCase();
               const jenis_kelamin = (sexValue.startsWith('L') || sexValue.includes('LAKI')) ? 'L' : 'P';
               
-              const statusVal = String(row[4] || "").trim().toUpperCase();
+              const statusVal = String(row[5] || "").trim().toUpperCase();
               let status_pegawai_detail: StatusPegawaiDetail = 'PNS';
               if (statusVal.includes('PENUH') || statusVal.includes('P3K_PN') || statusVal.includes('PPPK PENUH')) {
                 status_pegawai_detail = 'PPPK_Penuh_Waktu';
@@ -1185,18 +1221,48 @@ export default function App() {
                 status_pegawai_detail = 'Non_ASN';
               }
               
-              const rumpunVal = String(row[5] || "").trim().toUpperCase();
+              const nip = (status_pegawai_detail === 'Non_ASN' ? nikVal : nipVal) || `GEN-${Date.now()}-${index}`;
+
+              const rumpunVal = String(row[6] || "").trim().toUpperCase();
               let jenis_pegawai: JenisPegawai = 'Jafung_Kesehatan';
               if (rumpunVal.includes('STRUK')) {
                 jenis_pegawai = 'Struktural';
               } else if (rumpunVal.includes('UMUM') || rumpunVal.includes('STAF')) {
                 jenis_pegawai = 'Staf_Umum';
               }
+
+              const profesiStr = String(row[7] || "").trim().toLowerCase();
+              const foundProfesi = dbState.profesiSdmk.find(p => p.nama_profesi.toLowerCase().includes(profesiStr) || profesiStr.includes(p.nama_profesi.toLowerCase()));
+              const id_profesi = foundProfesi ? foundProfesi.id : 1;
+
+              let rawWa = row[8] ? String(row[8]).trim() : '';
+              if (!rawWa.startsWith('+62')) {
+                rawWa = rawWa.replace(/\D/g, '');
+                if (rawWa.startsWith('62')) {
+                  rawWa = '+' + rawWa;
+                } else if (rawWa.startsWith('0')) {
+                  rawWa = '+62' + rawWa.substring(1);
+                } else if (rawWa) {
+                  rawWa = '+62' + rawWa;
+                } else {
+                  rawWa = '+62';
+                }
+              }
+              const nomor_wa = rawWa;
               
-              const golongan_ruang = status_pegawai_detail === 'Non_ASN' ? '-' : (row[6] ? String(row[6]).trim() : 'III/a');
-              const tanggal_lahir = row[7] ? String(row[7]).trim() : '1991-05-15';
-              const sisa_cuti_tahunan = status_pegawai_detail === 'Non_ASN' ? 0 : (row[8] !== undefined ? Math.max(0, parseInt(row[8]) || 0) : 12);
+              const golongan_ruang = status_pegawai_detail === 'Non_ASN' ? '-' : (row[9] ? String(row[9]).trim() : 'III/a');
+              const tanggal_lahir = row[10] ? String(row[10]).trim() : '1991-05-15';
+              const sisa_cuti_tahunan = status_pegawai_detail === 'Non_ASN' ? 0 : (row[11] !== undefined ? Math.max(0, parseInt(row[11]) || 0) : 12);
               
+              const no_str = row[12] ? String(row[12]).trim() : undefined;
+              const tanggal_terbit_str = row[13] ? String(row[13]).trim() : undefined;
+              const tanggal_akhir_str = row[14] ? String(row[14]).trim() : undefined;
+              const is_str_seumur_hidup = String(tanggal_akhir_str || "").toLowerCase().includes("seumur") || String(tanggal_akhir_str || "").toLowerCase().includes("hidup");
+
+              const no_sip = row[15] ? String(row[15]).trim() : undefined;
+              const tanggal_terbit_sip = row[16] ? String(row[16]).trim() : undefined;
+              const tanggal_akhir_sip = row[17] ? String(row[17]).trim() : undefined;
+
               parsed.push({
                 id: Date.now() + index,
                 nip,
@@ -1209,14 +1275,23 @@ export default function App() {
                 tmt_berkala_terakhir: '2025-01-01',
                 tmt_jabatan_terakhir: '2025-01-01',
                 jenis_pegawai,
+                id_profesi,
                 jenjang_jafung: jenis_pegawai === 'Jafung_Kesehatan' ? 'Ahli Pertama' : null,
                 ak_integrasi_2022: 0,
                 sisa_cuti_tahunan,
                 status_kepegawaian: 'Aktif',
                 jenis_kelamin,
                 status_pegawai_detail,
+                nomor_wa,
+                nik: nikVal,
                 pppk_ni: status_pegawai_detail.startsWith('PPPK') ? nip : undefined,
-                nik: status_pegawai_detail === 'Non_ASN' ? nip : undefined,
+                no_str,
+                tanggal_terbit_str,
+                tanggal_akhir_str,
+                is_str_seumur_hidup,
+                no_sip,
+                tanggal_terbit_sip,
+                tanggal_akhir_sip
               });
             });
             
@@ -1262,14 +1337,15 @@ export default function App() {
       }
 
       if (cols.length >= 2) {
-        const nip = cols[0]?.trim() || `GEN-${Date.now()}-${index}`;
-        const nama_lengkap = cols[1]?.trim() || `Staf Excel ${index + 1}`;
-        const gelar_belakang = cols[2]?.trim() || null;
+        const nipVal = cols[0]?.trim() || '';
+        const nikVal = cols[1]?.trim()?.replace(/\D/g, '') || '';
+        const nama_lengkap = cols[2]?.trim() || `Staf Excel ${index + 1}`;
+        const gelar_belakang = cols[3]?.trim() || null;
         
-        let genCol = cols[3]?.trim()?.toUpperCase() || 'L';
+        let genCol = cols[4]?.trim()?.toUpperCase() || 'L';
         const jenis_kelamin = (genCol.startsWith('L') || genCol.includes('LAKI')) ? 'L' : 'P';
         
-        let statusCol = cols[4]?.trim() || 'PNS';
+        let statusCol = cols[5]?.trim() || 'PNS';
         let status_pegawai_detail: StatusPegawaiDetail = 'PNS';
         if (statusCol.toLowerCase().includes('penuh') || statusCol.toUpperCase().includes('PPPK_PENUH') || statusCol.toUpperCase().includes('PPPK PENUH')) {
           status_pegawai_detail = 'PPPK_Penuh_Waktu';
@@ -1279,7 +1355,9 @@ export default function App() {
           status_pegawai_detail = 'Non_ASN';
         }
 
-        let jenisCol = cols[5]?.trim() || 'Jafung_Kesehatan';
+        const nip = (status_pegawai_detail === 'Non_ASN' ? nikVal : nipVal) || `GEN-${Date.now()}-${index}`;
+
+        let jenisCol = cols[6]?.trim() || 'Jafung_Kesehatan';
         let jenis_pegawai: JenisPegawai = 'Jafung_Kesehatan';
         if (jenisCol.toLowerCase().includes('struk')) {
           jenis_pegawai = 'Struktural';
@@ -1287,9 +1365,37 @@ export default function App() {
           jenis_pegawai = 'Staf_Umum';
         }
 
-        const golongan_ruang = status_pegawai_detail === 'Non_ASN' ? '-' : (cols[6]?.trim() || 'III/a');
-        const tanggal_lahir = cols[7]?.trim() || '1991-05-15';
-        const sisa_cuti_tahunan = status_pegawai_detail === 'Non_ASN' ? 0 : (parseInt(cols[8]?.trim() || '12') || 12);
+        const profesiStr = cols[7]?.trim()?.toLowerCase() || '';
+        const foundProfesi = dbState.profesiSdmk.find(p => p.nama_profesi.toLowerCase().includes(profesiStr) || profesiStr.includes(p.nama_profesi.toLowerCase()));
+        const id_profesi = foundProfesi ? foundProfesi.id : 1;
+
+        let rawWa = cols[8]?.trim() || '';
+        if (!rawWa.startsWith('+62')) {
+          rawWa = rawWa.replace(/\D/g, '');
+          if (rawWa.startsWith('62')) {
+            rawWa = '+' + rawWa;
+          } else if (rawWa.startsWith('0')) {
+            rawWa = '+62' + rawWa.substring(1);
+          } else if (rawWa) {
+            rawWa = '+62' + rawWa;
+          } else {
+            rawWa = '+62';
+          }
+        }
+        const nomor_wa = rawWa;
+
+        const golongan_ruang = status_pegawai_detail === 'Non_ASN' ? '-' : (cols[9]?.trim() || 'III/a');
+        const tanggal_lahir = cols[10]?.trim() || '1991-05-15';
+        const sisa_cuti_tahunan = status_pegawai_detail === 'Non_ASN' ? 0 : (parseInt(cols[11]?.trim() || '12') || 12);
+
+        const no_str = cols[12]?.trim() || undefined;
+        const tanggal_terbit_str = cols[13]?.trim() || undefined;
+        const tanggal_akhir_str = cols[14]?.trim() || undefined;
+        const is_str_seumur_hidup = String(tanggal_akhir_str || "").toLowerCase().includes("seumur") || String(tanggal_akhir_str || "").toLowerCase().includes("hidup");
+
+        const no_sip = cols[15]?.trim() || undefined;
+        const tanggal_terbit_sip = cols[16]?.trim() || undefined;
+        const tanggal_akhir_sip = cols[17]?.trim() || undefined;
 
         parsed.push({
           id: Date.now() + index, // temporary id
@@ -1303,14 +1409,23 @@ export default function App() {
           tmt_berkala_terakhir: '2025-01-01',
           tmt_jabatan_terakhir: '2025-01-01',
           jenis_pegawai,
+          id_profesi,
           jenjang_jafung: jenis_pegawai === 'Jafung_Kesehatan' ? 'Ahli Pertama' : null,
           ak_integrasi_2022: 0,
           sisa_cuti_tahunan,
           status_kepegawaian: 'Aktif',
           jenis_kelamin,
           status_pegawai_detail,
+          nomor_wa,
+          nik: nikVal,
           pppk_ni: status_pegawai_detail.startsWith('PPPK') ? nip : undefined,
-          nik: status_pegawai_detail === 'Non_ASN' ? nip : undefined,
+          no_str,
+          tanggal_terbit_str,
+          tanggal_akhir_str,
+          is_str_seumur_hidup,
+          no_sip,
+          tanggal_terbit_sip,
+          tanggal_akhir_sip,
         });
       }
     });
