@@ -1031,7 +1031,23 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SAPA pegawai Dikes PPKB Kab. 
         descriptionText = `Layanan ${serviceLabel}`;
       }
 
-      const statusLine = currentRole === 'admin_dinkes' ? `\n- Status Dokumen: 📌 *${newUsulanStatus.toUpperCase()}*` : '';
+      let statusLine = '';
+      if (currentRole === 'admin_dinkes') {
+        if (newUsulanStatus === 'Pemberitahuan') {
+          const reqDocIds = syaratFiturMap[selectedFitur.slug] || [];
+          const reqDocs = reqDocIds.map((id, index) => {
+            const doc = masterDokumen.find(d => d.id === id);
+            return `  ${index + 1}. *${doc?.nama_dokumen || `Dokumen ID ${id}`}*`;
+          });
+          const docsString = reqDocs.length > 0 
+            ? reqDocs.join('\n') 
+            : '  - (Belum ada dokumen yang dipersyaratkan)';
+          
+          statusLine = `\n- Status Dokumen: 📌 *PEMBERITAHUAN PERSYARATAN WAJIB*\n\n*DAFTAR DOKUMEN WAJIB YANG HARUS KELENGKAPAN (${selectedFitur.nama_fitur})*:\n${docsString}\n\nMohon siapkan dan unggah berkas-berkas wajib di atas melalui aplikasi SAPA pegawai Dikes PPKB agar usulan dapat segera diproses lebih lanjut.`;
+        } else {
+          statusLine = `\n- Status Dokumen: 📌 *${newUsulanStatus.toUpperCase()}*`;
+        }
+      }
       const notesText = newUsulanCatatan ? `\n- Catatan Tambahan: "${newUsulanCatatan}"` : '';
 
       const isDinkes = currentRole === 'admin_dinkes';
