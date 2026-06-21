@@ -1311,7 +1311,44 @@ export async function pullCloudDataFromSupabase(): Promise<{ success: boolean; d
       return p;
     }) || asns;
 
-    logs.push("✅ Pull Berhasil! Seluruh data live terupdate dari cloud.");
+    // Merge pulled operational tables with local storage to safeguard offline-first additions / unsynced uploads
+    let localUsulans: any[] = [];
+    try {
+      localUsulans = JSON.parse(localStorage.getItem('simpeg_usulan_layanan') || '[]');
+    } catch (_) {}
+    const cloudUsulans = usulans || [];
+    const cloudUsulanIds = new Set(cloudUsulans.map((u: any) => Number(u.id)));
+    const localOnlyUsulans = Array.isArray(localUsulans) ? localUsulans.filter((u: any) => !cloudUsulanIds.has(Number(u.id))) : [];
+    const mergedUsulans = [...cloudUsulans, ...localOnlyUsulans];
+
+    let localDocsFiles: any[] = [];
+    try {
+      localDocsFiles = JSON.parse(localStorage.getItem('simpeg_usulan_dokumen_file') || '[]');
+    } catch (_) {}
+    const cloudDocsFiles = docsFiles || [];
+    const cloudDocsFilesIds = new Set(cloudDocsFiles.map((df: any) => Number(df.id)));
+    const localOnlyDocsFiles = Array.isArray(localDocsFiles) ? localDocsFiles.filter((df: any) => !cloudDocsFilesIds.has(Number(df.id))) : [];
+    const mergedDocsFiles = [...cloudDocsFiles, ...localOnlyDocsFiles];
+
+    let localRiwayats: any[] = [];
+    try {
+      localRiwayats = JSON.parse(localStorage.getItem('simpeg_riwayat_ak') || '[]');
+    } catch (_) {}
+    const cloudRiwayats = riwayats || [];
+    const cloudRiwayatsIds = new Set(cloudRiwayats.map((r: any) => Number(r.id)));
+    const localOnlyRiwayats = Array.isArray(localRiwayats) ? localRiwayats.filter((r: any) => !cloudRiwayatsIds.has(Number(r.id))) : [];
+    const mergedRiwayats = [...cloudRiwayats, ...localOnlyRiwayats];
+
+    let localArsips: any[] = [];
+    try {
+      localArsips = JSON.parse(localStorage.getItem('simpeg_arsip_kepegawaian') || '[]');
+    } catch (_) {}
+    const cloudArsips = arsips || [];
+    const cloudArsipIds = new Set(cloudArsips.map((a: any) => Number(a.id)));
+    const localOnlyArsips = Array.isArray(localArsips) ? localArsips.filter((a: any) => !cloudArsipIds.has(Number(a.id))) : [];
+    const mergedArsips = [...cloudArsips, ...localOnlyArsips];
+
+    logs.push("✅ Pull Berhasil! Seluruh data live terupdate dari cloud dan disinkronkan dengan perubahan lokal.");
     
     return {
       success: true,
@@ -1323,11 +1360,11 @@ export async function pullCloudDataFromSupabase(): Promise<{ success: boolean; d
         dokumen: docs,
         syaratFiturMap: syaratFiturMap,
         asnProfiles: mergedAsns,
-        usulanLayanan: usulans,
-        usulanDokumenFile: docsFiles,
-        riwayatAk: riwayats,
+        usulanLayanan: mergedUsulans,
+        usulanDokumenFile: mergedDocsFiles,
+        riwayatAk: mergedRiwayats,
         laporanSdmk: laporans,
-        arsipKepegawaian: arsips,
+        arsipKepegawaian: mergedArsips,
         users: usrs
       }
     };
