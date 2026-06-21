@@ -75,16 +75,6 @@ export default function LoginView({ dbState, onLogin, onReset }: LoginViewProps)
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-teal-500/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
 
-      {/* Header Info */}
-      <div className="max-w-[1200px] mx-auto w-full flex items-center justify-between py-2 border-b border-slate-200 opacity-80">
-        <div className="flex items-center space-x-2">
-          <Shield size={16} className="text-teal-600" />
-        </div>
-        <div className="text-[10px] sm:text-[11px] font-mono text-emerald-600 flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-        </div>
-      </div>
-
       {/* Main Container Grid */}
       <div className="max-w-[1240px] mx-auto w-full my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center py-6">
         
@@ -261,16 +251,8 @@ export default function LoginView({ dbState, onLogin, onReset }: LoginViewProps)
             )}
 
             {/* Emergency clean reset feature on login box */}
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-[9px] text-slate-400">Layanan SAPA &bull; Lombok Barat NTB</span>
-              <button
-                type="button"
-                onClick={onReset}
-                className="text-[9.5px] text-amber-600 hover:text-amber-700 font-bold hover:underline flex items-center space-x-1 border border-amber-200 px-2.5 py-1 rounded-lg bg-amber-50 cursor-pointer transition-all"
-              >
-                <RefreshCw size={10} className="mr-0.5" />
-                <span>Reset Database</span>
-              </button>
+            <div className="flex items-center justify-center pt-1">
+              <span className="text-[10px] text-slate-450 font-medium">Layanan SAPA &bull; Lombok Barat NTB</span>
             </div>
           </div>
         </div>
