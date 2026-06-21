@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS asn_profiles (
     pns_unor_induk VARCHAR(255),
     pns_no_sk_jabatan VARCHAR(100),
     pns_tgl_sk_jabatan DATE,
+    pns_instansi_pembina VARCHAR(255),
 
     -- PPPK Details
     pppk_ni VARCHAR(100),
@@ -818,6 +819,7 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
           pns_unor_induk: p.pns_unor_induk || null,
           pns_no_sk_jabatan: p.pns_no_sk_jabatan || null,
           pns_tgl_sk_jabatan: sanitizePgDate(p.pns_tgl_sk_jabatan),
+          pns_instansi_pembina: p.pns_instansi_pembina || null,
 
           // PPPK Details
           pppk_ni: p.pppk_ni || null,
