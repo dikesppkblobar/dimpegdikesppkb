@@ -83,6 +83,7 @@ export interface ASNProfile {
   pns_unor_induk?: string;
   pns_no_sk_jabatan?: string;
   pns_tgl_sk_jabatan?: string; // YYYY-MM-DD
+  pns_instansi_pembina?: string;
 
   // === PPPK (Penuh / Paruh Waktu) BKN Regulated Fields ===
   pppk_ni?: string; // Nomor Induk PPPK
