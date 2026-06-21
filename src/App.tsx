@@ -1476,16 +1476,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Database Reset Action */}
-                <button
-                  onClick={handleResetDatabase}
-                  title="Reset Database ke seeds"
-                  className="p-1.5 bg-rose-950/40 text-rose-450 hover:bg-rose-900/40 rounded-lg text-[10px] font-bold transition flex items-center space-x-1 border border-rose-500/25 cursor-pointer"
-                >
-                  <RefreshCw size={11} />
-                  <span className="hidden sm:inline">Reset DB</span>
-                </button>
-
                 {/* Logout Button */}
                 <button
                   onClick={() => {
