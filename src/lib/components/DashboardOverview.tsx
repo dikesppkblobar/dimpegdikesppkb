@@ -567,7 +567,7 @@ export default function DashboardOverview({
       sender: "Dinas Kesehatan PPKB (Admin)",
       time: new Date().toISOString(),
       title: `⚠️ Peringatan Jatuh Tempo - ${alertItem.asnName}`,
-      message: `Unit Penempatan: ${getPuskesmasName(alertItem.puskesmasId)}. Segera lengkapi, periksa, dan usulkan berkas administrasi TMT ${alertItem.type === 'pensiun' ? 'Pensiun' : alertItem.type === 'pangkat' ? 'Kenaikan Pangkat' : 'Gaji Berkala'} pegawai Anda. Batas waktu s.d. ${formatDate(alertItem.targetDateStr)}.`,
+      message: `Unit Penempatan: ${getPuskesmasName(alertItem.puskesmasId)}. Segera lengkapi, periksa, dan usulkan berkas administrasi TMT ${alertItem.type === 'pensiun' ? 'Pensiun' : alertItem.type === 'pangkat' ? 'Kenaikan Pangkat' : alertItem.type === 'kp4' ? 'Validasi KP4' : 'Gaji Berkala'} pegawai Anda. Batas waktu s.d. ${formatDate(alertItem.targetDateStr)}.`,
       targetRole: "admin_puskesmas",
       targetPuskesmasId: alertItem.puskesmasId,
       isRead: false
@@ -606,6 +606,13 @@ export default function DashboardOverview({
         '- SK Pangkat Terakhir',
         '- PAK (Penetapan Angka Kredit) Terakhir',
         '- Sasaran Kinerja Pegawai (SKP) 2 Tahun Terakhir'
+      ];
+    } else if (alertItem.type === 'kp4') {
+      serviceName = 'Validasi Formulir KP4 / Model DK Tahunan';
+      requiredDocs = [
+        '- Scan Formulir KP4 Asli (Model DK) ditandatangani Kepala Unit Kerja',
+        '- Salinan Kartu Keluarga (KK) Terbaru',
+        '- Salinan Surat Nikah dan Akta Kelahiran Anak (Terdaftar Tanggungan Gaji)'
       ];
     } else {
       serviceName = 'Layanan Kenaikan Gaji Berkala (KGB)';
@@ -2020,7 +2027,7 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
         </div>
       )}
 
-      {/* 1. TOP BANNER: Keputusan Berbasis Data Kepegawaian */}
+      {/* 1. TOP BANNER: Keputusan Berbasis Data SIMPEG Kepegawaian */}
       <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
         <div className="absolute right-0 bottom-0 opacity-10 translate-x-1/4 translate-y-1/4">
           <TrendingUp size={300} />
@@ -2030,10 +2037,10 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
             {currentRole === 'admin_dinkes' ? 'Dinkes Kabupaten' : getPuskesmasName(selectedPuskesmasId || 1)}
           </span>
           <h1 className="text-3xl font-display font-semibold mt-3 leading-tight tracking-tight">
-            Keputusan Berbasis Data Kepegawaian
+            Keputusan Berbasis Data SIMPEG Kepegawaian
           </h1>
           <p className="text-teal-100 text-sm mt-2 font-light leading-relaxed">
-            Sistem Arsip, Pemberitahuan, & Analisis Kepegawaian Dinas Kesehatan PPKB Kab. Lombok Barat
+            Platform verifikasi dua arah (Dinkes & Puskesmas) terintegrasi dengan alert peringatan dini, kalkulator jafung dan dasbor analitikal Kemenkes RI.
           </p>
         </div>
       </div>
@@ -3710,7 +3717,7 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
                       className="flex items-center space-x-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer"
                     >
                       <Bell size={13} />
-                      <span>Kirim ke Akun Masing-masing</span>
+                      <span>Kirim ke WA Pegawai</span>
                     </button>
                     <button
                       onClick={() => {
