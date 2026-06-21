@@ -1043,7 +1043,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SAPA pegawai Dikes PPKB Kab. 
             ? reqDocs.join('\n') 
             : '  - (Belum ada dokumen yang dipersyaratkan)';
           
-          statusLine = `\n- Status Dokumen: 📌 *PEMBERITAHUAN PERSYARATAN WAJIB*\n\n*DAFTAR DOKUMEN WAJIB YANG HARUS KELENGKAPAN (${selectedFitur.nama_fitur})*:\n${docsString}\n\nMohon siapkan dan unggah berkas-berkas wajib di atas melalui aplikasi SAPA pegawai Dikes PPKB agar usulan dapat segera diproses lebih lanjut.`;
+          statusLine = `\n- Status Dokumen: 📌 *PEMBERITAHUAN PERSYARATAN WAJIB*\n\n*DAFTAR DOKUMEN WAJIB YANG HARUS KELENGKAPAN (${selectedFitur.nama_fitur})*:\n${docsString}\n\nMohon persiapkan berkas-berkas di atas dan serahkan ke kepegawaian/UP Dikes PPKB agar usulan dapat segera diproses lebih lanjut.`;
         } else {
           statusLine = `\n- Status Dokumen: 📌 *${newUsulanStatus.toUpperCase()}*`;
         }
