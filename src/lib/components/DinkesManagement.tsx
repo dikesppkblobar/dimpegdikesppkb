@@ -2128,6 +2128,7 @@ CREATE TABLE asn_profiles (
     pns_unor_induk VARCHAR(255),
     pns_no_sk_jabatan VARCHAR(100),
     pns_tgl_sk_jabatan DATE,
+    pns_instansi_pembina VARCHAR(255),
     pppk_ni VARCHAR(100),
     pppk_no_perjanjian VARCHAR(100),
     pppk_tgl_perjanjian DATE,
