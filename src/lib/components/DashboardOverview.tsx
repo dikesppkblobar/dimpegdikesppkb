@@ -2804,17 +2804,6 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
                                           <div className="font-bold text-slate-700 truncate max-w-[180px]">
                                             {getJabatanName(p)}
                                           </div>
-                                          <div className="mt-0.5">
-                                            {isFungsional ? (
-                                              <span className="text-[8.5px] text-purple-600 bg-purple-50 border border-purple-150 rounded px-1.5 py-0.2 font-black leading-none uppercase tracking-wider block w-max">
-                                                Fungsional
-                                              </span>
-                                            ) : (
-                                              <span className="text-[8.5px] text-indigo-600 bg-indigo-50 border border-indigo-150 rounded px-1.5 py-0.2 font-black leading-none uppercase tracking-wider block w-max">
-                                                Administrasi
-                                              </span>
-                                            )}
-                                          </div>
                                         </td>
 
                                         {/* ASN Status details */}
