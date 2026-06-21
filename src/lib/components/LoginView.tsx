@@ -69,21 +69,19 @@ export default function LoginView({ dbState, onLogin, onReset }: LoginViewProps)
   };
 
   return (
-    <div id="sapa-login-portal-container" className="min-h-screen bg-[#0d111d] flex flex-col justify-between p-4 sm:p-6 font-sans relative overflow-hidden text-slate-100">
+    <div id="sapa-login-portal-container" className="min-h-screen bg-slate-50 flex flex-col justify-between p-4 sm:p-6 font-sans relative overflow-hidden text-slate-700">
       
       {/* Dynamic Ambient Background Decorative Elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-teal-900/15 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-900/10 blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-teal-500/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
 
       {/* Header Info */}
-      <div className="max-w-[1200px] mx-auto w-full flex items-center justify-between py-2 border-b border-white/5 opacity-80">
+      <div className="max-w-[1200px] mx-auto w-full flex items-center justify-between py-2 border-b border-slate-200 opacity-80">
         <div className="flex items-center space-x-2">
-          <Shield size={16} className="text-teal-400" />
-          <span className="text-[11px] font-mono tracking-wider uppercase text-slate-400">Portal Pengawasan Lombok Barat</span>
+          <Shield size={16} className="text-teal-600" />
         </div>
-        <div className="text-[10px] sm:text-[11px] font-mono text-emerald-450 flex items-center gap-1.5">
+        <div className="text-[10px] sm:text-[11px] font-mono text-emerald-600 flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Sistem Siap Digunakan</span>
         </div>
       </div>
 
@@ -95,55 +93,52 @@ export default function LoginView({ dbState, onLogin, onReset }: LoginViewProps)
           
           {/* Beautiful Official Dinkes Logo vector block */}
           <div className="flex items-center space-x-4">
-            <div id="dinkes-vector-logo-container" className="h-16 w-16 bg-white p-2.5 rounded-2xl shadow-xl border border-white/10 flex items-center justify-center shrink-0">
-              {/* High-fidelity Vector representation of Dinas Kesehatan Logo (Bakti Husada style) */}
-              <svg viewBox="0 0 100 100" className="h-full w-full object-contain">
-                {/* Shield Border */}
-                <path d="M50 5 L85 20 V65 C85 80 50 95 50 95 C50 95 15 80 15 65 V20 Z" fill="#00875A" />
-                <path d="M50 10 L80 23 V63 C80 75 50 88 50 88 C50 88 20 75 20 63 V23 Z" fill="#FFFFFF" />
-                {/* Green Star/Cross symbols of health */}
-                <circle cx="50" cy="48" r="24" fill="#00875A" />
-                <rect x="44" y="32" width="12" height="32" rx="3" fill="#FFFFFF" />
-                <rect x="34" y="42" width="32" height="12" rx="3" fill="#FFFFFF" />
-                {/* Central circular core */}
-                <circle cx="50" cy="48" r="8" fill="#00875A" />
-              </svg>
+            <div id="dinkes-vector-logo-container" className="h-16 w-16 bg-white p-1.5 rounded-2xl shadow-md border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden">
+              <img 
+                src="/logo_lombok_barat.jpg" 
+                alt="Logo Lombok Barat" 
+                className="h-full w-full object-contain"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = 'https://upload.wikimedia.org/wikipedia/commons/2/23/Logo_Kabupaten_Lombok_Barat.png';
+                }}
+              />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-[10px] bg-teal-500/10 text-teal-400 border border-teal-500/25 px-2.5 py-0.5 rounded-full uppercase font-mono font-extrabold tracking-wide">
+                <span className="text-[10px] bg-teal-500/10 text-teal-700 border border-teal-500/25 px-2.5 py-0.5 rounded-full uppercase font-mono font-extrabold tracking-wide">
                   Dikes PPKB &bull; LOBAR
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-1 font-display tracking-tight leading-none uppercase">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 font-display tracking-tight leading-none uppercase">
                 SAPA Pegawai
               </h1>
             </div>
           </div>
 
           <div className="space-y-4">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-200">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-800">
               Sistem Arsip, Pemberitahuan, & Analisis Kepegawaian Terintegrasi
             </h2>
-            <p className="text-slate-400 text-sm sm:text-[14.5px] leading-relaxed">
+            <p className="text-slate-600 text-sm sm:text-[14.5px] leading-relaxed">
               Portal administrasi digital terpadu Dinas Kesehatan, Pengendalian Penduduk, dan Keluarga Berencana Kabupaten Lombok Barat. Dirancang khusus untuk mengelola arsip manditori kepegawaian (CPNS/PNS, PPPK, Kontrak), verifikasi STR & SIP berkala, pemantauan riwayat angka kredit, serta visualisasi data SDMK real-time.
             </p>
           </div>
 
           {/* Key Features Quick badges indicators */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-4">
-            <div className="flex items-start space-x-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-              <FileCheck2 size={18} className="text-teal-400 mt-0.5" />
+            <div className="flex items-start space-x-3 p-3 rounded-xl bg-white border border-slate-200 shadow-xs">
+              <FileCheck2 size={18} className="text-teal-650 mt-0.5" />
               <div>
-                <h4 className="text-xs font-bold text-slate-200">Arsip Digital Mandatori</h4>
-                <p className="text-[11px] text-slate-400 mt-0.5">Perekaman aman SK kepegawaian, berkas penunjang, STR dan SIP kesehatan.</p>
+                <h4 className="text-xs font-bold text-slate-800">Arsip Digital Mandatori</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">Perekaman aman SK kepegawaian, berkas penunjang, STR dan SIP kesehatan.</p>
               </div>
             </div>
-            <div className="flex items-start space-x-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-              <RefreshCw size={18} className="text-emerald-400 mt-0.5" />
+            <div className="flex items-start space-x-3 p-3 rounded-xl bg-white border border-slate-200 shadow-xs">
+              <RefreshCw size={18} className="text-emerald-650 mt-0.5" />
               <div>
-                <h4 className="text-xs font-bold text-slate-200">Sinkronisasi Cloud Supabase</h4>
-                <p className="text-[11px] text-slate-400 mt-0.5">Sistem cerdas cadangan local-first & sinkronisasi otomatis awan real-time.</p>
+                <h4 className="text-xs font-bold text-slate-800">Sinkronisasi Cloud Supabase</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">Sistem cerdas cadangan local-first & sinkronisasi otomatis awan real-time.</p>
               </div>
             </div>
           </div>
@@ -155,50 +150,50 @@ export default function LoginView({ dbState, onLogin, onReset }: LoginViewProps)
 
         {/* Right Side: Login form */}
         <div className="lg:col-span-5">
-          <div className="backdrop-blur-md bg-white/[0.03] border border-white/10 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6 relative">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-6 sm:p-8 space-y-6 relative">
             <div>
-              <h3 className="text-lg font-bold text-white">Login Masuk Sistem</h3>
-              <p className="text-xs text-slate-400 mt-1">Silakan menggunakan kredensial akun pegawat Anda.</p>
+              <h3 className="text-lg font-bold text-slate-950">Login Masuk Sistem</h3>
+              <p className="text-xs text-slate-500 mt-1">Silakan menggunakan kredensial akun pegawai Anda.</p>
             </div>
 
             {error && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-450 font-medium leading-relaxed">
+              <div className="p-3 bg-rose-550/10 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium leading-relaxed bg-rose-50">
                 {error}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300 block">NIP atau Username</label>
+                <label className="text-xs font-bold text-slate-700 block">NIP atau Username</label>
                 <div className="relative">
-                  <User size={15} className="text-slate-450 absolute left-3 top-3.5" />
+                  <User size={15} className="text-slate-400 absolute left-3 top-3.5" />
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Masukkan NIP Anda (contoh: 198004122005011003)"
-                    className="w-full bg-slate-900/60 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-teal-500 transition-all font-mono"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:bg-white transition-all font-mono"
                     disabled={isLoading}
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300 block">Sandi / Password</label>
+                <label className="text-xs font-bold text-slate-700 block">Sandi / Password</label>
                 <div className="relative">
-                  <Lock size={15} className="text-slate-450 absolute left-3 top-3.5" />
+                  <Lock size={15} className="text-slate-400 absolute left-3 top-3.5" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Gunakan NIP sebagai Sandi bawaan"
-                    className="w-full bg-slate-900/60 border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-teal-500 transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:bg-white transition-all"
                     disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-slate-450 hover:text-slate-200 outline-none"
+                    className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 outline-none"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -208,7 +203,7 @@ export default function LoginView({ dbState, onLogin, onReset }: LoginViewProps)
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-500 hover:to-teal-600 text-white font-extrabold rounded-xl text-xs transition duration-150 shadow-md shadow-teal-900/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 bg-[#00875A] hover:bg-[#00704a] text-white font-extrabold rounded-xl text-xs transition duration-150 shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -224,15 +219,15 @@ export default function LoginView({ dbState, onLogin, onReset }: LoginViewProps)
 
             {/* Quick Helper Credentials Picker board */}
             {showHelper && (
-              <div className="pt-4 border-t border-white/5 space-y-2.5 text-left">
+              <div className="pt-4 border-t border-slate-105 space-y-2.5 text-left">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider flex items-center gap-1">
                     <HelpCircle size={11} />
                     <span>Daftar Akun Pengujian SAPA (Instan)</span>
                   </span>
                   <button 
                     onClick={() => setShowHelper(false)} 
-                    className="text-[10px] text-slate-500 hover:text-slate-300 font-bold hover:underline"
+                    className="text-[10px] text-slate-500 hover:text-slate-700 font-bold hover:underline"
                   >
                     Sembunyikan
                   </button>
@@ -245,16 +240,16 @@ export default function LoginView({ dbState, onLogin, onReset }: LoginViewProps)
                       type="button"
                       className={`p-2 rounded-xl border text-left transition text-xs flex justify-between items-center ${
                         username === u.nip 
-                          ? 'bg-teal-950/40 border-teal-500/50 text-white' 
-                          : 'bg-white/[0.01] border-white/5 hover:bg-white/[0.03] text-slate-350'
+                          ? 'bg-teal-50 border-teal-200 text-teal-900' 
+                          : 'bg-slate-50 border-slate-150 hover:bg-slate-100/80 text-slate-700'
                       }`}
                     >
                       <div className="leading-tight">
-                        <p className="font-bold text-[11px]">{u.nama_lengkap}</p>
-                        <p className="text-[9px] text-slate-450 mt-0.5">NIP: {u.nip}</p>
+                        <p className="font-bold text-[11px] text-slate-800">{u.nama_lengkap}</p>
+                        <p className="text-[9px] text-slate-500 mt-0.5">NIP: {u.nip}</p>
                       </div>
                       <div className="text-right">
-                        <span className="px-2 py-0.5 rounded-md text-[8.5px] font-bold uppercase bg-slate-900/80 border border-white/5 text-teal-400 block max-w-max ml-auto">
+                        <span className="px-2 py-0.5 rounded-md text-[8.5px] font-bold uppercase bg-teal-100 border border-teal-200 text-teal-800 block max-w-max ml-auto">
                           {u.role === 'admin_dinkes' ? 'Dinkes' : 'Unit'}
                         </span>
                         <span className="text-[8px] text-slate-500 block mt-0.5">{getPuskesmasName(u.id_puskesmas)}</span>
@@ -267,13 +262,13 @@ export default function LoginView({ dbState, onLogin, onReset }: LoginViewProps)
 
             {/* Emergency clean reset feature on login box */}
             <div className="flex items-center justify-between pt-1">
-              <span className="text-[9px] text-slate-500">Layanan SAPA &bull; Lombok Barat NTB</span>
+              <span className="text-[9px] text-slate-400">Layanan SAPA &bull; Lombok Barat NTB</span>
               <button
                 type="button"
                 onClick={onReset}
-                className="text-[9.5px] text-amber-500/80 hover:text-amber-400 font-bold hover:underline flex items-center space-x-1 border border-amber-500/20 hover:border-amber-500/40 px-2 py-1 rounded bg-amber-500/5 cursor-pointer transition-all"
+                className="text-[9.5px] text-amber-600 hover:text-amber-700 font-bold hover:underline flex items-center space-x-1 border border-amber-200 px-2.5 py-1 rounded-lg bg-amber-50 cursor-pointer transition-all"
               >
-                <RefreshCw size={10} className="mr-0.5 animate-hover" />
+                <RefreshCw size={10} className="mr-0.5" />
                 <span>Reset Database</span>
               </button>
             </div>
@@ -283,7 +278,7 @@ export default function LoginView({ dbState, onLogin, onReset }: LoginViewProps)
       </div>
 
       {/* Footer copyright section */}
-      <div className="max-w-[1200px] mx-auto w-full text-center text-slate-600 text-[10.5px] py-2 border-t border-white/5 mt-auto opacity-70">
+      <div className="max-w-[1240px] mx-auto w-full text-center text-slate-500 text-[10.5px] py-2 border-t border-slate-200 mt-auto opacity-80">
         <p>SAPA pegawai Dikes PPKB v1.0.0 &bull; Sistem Pendukung Keputusan & Manajemen Kepegawaian Sehat Terintegrasi</p>
         <p className="mt-0.5">Dinas Kesehatan Pengendalian Penduduk dan Keluarga Berencana Kabupaten Lombok Barat &copy; 2026. All rights reserved.</p>
       </div>
