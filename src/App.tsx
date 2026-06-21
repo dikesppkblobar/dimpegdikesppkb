@@ -463,6 +463,7 @@ export default function App() {
   const [newPnsTglSk, setNewPnsTglSk] = useState('');
   const [newPnsNamaJabatan, setNewPnsNamaJabatan] = useState('');
   const [newPnsJenisJabatan, setNewPnsJenisJabatan] = useState('Jabatan Fungsional');
+  const [newPnsInstansiPembina, setNewPnsInstansiPembina] = useState('Badan Kepegawaian Negara');
   const [newPnsJenisMutasi, setNewPnsJenisMutasi] = useState('Mutasi Jabatan');
   const [newPnsTmtJabatan, setNewPnsTmtJabatan] = useState('');
   const [newPnsInstansiKerja, setNewPnsInstansiKerja] = useState('Pemerintah Kab. Lombok Barat');
@@ -552,6 +553,7 @@ export default function App() {
     setNewPnsTglSk('');
     setNewPnsNamaJabatan('');
     setNewPnsJenisJabatan('Jabatan Fungsional');
+    setNewPnsInstansiPembina('Badan Kepegawaian Negara');
     setNewPnsJenisMutasi('Mutasi Jabatan');
     setNewPnsTmtJabatan('');
     setNewPnsInstansiKerja('Pemerintah Kab. Lombok Barat');
@@ -1003,6 +1005,7 @@ export default function App() {
       pns_unor_induk: newStatusDetail === 'PNS' ? getPuskesmasName(finalUnitId) : undefined,
       pns_no_sk_jabatan: newStatusDetail === 'PNS' ? newPnsNoSkJabatan : undefined,
       pns_tgl_sk_jabatan: newStatusDetail === 'PNS' ? newPnsTglSkJabatan : undefined,
+      pns_instansi_pembina: newStatusDetail === 'PNS' ? newPnsInstansiPembina : undefined,
  
       // PPPK Detailed Values (Penuh / Paruh)
       pppk_ni: (newStatusDetail === 'PPPK_Penuh_Waktu' || newStatusDetail === 'PPPK_Paruh_Waktu') ? newNip : undefined,
@@ -2470,7 +2473,7 @@ export default function App() {
                                 type="text"
                                 value={newPangkatNama}
                                 onChange={(e) => setNewPangkatNama(e.target.value)}
-                                disabled={true}
+                                disabled={newJenisPegawai === 'Jafung_Kesehatan'}
                                 className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:ring-1 focus:ring-emerald-500 disabled:opacity-75 disabled:cursor-not-allowed disabled:bg-[#16161a]/50 text-emerald-400 font-semibold"
                                 placeholder="Pembina Tingkat I"
                               />
@@ -2482,7 +2485,7 @@ export default function App() {
                                 type="text"
                                 value={newPnsJenisKenaikanPangkat}
                                 onChange={(e) => setNewPnsJenisKenaikanPangkat(e.target.value)}
-                                disabled={true}
+                                disabled={newJenisPegawai === 'Jafung_Kesehatan'}
                                 className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:ring-1 focus:ring-emerald-500 disabled:opacity-75 disabled:cursor-not-allowed disabled:bg-[#16161a]/50 text-emerald-400 font-semibold"
                                 placeholder="Pilihan (Fungsional Tertentu)"
                               />
@@ -2562,49 +2565,64 @@ export default function App() {
                               />
                             </div>
 
-                            <div className="space-y-1.5">
-                              <label className="text-slate-400">Jenis Jabatan</label>
-                              <select
-                                value={newPnsJenisJabatan}
-                                onChange={(e) => setNewPnsJenisJabatan(e.target.value)}
-                                className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg"
-                              >
-                                <option value="Jabatan Fungsional">Jabatan Fungsional</option>
-                                <option value="Jabatan Struktural">Jabatan Struktural</option>
-                                <option value="Fungsional Umum">Fungsional Umum</option>
-                              </select>
-                            </div>
+                            {newJenisPegawai === 'Jafung_Kesehatan' ? (
+                              <>
+                                <div className="space-y-1.5">
+                                  <label className="text-slate-400">Jenis Jabatan</label>
+                                  <select
+                                    value={newPnsJenisJabatan}
+                                    onChange={(e) => setNewPnsJenisJabatan(e.target.value)}
+                                    className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg"
+                                  >
+                                    <option value="Jabatan Fungsional">Jabatan Fungsional</option>
+                                    <option value="Jabatan Struktural">Jabatan Struktural</option>
+                                    <option value="Fungsional Umum">Fungsional Umum</option>
+                                  </select>
+                                </div>
 
-                            <div className="space-y-1.5">
-                              <label className="text-slate-400">TMT Jabatan</label>
-                              <input
-                                type="date"
-                                value={newPnsTmtJabatan}
-                                onChange={(e) => setNewPnsTmtJabatan(e.target.value)}
-                                className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg"
-                              />
-                            </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-slate-400">TMT Jabatan</label>
+                                  <input
+                                    type="date"
+                                    value={newPnsTmtJabatan}
+                                    onChange={(e) => setNewPnsTmtJabatan(e.target.value)}
+                                    className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg"
+                                  />
+                                </div>
 
-                            <div className="space-y-1.5">
-                              <label className="text-slate-400">Nomor SK Jabatan</label>
-                              <input
-                                type="text"
-                                value={newPnsNoSkJabatan}
-                                onChange={(e) => setNewPnsNoSkJabatan(e.target.value)}
-                                className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg font-mono"
-                                placeholder="821.16/264/BKD-PSDM/2022"
-                              />
-                            </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-slate-400">Nomor SK Jabatan</label>
+                                  <input
+                                    type="text"
+                                    value={newPnsNoSkJabatan}
+                                    onChange={(e) => setNewPnsNoSkJabatan(e.target.value)}
+                                    className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg font-mono"
+                                    placeholder="821.16/264/BKD-PSDM/2022"
+                                  />
+                                </div>
 
-                            <div className="space-y-1.5">
-                              <label className="text-slate-400">Tanggal SK Jabatan</label>
-                              <input
-                                type="date"
-                                value={newPnsTglSkJabatan}
-                                onChange={(e) => setNewPnsTglSkJabatan(e.target.value)}
-                                className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg"
-                              />
-                            </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-slate-400">Tanggal SK Jabatan</label>
+                                  <input
+                                    type="date"
+                                    value={newPnsTglSkJabatan}
+                                    onChange={(e) => setNewPnsTglSkJabatan(e.target.value)}
+                                    className="w-full p-2 border border-white/5 bg-[#16161a] text-white rounded-lg"
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <div className="space-y-1.5">
+                                <label className="text-slate-400">Nomenklatur Instansi Pembina Pegawai</label>
+                                <input
+                                  type="text"
+                                  value={newPnsInstansiPembina}
+                                  onChange={(e) => setNewPnsInstansiPembina(e.target.value)}
+                                  className="w-full p-2 border border-emerald-500/35 bg-[#16161a] text-emerald-400 font-semibold rounded-lg focus:ring-1 focus:ring-emerald-500"
+                                  placeholder="Contoh: Badan Kepegawaian Negara (BKN)"
+                                />
+                              </div>
+                            )}
 
                             <div className="space-y-1.5">
                               <label className="text-slate-400">TMT Gaji Berkala (Berikutnya/Terakhir)</label>
@@ -3633,18 +3651,30 @@ export default function App() {
                       <div className="space-y-1.5">
                         <label className="text-slate-600 font-semibold block mb-1">Pangkat Nama <span className="text-[10px] text-teal-600 font-normal block mt-0.5">(bisa lebih cepat apabila AK tercukupi)</span></label>
                         <input
-                          type="text" disabled={true}
-                          value={GOLONGAN_TO_PANGKAT[editingAsn.golongan_ruang] || editingAsn.pangkat_nama || ''}
-                          className="w-full p-2 border border-slate-200 bg-slate-50 text-slate-500 rounded-lg font-bold cursor-not-allowed shadow-inner"
+                          type="text"
+                          disabled={editingAsn.jenis_pegawai === 'Jafung_Kesehatan'}
+                          value={editingAsn.pangkat_nama || GOLONGAN_TO_PANGKAT[editingAsn.golongan_ruang] || ''}
+                          onChange={(e) => setEditingAsn({ ...editingAsn, pangkat_nama: e.target.value })}
+                          className={`w-full p-2 border rounded-lg font-bold transition font-medium shadow-xs ${
+                            editingAsn.jenis_pegawai === 'Jafung_Kesehatan'
+                              ? 'border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed shadow-inner'
+                              : 'border-slate-300 bg-white text-slate-900 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none'
+                          }`}
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-slate-600 font-semibold block mb-1">Jenis Kenaikan Pangkat <span className="text-[10px] text-teal-600 font-normal block mt-0.5">(Isi Otomatis)</span></label>
+                        <label className="text-slate-600 font-semibold block mb-1">Jenis Kenaikan Pangkat <span className="text-[10px] text-teal-600 font-normal block mt-0.5">(Gunakan Pilihan / Reguler)</span></label>
                         <input
-                          type="text" disabled={true}
-                          value={getNextGolonganDescription(editingAsn.golongan_ruang)}
-                          className="w-full p-2 border border-slate-200 bg-slate-50 text-slate-500 rounded-lg font-bold cursor-not-allowed shadow-inner"
+                          type="text"
+                          disabled={editingAsn.jenis_pegawai === 'Jafung_Kesehatan'}
+                          value={editingAsn.pns_jenis_kenaikan_pangkat || getNextGolonganDescription(editingAsn.golongan_ruang)}
+                          onChange={(e) => setEditingAsn({ ...editingAsn, pns_jenis_kenaikan_pangkat: e.target.value })}
+                          className={`w-full p-2 border rounded-lg font-bold transition font-medium shadow-xs ${
+                            editingAsn.jenis_pegawai === 'Jafung_Kesehatan'
+                              ? 'border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed shadow-inner'
+                              : 'border-slate-300 bg-white text-slate-900 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none'
+                          }`}
                         />
                       </div>
 
@@ -3710,38 +3740,53 @@ export default function App() {
                         />
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-slate-600 font-semibold block mb-1">Jenis Jabatan</label>
-                        <select
-                          value={editingAsn.pns_jenis_jabatan || 'Jabatan Fungsional'}
-                          onChange={(e) => setEditingAsn({ ...editingAsn, pns_jenis_jabatan: e.target.value })}
-                          className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-medium shadow-xs"
-                        >
-                          <option value="Jabatan Fungsional">Jabatan Fungsional</option>
-                          <option value="Struktural">Struktural</option>
-                          <option value="Umum">Umum</option>
-                        </select>
-                      </div>
+                      {editingAsn.jenis_pegawai === 'Jafung_Kesehatan' ? (
+                        <>
+                          <div className="space-y-1.5">
+                            <label className="text-slate-600 font-semibold block mb-1">Jenis Jabatan</label>
+                            <select
+                              value={editingAsn.pns_jenis_jabatan || 'Jabatan Fungsional'}
+                              onChange={(e) => setEditingAsn({ ...editingAsn, pns_jenis_jabatan: e.target.value })}
+                              className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-medium shadow-xs"
+                            >
+                              <option value="Jabatan Fungsional">Jabatan Fungsional</option>
+                              <option value="Struktural">Struktural</option>
+                              <option value="Umum">Umum</option>
+                            </select>
+                          </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-slate-600 font-semibold block mb-1">Nomor SK Jabatan</label>
-                        <input
-                          type="text"
-                          value={editingAsn.pns_no_sk_jabatan || ''}
-                          onChange={(e) => setEditingAsn({ ...editingAsn, pns_no_sk_jabatan: e.target.value })}
-                          className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-medium shadow-xs"
-                        />
-                      </div>
+                          <div className="space-y-1.5">
+                            <label className="text-slate-600 font-semibold block mb-1">Nomor SK Jabatan</label>
+                            <input
+                              type="text"
+                              value={editingAsn.pns_no_sk_jabatan || ''}
+                              onChange={(e) => setEditingAsn({ ...editingAsn, pns_no_sk_jabatan: e.target.value })}
+                              className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-medium shadow-xs"
+                            />
+                          </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-slate-600 font-semibold block mb-1">Tanggal SK Jabatan</label>
-                        <input
-                          type="date"
-                          value={editingAsn.pns_tgl_sk_jabatan || ''}
-                          onChange={(e) => setEditingAsn({ ...editingAsn, pns_tgl_sk_jabatan: e.target.value })}
-                          className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-medium shadow-xs"
-                        />
-                      </div>
+                          <div className="space-y-1.5">
+                            <label className="text-slate-600 font-semibold block mb-1">Tanggal SK Jabatan</label>
+                            <input
+                              type="date"
+                              value={editingAsn.pns_tgl_sk_jabatan || ''}
+                              onChange={(e) => setEditingAsn({ ...editingAsn, pns_tgl_sk_jabatan: e.target.value })}
+                              className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-medium shadow-xs"
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <label className="text-slate-600 font-semibold block mb-1">Nomenklatur Instansi Pembina Pegawai</label>
+                          <input
+                            type="text"
+                            value={editingAsn.pns_instansi_pembina || ''}
+                            onChange={(e) => setEditingAsn({ ...editingAsn, pns_instansi_pembina: e.target.value })}
+                            className="w-full p-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-medium shadow-xs"
+                            placeholder="Contoh: Badan Kepegawaian Negara (BKN)"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -4817,18 +4862,27 @@ export default function App() {
                         <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wide block pb-0.5">Nama Jabatan</span>
                         <span className="text-slate-900 font-bold text-xs">{selectedProfileForDetail.pns_nama_jabatan || '-'}</span>
                       </div>
-                      <div>
-                        <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wide block pb-0.5">Jenis Jabatan</span>
-                        <span className="text-slate-900 text-xs">{selectedProfileForDetail.pns_jenis_jabatan || '-'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wide block pb-0.5">Nomor SK Jabatan</span>
-                        <span className="text-slate-900 font-mono text-xs">{selectedProfileForDetail.pns_no_sk_jabatan || '-'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wide block pb-0.5">Tanggal SK Jabatan</span>
-                        <span className="text-slate-900 text-xs">{selectedProfileForDetail.pns_tgl_sk_jabatan ? formatDate(selectedProfileForDetail.pns_tgl_sk_jabatan) : '-'}</span>
-                      </div>
+                      {selectedProfileForDetail.jenis_pegawai === 'Jafung_Kesehatan' ? (
+                        <>
+                          <div>
+                            <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wide block pb-0.5">Jenis Jabatan</span>
+                            <span className="text-slate-900 text-xs">{selectedProfileForDetail.pns_jenis_jabatan || '-'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wide block pb-0.5">Nomor SK Jabatan</span>
+                            <span className="text-slate-900 font-mono text-xs">{selectedProfileForDetail.pns_no_sk_jabatan || '-'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wide block pb-0.5">Tanggal SK Jabatan</span>
+                            <span className="text-slate-900 text-xs">{selectedProfileForDetail.pns_tgl_sk_jabatan ? formatDate(selectedProfileForDetail.pns_tgl_sk_jabatan) : '-'}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wide block pb-0.5">Nomenklatur Instansi Pembina Pegawai</span>
+                          <span className="text-slate-900 font-bold text-xs">{selectedProfileForDetail.pns_instansi_pembina || 'Badan Kepegawaian Negara / Kementerian Kesehatan'}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
