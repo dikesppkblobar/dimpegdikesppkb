@@ -23,7 +23,12 @@ import {
   AlertCircle,
   FolderCheck,
   AlertTriangle,
-  X
+  X,
+  LogOut,
+  Lock,
+  User,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { getDB, saveDB, initializeDB, getFallbackProfesiId } from './mockData';
@@ -48,6 +53,7 @@ import LaporanSDMK from './lib/components/LaporanSDMK';
 import DinkesManagement from './lib/components/DinkesManagement';
 import ArsipKepegawaianView from './lib/components/ArsipKepegawaianView';
 import DashboardKP4 from './lib/components/DashboardKP4';
+import LoginView from './lib/components/LoginView';
 import { pushClientDataToSupabase, pullCloudDataFromSupabase, testSupabaseConnection } from './lib/supabase';
 import { formatDate, addYearsToDateString } from './utils';
 
@@ -181,9 +187,37 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<string>('dasbor');
 
+  // User Authentication State
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('simpeg_current_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (_) {
+      return null;
+    }
+  });
+
   // Multi-Tenant Acting User states
-  const [currentRole, setCurrentRole] = useState<'admin_dinkes' | 'admin_puskesmas'>('admin_dinkes');
-  const [selectedPuskesmasId, setSelectedPuskesmasId] = useState<number>(1); // e.g. Gerung
+  const [currentRole, setCurrentRole] = useState<'admin_dinkes' | 'admin_puskesmas'>(() => {
+    try {
+      const saved = localStorage.getItem('simpeg_current_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.role) return parsed.role;
+      }
+    } catch (_) {}
+    return 'admin_dinkes';
+  });
+  const [selectedPuskesmasId, setSelectedPuskesmasId] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('simpeg_current_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.id_puskesmas) return Number(parsed.id_puskesmas);
+      }
+    } catch (_) {}
+    return 1; // e.g. Gerung
+  });
 
   // Renbut State
   const [renbutList, setRenbutList] = useState<any[]>(() => {
@@ -855,6 +889,7 @@ export default function App() {
       initializeDB();
       const fresh = getDB();
       setDbState(fresh);
+      setCurrentUser(null); // Clear active user to return to login screen
       setActiveTab('dasbor');
       setSelectedPuskesmasId(1);
       setCurrentRole('admin_dinkes');
@@ -1360,6 +1395,37 @@ export default function App() {
     );
   }
 
+  // Display beautiful login page if not authenticated
+  if (!currentUser) {
+    return (
+      <>
+        <LoginView
+          dbState={dbState}
+          onLogin={(user) => {
+            setCurrentUser(user);
+            localStorage.setItem('simpeg_current_user', JSON.stringify(user));
+            setCurrentRole(user.role);
+            setSelectedPuskesmasId(user.id_puskesmas || 1);
+            setSuccessToast(`Selamat datang kembali, ${user.nama_lengkap}!`);
+          }}
+          onReset={handleResetDatabase}
+        />
+        {/* Render Success Toast if present on Login screen */}
+        {successToast && (
+          <div className="fixed bottom-5 right-5 z-80 bg-white border-l-4 border-emerald-500 text-slate-800 p-4 rounded-xl shadow-2xl flex items-center justify-between border border-slate-100 max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center space-x-2.5">
+              <span className="text-emerald-500 font-extrabold text-sm">&#10003;</span>
+              <p className="text-xs font-semibold leading-relaxed">
+                {successToast}
+              </p>
+            </div>
+            <button onClick={() => setSuccessToast(null)} className="text-slate-400 hover:text-slate-800 text-xs font-bold pl-2 cursor-pointer">&times;</button>
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <div id="simpeg-rootbox" className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
       
@@ -1393,68 +1459,51 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right Header Panel with integrated Multi-Tenant Switcher and In-App Notifications Center */}
+          {/* Right Header Panel with active user profile, Reset DB helper, and In-App Notifications Center */}
           <div className="flex items-center gap-3 self-end md:self-center relative">
             
-            {/* Role Switching Simulator Board (Multi-Tenant simulator) */}
-            <div className="bg-[#16161a] border border-white/5 p-2 rounded-xl flex flex-wrap items-center gap-3">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                <Sliders size={13} className="text-emerald-400" />
-                <span>Otoritas Sesi:</span>
-              </span>
+            {currentUser && (
+              <div id="user-profile-badge-card" className="bg-[#16161a] border border-white/5 p-2 rounded-xl flex flex-wrap items-center gap-3">
+                <div className="flex items-center space-x-2 px-1.5 py-0.5">
+                  <div className="h-7 w-7 rounded-lg bg-teal-600 font-extrabold text-white flex items-center justify-center text-xs uppercase shadow-xs">
+                    {currentUser.nama_lengkap ? currentUser.nama_lengkap.charAt(0) : 'U'}
+                  </div>
+                  <div className="text-left leading-tight hidden lg:block">
+                    <p className="text-[10.5px] font-bold text-slate-100">{currentUser.nama_lengkap}</p>
+                    <p className="text-[8.5px] text-teal-400 font-mono mt-0.2">
+                      {currentUser.role === 'admin_dinkes' ? 'Admin Utama (Dikes PPKB)' : getPuskesmasName(currentUser.id_puskesmas)}
+                    </p>
+                  </div>
+                </div>
 
-              {/* Select Role Type */}
-              <div className="flex bg-slate-900 border border-white/5 p-0.5 rounded-lg text-xs">
+                {/* Database Reset Action */}
                 <button
-                  onClick={() => {
-                    setCurrentRole('admin_dinkes');
-                    setActiveTab('dasbor');
-                    setShowNotificationsDropdown(false);
-                  }}
-                  className={`px-3 py-1 font-semibold rounded-md transition ${currentRole === 'admin_dinkes' ? 'bg-teal-700 text-white shadow-xs' : 'text-slate-500 hover:text-slate-400'}`}
+                  onClick={handleResetDatabase}
+                  title="Reset Database ke seeds"
+                  className="p-1.5 bg-rose-950/40 text-rose-450 hover:bg-rose-900/40 rounded-lg text-[10px] font-bold transition flex items-center space-x-1 border border-rose-500/25 cursor-pointer"
                 >
-                  Admin Utama (Dikes PPKB)
+                  <RefreshCw size={11} />
+                  <span className="hidden sm:inline">Reset DB</span>
                 </button>
+
+                {/* Logout Button */}
                 <button
                   onClick={() => {
-                    setCurrentRole('admin_puskesmas');
+                    setCurrentUser(null);
+                    localStorage.removeItem('simpeg_current_user');
+                    // Reset defaults to prevent leaked active states
+                    setCurrentRole('admin_dinkes');
+                    setSelectedPuskesmasId(1);
                     setActiveTab('dasbor');
-                    setShowNotificationsDropdown(false);
+                    setSuccessToast("Anda telah keluar dari sistem.");
                   }}
-                  className={`px-3 py-1 font-semibold rounded-md transition ${currentRole === 'admin_puskesmas' ? 'bg-teal-700 text-white shadow-xs' : 'text-slate-500 hover:text-slate-400'}`}
+                  className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1.5 border border-white/5 cursor-pointer"
                 >
-                  Admin Unit (Puskesmas)
+                  <LogOut size={12} />
+                  <span>Keluar</span>
                 </button>
               </div>
-
-              {/* Tenancy selection helper */}
-              {currentRole === 'admin_puskesmas' && (
-                <select
-                  value={selectedPuskesmasId}
-                  onChange={(e) => {
-                    setSelectedPuskesmasId(parseInt(e.target.value));
-                    setActiveTab('dasbor');
-                    setShowNotificationsDropdown(false);
-                  }}
-                  className="p-1 border border-white/10 rounded font-bold text-xs bg-[#0f0f12] text-emerald-400 focus:outline-none"
-                >
-                  {/* Exclude Dinkes (id 100) from puskesmas list for Puskesmas tenant picker */}
-                  {dbState.puskesmas.filter(pk => pk.id !== 100).map(pk => (
-                    <option key={pk.id} value={pk.id} className="bg-[#16161a] text-slate-300">{pk.nama_puskesmas}</option>
-                  ))}
-                </select>
-              )}
-              
-              {/* Database Reset Action */}
-              <button
-                onClick={handleResetDatabase}
-                title="Reset Database ke seeds"
-                className="p-1.5 bg-rose-950/40 text-rose-400 hover:bg-rose-900/40 rounded-lg text-[10px] font-bold transition flex items-center space-x-1 border border-rose-500/25 cursor-pointer"
-              >
-                <RefreshCw size={11} />
-                <span className="hidden sm:inline">Reset DB</span>
-              </button>
-            </div>
+            )}
 
             {/* In-App Notification Center Icon & dropdown */}
             <div className="relative">
