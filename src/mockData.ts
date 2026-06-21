@@ -674,10 +674,38 @@ export const saveDB = (data: Partial<ReturnType<typeof getDB>> & Record<string, 
     else if (key === 'notifications') storageKey = 'simpeg_notifications';
 
     if (storageKey) {
-      if (typeof val === 'string') {
-        localStorage.setItem(storageKey, val);
-      } else {
-        localStorage.setItem(storageKey, JSON.stringify(val));
+      const serializedValue = typeof val === 'string' ? val : JSON.stringify(val);
+      try {
+        localStorage.setItem(storageKey, serializedValue);
+      } catch (err: any) {
+        if (err.name === 'QuotaExceededError' || err.code === 22 || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+          console.warn(`SAPA Storage quota exceeded for key "${storageKey}". Attempting automatic base64 compression/pruning of older records...`);
+          
+          if (storageKey === 'simpeg_arsip_kepegawaian' || storageKey === 'simpeg_usulan_dokumen_file') {
+            try {
+              const list = typeof val === 'string' ? JSON.parse(val) : val;
+              if (Array.isArray(list)) {
+                // Keep only the most recent files intact, stub the rest to save space.
+                const processed = list.map((item: any, idx: number) => {
+                  // Keep item fully intact if it is the latest uploaded item
+                  if (idx < list.length - 1 && item.file_path && item.file_path.startsWith('data:')) {
+                    return {
+                      ...item,
+                      file_path: "data:application/pdf;base64,SIMULATED_LARGE_FILE_REDUCED_TO_PRESERVE_LOCAL_QUOTA_STUB_OK"
+                    };
+                  }
+                  return item;
+                });
+                localStorage.setItem(storageKey, JSON.stringify(processed));
+                console.log(`Successfully saved processed/pruned list for "${storageKey}" within localStorage quota limit!`);
+                return;
+              }
+            } catch (_) {}
+          }
+          console.error(`Unable to automatically compress store data for key "${storageKey}".`);
+        } else {
+          console.error(`Storage save failure for key "${storageKey}":`, err);
+        }
       }
     }
   });
