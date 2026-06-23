@@ -1153,6 +1153,7 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
  * for offline-first replication.
  */
 function mergeLocalAndCloud<T extends { id: number | string }>(localList: T[], cloudList: T[]): T[] {
+  console.log(`[mergeLocalAndCloud] MERGING arrays - localList:`, localList, `cloudList:`, cloudList);
   const localMap = new Map(localList.map(item => [String(item.id), item]));
   const cloudMap = new Map(cloudList.map(item => [String(item.id), item]));
 
@@ -1164,10 +1165,11 @@ function mergeLocalAndCloud<T extends { id: number | string }>(localList: T[], c
     const id = String(localItem.id);
     const cloudItem = cloudMap.get(id);
     if (cloudItem) {
-      merged.push({
+      const mergedItem = {
         ...cloudItem,
         ...localItem
-      });
+      };
+      merged.push(mergedItem);
     } else {
       // Local-only item (new creations not yet in the cloud)
       merged.push(localItem);
@@ -1182,6 +1184,7 @@ function mergeLocalAndCloud<T extends { id: number | string }>(localList: T[], c
     }
   });
 
+  console.log(`[mergeLocalAndCloud] MERGING complete - result:`, merged);
   return merged;
 }
 
