@@ -696,7 +696,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SAPA pegawai Dikes PPKB Kab. 
           if (result.method === 'fonnte') {
             alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan dan notifikasi berhasil terkirim via Fonnte API secara langsung.`);
           } else {
-            alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan.\n⚠️ API Fonnte terbatas/error dan dialihkan ke WhatsApp Web login.`);
+            alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan.\n⚠️ Fonnte API Error: "${result.error || 'Terbatas/Error'}"\nNotifikasi dialihkan ke WhatsApp Web.`);
           }
         } catch (err: any) {
           alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan.\n❌ Gagal mengirim notifikasi: ${err.message || err}`);
@@ -1405,7 +1405,7 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SAPA pegawai Dikes 
                     if (result.method === 'fonnte') {
                       alert(`✓ Berhasil mengirim pesan via Fonnte API secara langsung.`);
                     } else {
-                      alert(`⚠️ API Fonnte terbatas/error dan dialihkan ke WhatsApp Web login.`);
+                      alert(`⚠️ Gagal mengirim via API Fonnte: "${result.error || 'Terbatas/Error'}"\nPesan dialihkan via WhatsApp Web.`);
                     }
                   } catch (err: any) {
                     alert(`❌ Gagal mengirim: ${err.message || err}`);
@@ -1896,7 +1896,7 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SAPA pegawai Dikes 
                               if (result.method === 'fonnte') {
                                 alert(`✓ Notifikasi berhasil terkirim via Fonnte API secara langsung.`);
                               } else {
-                                alert(`⚠️ API Fonnte terbatas/error dan dialihkan ke WhatsApp Web login.`);
+                                alert(`⚠️ Fonnte API Error: "${result.error || 'Terbatas/Error'}"\nNotifikasi dialihkan ke WhatsApp Web.`);
                               }
                             } catch (err: any) {
                               alert(`❌ Gagal mengirim notifikasi WA: ${err.message || err}`);
