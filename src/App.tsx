@@ -401,7 +401,16 @@ export default function App() {
 
   // Filter queries for Pegawai roster table
   const [rosterSearch, setRosterSearch] = useState('');
-  const [rosterUnitFilter, setRosterUnitFilter] = useState<number | string>('ALL'); // 'ALL' or specific ID
+  const [rosterUnitFilter, setRosterUnitFilter] = useState<number | string>(() => {
+    try {
+      const saved = localStorage.getItem('simpeg_current_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.role === 'admin_dinkes') return 100;
+      }
+    } catch (_) {}
+    return 'ALL';
+  }); // defaults to 100 for admin_dinkes, 'ALL' for others
   const [rosterStatusFilter, setRosterStatusFilter] = useState<string>('ALL'); // 'ALL', 'PNS', etc.
   const [rosterSubJenisJabatanFilter, setRosterSubJenisJabatanFilter] = useState<string>('ALL');
 
@@ -1524,6 +1533,11 @@ export default function App() {
             localStorage.setItem('simpeg_current_user', JSON.stringify(user));
             setCurrentRole(user.role);
             setSelectedPuskesmasId(user.id_puskesmas || 1);
+            if (user.role === 'admin_dinkes') {
+              setRosterUnitFilter(100);
+            } else {
+              setRosterUnitFilter('ALL');
+            }
             setSuccessToast(`Selamat datang kembali, ${user.nama_lengkap}!`);
           }}
           onReset={handleResetDatabase}
@@ -3122,7 +3136,7 @@ export default function App() {
                     <select
                       value={rosterStatusFilter}
                       onChange={(e) => setRosterStatusFilter(e.target.value)}
-                      className="p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:outline-none"
+                      className="p-2 border border-slate-300 bg-white text-black rounded-lg focus:outline-none font-semibold"
                     >
                       <option value="ALL">Semua Jenis Status</option>
                       <option value="PNS">Pegawai Negeri Sipil (PNS)</option>
@@ -3138,7 +3152,7 @@ export default function App() {
                     <select
                       value={rosterSubJenisJabatanFilter}
                       onChange={(e) => setRosterSubJenisJabatanFilter(e.target.value)}
-                      className="p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:outline-none text-emerald-400 font-semibold"
+                      className="p-2 border border-slate-300 bg-white text-black rounded-lg focus:outline-none font-semibold"
                     >
                       <option value="ALL">Semua Sub-Jenis Jabatan</option>
                       <option value="TENAGA_MEDIS">Tenaga Medis (Dokter/drg)</option>
@@ -3158,11 +3172,15 @@ export default function App() {
                       <label className="text-[10px] text-slate-500 uppercase font-bold block">Pilih Unit Kerja</label>
                       <select
                         value={rosterUnitFilter}
-                        onChange={(e) => setRosterUnitFilter(e.target.value)}
-                        className="p-2 border border-white/5 bg-[#16161a] text-white rounded-lg focus:outline-none text-emerald-400 font-bold"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setRosterUnitFilter(val === 'ALL' ? 'ALL' : Number(val));
+                        }}
+                        className="p-2 border border-slate-300 bg-white text-black rounded-lg focus:outline-none font-bold"
                       >
+                        <option value={100}>Dinas Kesehatan PPKB</option>
                         <option value="ALL">Semua Unit Kerja Dinas (Milik Dikes PPKB)</option>
-                        {dbState.puskesmas.map(pk => (
+                        {dbState.puskesmas.filter(pk => pk.id !== 100).map(pk => (
                           <option key={pk.id} value={pk.id}>{pk.nama_puskesmas}</option>
                         ))}
                       </select>
