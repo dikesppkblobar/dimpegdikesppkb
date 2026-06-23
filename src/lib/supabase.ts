@@ -1149,6 +1149,43 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
 }
 
 /**
+ * Helper to robustly merge local list (changes, additions) with cloud list (master source)
+ * for offline-first replication.
+ */
+function mergeLocalAndCloud<T extends { id: number | string }>(localList: T[], cloudList: T[]): T[] {
+  const localMap = new Map(localList.map(item => [String(item.id), item]));
+  const cloudMap = new Map(cloudList.map(item => [String(item.id), item]));
+
+  const merged: T[] = [];
+
+  // 1. Process items from the local list. If also present in cloud, merge them with local taking precedence.
+  // This preserves local modifications and offline updates.
+  localList.forEach(localItem => {
+    const id = String(localItem.id);
+    const cloudItem = cloudMap.get(id);
+    if (cloudItem) {
+      merged.push({
+        ...cloudItem,
+        ...localItem
+      });
+    } else {
+      // Local-only item (new creations not yet in the cloud)
+      merged.push(localItem);
+    }
+  });
+
+  // 2. Process items that are ONLY in the cloud list (created by others or seeded originally)
+  cloudList.forEach(cloudItem => {
+    const id = String(cloudItem.id);
+    if (!localMap.has(id)) {
+      merged.push(cloudItem);
+    }
+  });
+
+  return merged;
+}
+
+/**
  * Bulk Pull Cloud State from Supabase
  */
 export async function pullCloudDataFromSupabase(): Promise<{ success: boolean; data?: any; log: string[] }> {
@@ -1294,61 +1331,47 @@ export async function pullCloudDataFromSupabase(): Promise<{ success: boolean; d
       });
     }
 
-    // Merge pulled profiles with local ones to preserve custom fields (like nik, nomor_wa) if they are missing/null in the cloud
+    // Merge pulled profiles with local ones properly in a robust offline-first way
     let localProfiles: any[] = [];
     try {
       localProfiles = JSON.parse(localStorage.getItem('simpeg_asn_profiles') || '[]');
     } catch (_) {}
-
-    const mergedAsns = asns?.map((p: any) => {
-      const localItem = localProfiles.find((la: any) => Number(la.id) === Number(p.id));
-      if (localItem) {
-        return {
-          ...localItem,
-          ...p,
-          nik: p.nik || localItem.nik || null,
-          nomor_wa: p.nomor_wa || localItem.nomor_wa || null
-        };
-      }
-      return p;
-    }) || asns;
+    const safeLocalAsns = Array.isArray(localProfiles) ? localProfiles : [];
+    const safeCloudAsns = Array.isArray(asns) ? asns : [];
+    const mergedAsns = mergeLocalAndCloud(safeLocalAsns, safeCloudAsns);
 
     // Merge pulled operational tables with local storage to safeguard offline-first additions / unsynced uploads
     let localUsulans: any[] = [];
     try {
       localUsulans = JSON.parse(localStorage.getItem('simpeg_usulan_layanan') || '[]');
     } catch (_) {}
-    const cloudUsulans = usulans || [];
-    const cloudUsulanIds = new Set(cloudUsulans.map((u: any) => Number(u.id)));
-    const localOnlyUsulans = Array.isArray(localUsulans) ? localUsulans.filter((u: any) => !cloudUsulanIds.has(Number(u.id))) : [];
-    const mergedUsulans = [...cloudUsulans, ...localOnlyUsulans];
+    const safeLocalUsulans = Array.isArray(localUsulans) ? localUsulans : [];
+    const safeCloudUsulans = Array.isArray(usulans) ? usulans : [];
+    const mergedUsulans = mergeLocalAndCloud(safeLocalUsulans, safeCloudUsulans);
 
     let localDocsFiles: any[] = [];
     try {
       localDocsFiles = JSON.parse(localStorage.getItem('simpeg_usulan_dokumen_file') || '[]');
     } catch (_) {}
-    const cloudDocsFiles = docsFiles || [];
-    const cloudDocsFilesIds = new Set(cloudDocsFiles.map((df: any) => Number(df.id)));
-    const localOnlyDocsFiles = Array.isArray(localDocsFiles) ? localDocsFiles.filter((df: any) => !cloudDocsFilesIds.has(Number(df.id))) : [];
-    const mergedDocsFiles = [...cloudDocsFiles, ...localOnlyDocsFiles];
+    const safeLocalDocsFiles = Array.isArray(localDocsFiles) ? localDocsFiles : [];
+    const safeCloudDocsFiles = Array.isArray(docsFiles) ? docsFiles : [];
+    const mergedDocsFiles = mergeLocalAndCloud(safeLocalDocsFiles, safeCloudDocsFiles);
 
     let localRiwayats: any[] = [];
     try {
       localRiwayats = JSON.parse(localStorage.getItem('simpeg_riwayat_ak') || '[]');
     } catch (_) {}
-    const cloudRiwayats = riwayats || [];
-    const cloudRiwayatsIds = new Set(cloudRiwayats.map((r: any) => Number(r.id)));
-    const localOnlyRiwayats = Array.isArray(localRiwayats) ? localRiwayats.filter((r: any) => !cloudRiwayatsIds.has(Number(r.id))) : [];
-    const mergedRiwayats = [...cloudRiwayats, ...localOnlyRiwayats];
+    const safeLocalRiwayats = Array.isArray(localRiwayats) ? localRiwayats : [];
+    const safeCloudRiwayats = Array.isArray(riwayats) ? riwayats : [];
+    const mergedRiwayats = mergeLocalAndCloud(safeLocalRiwayats, safeCloudRiwayats);
 
     let localArsips: any[] = [];
     try {
       localArsips = JSON.parse(localStorage.getItem('simpeg_arsip_kepegawaian') || '[]');
     } catch (_) {}
-    const cloudArsips = arsips || [];
-    const cloudArsipIds = new Set(cloudArsips.map((a: any) => Number(a.id)));
-    const localOnlyArsips = Array.isArray(localArsips) ? localArsips.filter((a: any) => !cloudArsipIds.has(Number(a.id))) : [];
-    const mergedArsips = [...cloudArsips, ...localOnlyArsips];
+    const safeLocalArsips = Array.isArray(localArsips) ? localArsips : [];
+    const safeCloudArsips = Array.isArray(arsips) ? arsips : [];
+    const mergedArsips = mergeLocalAndCloud(safeLocalArsips, safeCloudArsips);
 
     logs.push("✅ Pull Berhasil! Seluruh data live terupdate dari cloud dan disinkronkan dengan perubahan lokal.");
     
