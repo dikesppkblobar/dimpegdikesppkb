@@ -2104,38 +2104,6 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SAPA pegawai Dikes 
                             </td>
                             <td className="p-3">
                               <div className="text-slate-800 font-bold">{ftr?.nama_fitur}</div>
-                              {/* Document List for view/download */}
-                              {(() => {
-                                const usulanFiles = usulanDokumenFile.filter(f => f.id_usulan === usulan.id);
-                                return usulanFiles.length > 0 ? (
-                                  <div className="mt-2 flex flex-wrap gap-1.5 max-w-sm">
-                                    {usulanFiles.map(uf => {
-                                      const docType = masterDokumen.find(d => d.id === uf.id_dokumen)?.nama_dokumen || "Dokumen";
-                                      return (
-                                        <div key={uf.id} className="inline-flex items-center bg-emerald-50 text-emerald-950 border border-emerald-200/50 px-2 py-0.5 rounded-lg text-[10px] space-x-1.5 hover:bg-emerald-100/50 transition">
-                                          <span className="truncate max-w-[120px] font-medium" title={uf.file_name}>📄 {docType}</span>
-                                          <div className="flex items-center space-x-1 border-l border-emerald-200 pl-1.5">
-                                            <button 
-                                              onClick={() => handlePreviewUsulanFile(uf, usulan)}
-                                              className="text-emerald-700 hover:text-emerald-950 cursor-pointer p-0.5 transition"
-                                              title="Lihat Berkas"
-                                            >
-                                              <Eye size={11} />
-                                            </button>
-                                            <button 
-                                              onClick={() => handleDownloadUsulanFile(uf, usulan)}
-                                              className="text-emerald-700 hover:text-emerald-950 cursor-pointer p-0.5 transition"
-                                              title="Unduh Berkas"
-                                            >
-                                              <Download size={11} />
-                                            </button>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                ) : null;
-                              })()}
                             </td>
                             <td className="p-3">
                               {getPuskesmasName(usulan.id_puskesmas_pengusul)}
