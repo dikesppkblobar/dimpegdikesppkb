@@ -244,3 +244,83 @@ export function addYearsToDateString(dateString: string | undefined | null, year
   }
 }
 
+/**
+ * Sends a WhatsApp message using Fonnte API with a fallback to opening a WhatsApp Web link.
+ * @param phone Recipient phone number (handles standard phone digits, e.g. "08...", "+62...")
+ * @param message Message body text
+ * @returns Promise<{ success: boolean; method: 'fonnte' | 'wa_web'; error?: string }>
+ */
+export async function sendWhatsAppMessage(phone: string, message: string): Promise<{ success: boolean; method: 'fonnte' | 'wa_web'; error?: string }> {
+  // Clean phone number:
+  // Fonnte expects country code (e.g., 628...). Let's clean and format
+  let cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (cleanPhone.startsWith('0')) {
+    cleanPhone = '62' + cleanPhone.substring(1);
+  } else if (cleanPhone.startsWith('8')) {
+    cleanPhone = '62' + cleanPhone;
+  }
+  
+  if (!cleanPhone) {
+    throw new Error('Nomor telepon tidak valid');
+  }
+
+  const tokenFonnte = 'FaRp7B4ZtDZxFP3Ck2pT';
+  const accountToken = '142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN';
+
+  try {
+    const formData = new FormData();
+    formData.append('target', cleanPhone);
+    formData.append('message', message);
+    formData.append('countryCode', '62');
+    formData.append('token', tokenFonnte);
+    formData.append('account', accountToken);
+
+    const response = await fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': tokenFonnte,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    // Fonnte success holds status: true or status: success
+    const isSuccess = result && (
+      result.status === true || 
+      result.status === 'true' || 
+      result.status === 'success' || 
+      result.success === true ||
+      result.status === 'success' ||
+      (result.status && result.status !== 'false')
+    );
+
+    if (isSuccess) {
+      return { success: true, method: 'fonnte' };
+    } else {
+      const msg = result?.reason || result?.message || JSON.stringify(result);
+      throw new Error(msg || 'API returned failure status');
+    }
+  } catch (err: any) {
+    console.error('Fonnte API failed or hit limits, falling back to WA Web:', err);
+    
+    // Trigger WA Web fallback
+    const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
+    const encoded = encodeURIComponent(message);
+    const targetUrl = isMobileOrTablet 
+      ? `whatsapp://send?phone=${cleanPhone}&text=${encoded}`
+      : `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`;
+    
+    window.open(targetUrl, 'whatsapp_window');
+    
+    return { 
+      success: true, 
+      method: 'wa_web', 
+      error: err?.message || 'Fonnte API Limited/Error' 
+    };
+  }
+}
+
