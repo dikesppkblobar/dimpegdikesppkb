@@ -2037,7 +2037,10 @@ export default function App() {
                 saveAndSync({ puskesmas: updated });
               }}
               dbState={dbState}
-              onUpdateDbState={(updatedState) => setDbState(updatedState)}
+              onUpdateDbState={(updatedState) => {
+                setDbState(updatedState);
+                saveDB(updatedState);
+              }}
             />
           )}
 
