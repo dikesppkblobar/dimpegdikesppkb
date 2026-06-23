@@ -57,9 +57,10 @@ export default function DashboardKP4({
   };
 
   // get Puskesmas Name Helper
-  const getPuskesmasName = (id: number) => {
-    const found = puskesmasList.find(p => p.id === id);
-    return found ? ((found as any).nama_puskesmas || found.nama) : `Puskesmas ID ${id}`;
+  const getPuskesmasName = (id: any) => {
+    const numericId = Number(id);
+    const found = puskesmasList.find(p => Number(p.id) === numericId);
+    return found ? ((found as any).nama_puskesmas || found.nama) : `Puskesmas ID ${numericId}`;
   };
 
   // 2026 Fixed budget simulation based on approximate PNS/PPPK base salary
@@ -676,10 +677,10 @@ _Notifikasi otomatis dikirim via Sistem Analisa KP4 Dinkes Lombok Barat_`;
                   }}
                   className="p-2 border border-slate-300 bg-white text-xs text-black rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-bold shadow-2xs cursor-pointer"
                 >
-                  <option value={100}>Dinas Kesehatan PPKB</option>
-                  <option value="ALL">Semua Unit Kerja Lombok Barat</option>
+                  <option value={100} className="text-black bg-white font-bold">Dinas Kesehatan PPKB</option>
+                  <option value="ALL" className="text-black bg-white font-bold">Semua Unit Kerja Lombok Barat</option>
                   {puskesmasList.filter(p => p.id !== 100).map(p => (
-                    <option key={p.id} value={p.id}>{(p as any).nama_puskesmas || p.nama}</option>
+                    <option key={p.id} value={p.id} className="text-black bg-white">{(p as any).nama_puskesmas || p.nama}</option>
                   ))}
                 </select>
               </div>
