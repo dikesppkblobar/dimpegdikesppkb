@@ -264,37 +264,32 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
     throw new Error('Nomor telepon tidak valid');
   }
 
-  const tokenFonnte = 'FaRp7B4ZtDZxFP3Ck2pT';
-  const accountToken = '142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN';
-
   try {
-    const formData = new FormData();
-    formData.append('target', cleanPhone);
-    formData.append('message', message);
-    formData.append('countryCode', '62');
-    formData.append('token', tokenFonnte);
-    formData.append('account', accountToken);
-
-    const response = await fetch('https://api.fonnte.com/send', {
+    // Call our server-side API proxy to avoid CORS errors and send directly in one-click
+    const response = await fetch('/api/send-whatsapp', {
       method: 'POST',
       headers: {
-        'Authorization': tokenFonnte,
+        'Content-Type': 'application/json',
       },
-      body: formData,
+      body: JSON.stringify({
+        phone: cleanPhone,
+        message: message,
+      }),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+      const errorJson = await response.json().catch(() => ({}));
+      throw new Error(errorJson?.reason || errorJson?.message || `HTTP Error ${response.status}`);
     }
 
     const result = await response.json();
-    // Fonnte success holds status: true or status: success
+    
+    // Fonnte typical successful response holds status: true or status: success
     const isSuccess = result && (
       result.status === true || 
       result.status === 'true' || 
       result.status === 'success' || 
       result.success === true ||
-      result.status === 'success' ||
       (result.status && result.status !== 'false')
     );
 
@@ -305,7 +300,7 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
       throw new Error(msg || 'API returned failure status');
     }
   } catch (err: any) {
-    console.error('Fonnte API failed or hit limits, falling back to WA Web:', err);
+    console.error('Fonnte API proxy failed or hit limits, falling back to WA Web:', err);
     
     // Trigger WA Web fallback
     const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
