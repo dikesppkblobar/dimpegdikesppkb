@@ -35,7 +35,7 @@ import {
 import * as XLSX from 'xlsx';
 import { ASNProfile, UsulanLayanan, Puskesmas, InAppNotification, ArsipKepegawaian } from '../../types';
 import { getFallbackProfesiId } from '../../mockData';
-import { EarlyWarningAlert, getEarlyWarningAlerts, formatDate } from '../../utils';
+import { EarlyWarningAlert, getEarlyWarningAlerts, formatDate, sendWhatsAppMessage } from '../../utils';
 
 const PROFESSION_COLORS: Record<string, string> = {
   'PERAWAT': '#6366f1', // indigo
@@ -2006,15 +2006,17 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
-                  const encoded = encodeURIComponent(waDraftMessage);
-                  const cleanPhoneNum = waRecipientPhone.replace('+', '');
-                  const targetUrl = isMobileOrTablet 
-                    ? `whatsapp://send?phone=${cleanPhoneNum}&text=${encoded}`
-                    : `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
-                  
-                  window.open(targetUrl, 'whatsapp_window');
+                onClick={async () => {
+                  try {
+                    const result = await sendWhatsAppMessage(waRecipientPhone, waDraftMessage);
+                    if (result.method === 'fonnte') {
+                      alert(`✓ Berhasil mengirim pesan via Fonnte API secara langsung.`);
+                    } else {
+                      alert(`⚠️ API Fonnte terbatas/error dan dialihkan ke WhatsApp Web login.`);
+                    }
+                  } catch (err: any) {
+                    alert(`❌ Gagal mengirim: ${err.message || err}`);
+                  }
                   setWaModalOpen(false);
                 }}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-sm flex items-center space-x-1.5"
