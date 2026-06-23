@@ -1651,7 +1651,7 @@ export default function App() {
                         <Bell size={13} className="text-teal-600" />
                         <span>Pusat Notifikasi ({unreadCount} baru)</span>
                       </h4>
-                      <p className="text-[10px] text-slate-400 font-medium">Acting: {currentRole === 'admin_dinkes' ? 'Dinkes PPKB' : `Puskesmas #${selectedPuskesmasId}`}</p>
+                      <p className="text-[10px] text-slate-400 font-medium">Acting: {currentRole === 'admin_dinkes' ? 'Dinkes PPKB' : getPuskesmasName(selectedPuskesmasId)}</p>
                     </div>
                     {unreadCount > 0 && (
                       <button
