@@ -423,7 +423,7 @@ _Notifikasi otomatis dikirim via Sistem Analisa KP4 Dinkes Lombok Barat_`;
                     if (result.method === 'fonnte') {
                       alert(`✓ Berhasil mengirim pesan via Fonnte API secara langsung.`);
                     } else {
-                      alert(`⚠️ API Fonnte terbatas/error dan dialihkan ke WhatsApp Web login.`);
+                      alert(`⚠️ Gagal mengirim via API Fonnte: "${result.error || 'Terbatas/Error'}"\nPesan dialihkan via WhatsApp Web.`);
                     }
                   } catch (err: any) {
                     alert(`❌ Gagal mengirim: ${err.message || err}`);
