@@ -40,7 +40,8 @@ import {
   calculateYearlyCredit, 
   compileTotalCredit, 
   runMockOcrValidation,
-  formatDate 
+  formatDate,
+  sendWhatsAppMessage
 } from '../../utils';
 
 const dataURLtoBlob = (dataurl: string): Blob => {
@@ -652,7 +653,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SAPA pegawai Dikes PPKB Kab. 
     });
   };
 
-  const handleSaveEditUsulan = () => {
+  const handleSaveEditUsulan = async () => {
     if (!editingUsulan) return;
     
     // Check if moving to Selesai and if there are side effects needed
@@ -690,14 +691,16 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SAPA pegawai Dikes PPKB Kab. 
       }
 
       if (cleanPhone) {
-        const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
-        const encoded = encodeURIComponent(editUsulanWaMessage);
-        const cleanPhoneNum = cleanPhone.replace('+', '');
-        const targetUrl = isMobileOrTablet 
-          ? `whatsapp://send?phone=${cleanPhoneNum}&text=${encoded}`
-          : `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
-        window.open(targetUrl, 'whatsapp_window');
-        alert(`✓ Perubahan Usulan #${editingUsulan.id} berhasil disimpan dan diarahkan ke WhatsApp.`);
+        try {
+          const result = await sendWhatsAppMessage(cleanPhone, editUsulanWaMessage);
+          if (result.method === 'fonnte') {
+            alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan dan notifikasi berhasil terkirim via Fonnte API secara langsung.`);
+          } else {
+            alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan.\n⚠️ API Fonnte terbatas/error dan dialihkan ke WhatsApp Web login.`);
+          }
+        } catch (err: any) {
+          alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan.\n❌ Gagal mengirim notifikasi: ${err.message || err}`);
+        }
       } else {
         alert(`✓ Perubahan Usulan #${editingUsulan.id} berhasil disimpan.\n⚠️ Catatan: Nomor WhatsApp pegawai belum terdaftar.`);
       }
@@ -1043,7 +1046,7 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SAPA pegawai Dikes PPKB Kab. 
             ? reqDocs.join('\n') 
             : '  - (Belum ada dokumen yang dipersyaratkan)';
           
-          statusLine = `\n- Status Dokumen: 📌 *PEMBERITAHUAN PERSYARATAN WAJIB*\n\n*DAFTAR DOKUMEN WAJIB YANG HARUS KELENGKAPAN (${selectedFitur.nama_fitur})*:\n${docsString}\n\nMohon persiapkan berkas-berkas di atas dan serahkan ke kepegawaian/UP Dikes PPKB agar usulan dapat segera diproses lebih lanjut.`;
+          statusLine = `\n- Status Dokumen: 📌 *PEMBERITAHUAN PERSYARATAN WAJIB*\n\n*DAFTAR DOKUMEN WAJIB YANG HARUS KELENGKAPAN (${selectedFitur.nama_fitur})*:\n${docsString}\n\nMohon siapkan dan unggah berkas-berkas wajib di atas melalui aplikasi SAPA pegawai Dikes PPKB agar usulan dapat segera diproses lebih lanjut.`;
         } else {
           statusLine = `\n- Status Dokumen: 📌 *${newUsulanStatus.toUpperCase()}*`;
         }
@@ -1396,15 +1399,17 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SAPA pegawai Dikes 
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
-                  const encoded = encodeURIComponent(waDraftMessage);
-                  const cleanPhoneNum = waRecipientPhone.replace('+', '');
-                  const targetUrl = isMobileOrTablet 
-                    ? `whatsapp://send?phone=${cleanPhoneNum}&text=${encoded}`
-                    : `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
-                  
-                  window.open(targetUrl, 'whatsapp_window');
+                onClick={async () => {
+                  try {
+                    const result = await sendWhatsAppMessage(waRecipientPhone, waDraftMessage);
+                    if (result.method === 'fonnte') {
+                      alert(`✓ Berhasil mengirim pesan via Fonnte API secara langsung.`);
+                    } else {
+                      alert(`⚠️ API Fonnte terbatas/error dan dialihkan ke WhatsApp Web login.`);
+                    }
+                  } catch (err: any) {
+                    alert(`❌ Gagal mengirim: ${err.message || err}`);
+                  }
                   setWaModalOpen(false);
                 }}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-sm flex items-center space-x-1.5"
@@ -1865,7 +1870,7 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SAPA pegawai Dikes 
 
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           handleKirimUsulan();
                           
                           // Find recipient dynamically based on active role
@@ -1883,16 +1888,19 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SAPA pegawai Dikes 
                           }
 
                           if (cleanPhone) {
-                            const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
                             window.alert(
-                              `✓ Usulan layanan kepegawaian berhasil diajukan dan masuk ke aplikasi SIMPEG.\n\nSistem sekarang akan membuka WhatsApp untuk mengirim pesan kepada: ${recipientName} (${cleanPhone}).`
+                              `✓ Usulan layanan kepegawaian berhasil diajukan dan masuk ke aplikasi SIMPEG.\n\nSistem sekarang akan mengirimkan notifikasi kepada: ${recipientName} (${cleanPhone}).`
                             );
-                            const encoded = encodeURIComponent(editedWaMessage);
-                            const cleanPhoneNum = cleanPhone.replace('+', '');
-                            const targetUrl = isMobileOrTablet 
-                              ? `whatsapp://send?phone=${cleanPhoneNum}&text=${encoded}`
-                              : `https://web.whatsapp.com/send?phone=${cleanPhoneNum}&text=${encoded}`;
-                            window.open(targetUrl, 'whatsapp_window');
+                            try {
+                              const result = await sendWhatsAppMessage(cleanPhone, editedWaMessage);
+                              if (result.method === 'fonnte') {
+                                alert(`✓ Notifikasi berhasil terkirim via Fonnte API secara langsung.`);
+                              } else {
+                                alert(`⚠️ API Fonnte terbatas/error dan dialihkan ke WhatsApp Web login.`);
+                              }
+                            } catch (err: any) {
+                              alert(`❌ Gagal mengirim notifikasi WA: ${err.message || err}`);
+                            }
                           } else {
                             window.alert(
                               `✓ Usulan layanan kepegawaian berhasil diajukan dan masuk ke aplikasi SIMPEG.\n\n⚠️ Catatan: Nomor WhatsApp penerima tidak tersedia atau belum terdaftar.`
