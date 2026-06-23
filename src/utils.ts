@@ -264,8 +264,11 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
     throw new Error('Nomor telepon tidak valid');
   }
 
+  const tokenFonnte = 'FaRp7B4ZtDZxFP3Ck2pT';
+  const accountToken = '142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN';
+
+  // 1. Path A: Server-side API Proxy
   try {
-    // Call our server-side API proxy to avoid CORS errors and send directly in one-click
     const response = await fetch('/api/send-whatsapp', {
       method: 'POST',
       headers: {
@@ -277,45 +280,89 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
       }),
     });
 
-    if (!response.ok) {
-      const errorJson = await response.json().catch(() => ({}));
-      throw new Error(errorJson?.reason || errorJson?.message || `HTTP Error ${response.status}`);
-    }
+    if (response.ok) {
+      const result = await response.json();
+      const isSuccess = result && (
+        result.status === true || 
+        result.status === 'true' || 
+        result.status === 'success' || 
+        result.success === true ||
+        (result.status && result.status !== 'false')
+      );
 
-    const result = await response.json();
-    
-    // Fonnte typical successful response holds status: true or status: success
-    const isSuccess = result && (
-      result.status === true || 
-      result.status === 'true' || 
-      result.status === 'success' || 
-      result.success === true ||
-      (result.status && result.status !== 'false')
-    );
-
-    if (isSuccess) {
-      return { success: true, method: 'fonnte' };
+      if (isSuccess) {
+        return { success: true, method: 'fonnte' };
+      } else {
+        const msg = result?.reason || result?.message || JSON.stringify(result);
+        throw new Error(msg || 'API returned failure status');
+      }
     } else {
-      const msg = result?.reason || result?.message || JSON.stringify(result);
-      throw new Error(msg || 'API returned failure status');
+      // If server returned 404 or other status, raise to catch block to try direct direct fallback
+      throw new Error(`Proxy_Error_Status_${response.status}`);
     }
-  } catch (err: any) {
-    console.error('Fonnte API proxy failed or hit limits, falling back to WA Web:', err);
-    
-    // Trigger WA Web fallback
-    const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
-    const encoded = encodeURIComponent(message);
-    const targetUrl = isMobileOrTablet 
-      ? `whatsapp://send?phone=${cleanPhone}&text=${encoded}`
-      : `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`;
-    
-    window.open(targetUrl, 'whatsapp_window');
-    
-    return { 
-      success: true, 
-      method: 'wa_web', 
-      error: err?.message || 'Fonnte API Limited/Error' 
-    };
+  } catch (proxyErr: any) {
+    const is404 = proxyErr.message?.includes('404') || false;
+    console.log(`[WhatsApp] Proxy API not available (is404=${is404}), trying direct browser fetch as fallback...`, proxyErr);
+
+    // 2. Path B: Direct Browser-based API (Ideal for static hosts like Vercel)
+    try {
+      const formData = new FormData();
+      formData.append('target', cleanPhone);
+      formData.append('message', message);
+      formData.append('countryCode', '62');
+      formData.append('token', tokenFonnte);
+      formData.append('account', accountToken);
+
+      // Using simple request without custom headers to avoid CORS preflight OPTIONS requests
+      const directResponse = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (directResponse.ok) {
+        const result = await directResponse.json();
+        const isSuccess = result && (
+          result.status === true || 
+          result.status === 'true' || 
+          result.status === 'success' || 
+          result.success === true ||
+          (result.status && result.status !== 'false')
+        );
+
+        if (isSuccess) {
+          return { success: true, method: 'fonnte' };
+        } else {
+          const msg = result?.reason || result?.message || JSON.stringify(result);
+          throw new Error(msg || 'API returned failure status');
+        }
+      } else {
+        throw new Error(`HTTP ${directResponse.status} from api.fonnte.com`);
+      }
+    } catch (directErr: any) {
+      console.error('[WhatsApp] Both Server Proxy and Direct Browser attempts failed:', directErr);
+
+      // 3. Path C: Interactive Falling back to WhatsApp Web link integration (Ultimate backup)
+      const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
+      const encoded = encodeURIComponent(message);
+      const targetUrl = isMobileOrTablet 
+        ? `whatsapp://send?phone=${cleanPhone}&text=${encoded}`
+        : `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`;
+      
+      window.open(targetUrl, 'whatsapp_window');
+      
+      let friendlyError = 'Fonnte Hub/Device limit';
+      if (is404) {
+        friendlyError = `Deploy Vercel Static (404 Proxy) & Direct Fonnte blocked: "${directErr.message || directErr}"`;
+      } else {
+        friendlyError = `${proxyErr.message || proxyErr} | Direct error: ${directErr.message || directErr}`;
+      }
+
+      return { 
+        success: true, 
+        method: 'wa_web', 
+        error: friendlyError 
+      };
+    }
   }
 }
 
