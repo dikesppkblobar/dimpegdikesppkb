@@ -561,6 +561,7 @@ export const getDB = () => {
   };
 
   const rawProfiles = safeParse<ASNProfile[]>('simpeg_asn_profiles', []);
+  console.log(`[getDB] Berhasil memuat rawProfiles dari localStorage (sebelum healed):`, rawProfiles);
   const safeProfilesList = Array.isArray(rawProfiles) ? rawProfiles : [];
 
   const healedProfiles: ASNProfile[] = safeProfilesList.map(p => {
@@ -677,6 +678,9 @@ export const saveDB = (data: Partial<ReturnType<typeof getDB>> & Record<string, 
       const serializedValue = typeof val === 'string' ? val : JSON.stringify(val);
       try {
         localStorage.setItem(storageKey, serializedValue);
+        if (storageKey === 'simpeg_asn_profiles') {
+          console.log(`[saveDB] Berhasil menyimpan simpeg_asn_profiles ke localStorage:`, val);
+        }
       } catch (err: any) {
         if (err.name === 'QuotaExceededError' || err.code === 22 || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
           console.warn(`SAPA Storage quota exceeded for key "${storageKey}". Attempting automatic base64 compression/pruning of older records...`);
