@@ -34,7 +34,7 @@ export default function DashboardKP4({
 }: DashboardKP4Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [unitFilter, setUnitFilter] = useState<number | 'ALL'>(
-    currentRole === 'admin_dinkes' ? 'ALL' : selectedPuskesmasId
+    currentRole === 'admin_dinkes' ? 100 : selectedPuskesmasId
   );
   const [statusWarnFilter, setStatusWarnFilter] = useState<'ALL' | 'WARNING_ONLY' | 'CLEAN_ONLY'>('ALL');
   const [selectedWarningCode, setSelectedWarningCode] = useState<string | null>(null);
@@ -58,7 +58,8 @@ export default function DashboardKP4({
 
   // get Puskesmas Name Helper
   const getPuskesmasName = (id: number) => {
-    return puskesmasList.find(p => p.id === id)?.nama || `Puskesmas ID ${id}`;
+    const found = puskesmasList.find(p => p.id === id);
+    return found ? ((found as any).nama_puskesmas || found.nama) : `Puskesmas ID ${id}`;
   };
 
   // 2026 Fixed budget simulation based on approximate PNS/PPPK base salary
@@ -658,7 +659,7 @@ _Notifikasi otomatis dikirim via Sistem Analisa KP4 Dinkes Lombok Barat_`;
                 placeholder="Cari Nama / NIP / NIK..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-64 p-2 pl-8 border border-slate-200 bg-slate-50 text-xs text-slate-800 rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-medium"
+                className="w-64 p-2 pl-8 border border-slate-300 bg-white text-xs text-black rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-medium shadow-2xs"
               />
               <Search size={13} className="absolute left-2.5 top-3.5 text-slate-400" />
             </div>
@@ -673,11 +674,12 @@ _Notifikasi otomatis dikirim via Sistem Analisa KP4 Dinkes Lombok Barat_`;
                     const val = e.target.value;
                     setUnitFilter(val === 'ALL' ? 'ALL' : parseInt(val));
                   }}
-                  className="p-2 border border-slate-200 bg-slate-50 text-xs text-slate-700 rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-semibold cursor-pointer"
+                  className="p-2 border border-slate-300 bg-white text-xs text-black rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-bold shadow-2xs cursor-pointer"
                 >
+                  <option value={100}>Dinas Kesehatan PPKB</option>
                   <option value="ALL">Semua Unit Kerja Lombok Barat</option>
-                  {puskesmasList.map(p => (
-                    <option key={p.id} value={p.id}>{p.nama}</option>
+                  {puskesmasList.filter(p => p.id !== 100).map(p => (
+                    <option key={p.id} value={p.id}>{(p as any).nama_puskesmas || p.nama}</option>
                   ))}
                 </select>
               </div>
@@ -687,7 +689,7 @@ _Notifikasi otomatis dikirim via Sistem Analisa KP4 Dinkes Lombok Barat_`;
             <select
               value={statusWarnFilter}
               onChange={(e) => setStatusWarnFilter(e.target.value as any)}
-              className="p-2 border border-slate-200 bg-slate-50 text-xs text-slate-700 rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-semibold cursor-pointer"
+              className="p-2 border border-slate-300 bg-white text-xs text-black rounded-xl focus:ring-1 focus:ring-teal-500 outline-none transition font-semibold cursor-pointer"
             >
               <option value="ALL">Semua Hasil Audit</option>
               <option value="WARNING_ONLY">⚠️ Butuh Perhatian (Telah Terdeteksi Issue BPK)</option>
