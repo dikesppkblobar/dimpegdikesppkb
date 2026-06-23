@@ -2070,26 +2070,26 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
             onClick={() => setActiveKpiFilter(activeKpiFilter === 'pangkat' ? null : 'pangkat')}
             className={`p-5 rounded-2xl transition-all duration-200 cursor-pointer border select-none ${
               activeKpiFilter === 'pangkat' 
-                ? 'bg-gradient-to-br from-indigo-950 to-slate-900 text-white border-indigo-500 shadow-md scale-[1.01]' 
-                : 'bg-white text-slate-800 border-slate-200 hover:border-indigo-300 hover:shadow-xs'
+                ? 'bg-gradient-to-br from-indigo-900 to-slate-900 text-white border-indigo-500 shadow-md scale-[1.01]' 
+                : 'bg-indigo-50/30 text-indigo-950 border-indigo-100 hover:bg-indigo-50/70 hover:border-indigo-300 hover:shadow-xs'
             }`}
           >
             <div className="flex justify-between items-start">
-              <div className={`p-2 rounded-xl ${activeKpiFilter === 'pangkat' ? 'bg-indigo-900 border border-indigo-750 text-indigo-200' : 'bg-indigo-50 text-indigo-600'}`}>
+              <div className={`p-2 rounded-xl transition ${activeKpiFilter === 'pangkat' ? 'bg-indigo-800 border border-indigo-500 text-indigo-200' : 'bg-indigo-100 text-indigo-700'}`}>
                 <Award size={20} />
               </div>
-              <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded ${activeKpiFilter === 'pangkat' ? 'bg-indigo-805 text-indigo-200' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded transition ${activeKpiFilter === 'pangkat' ? 'bg-indigo-950 text-indigo-200 border border-indigo-800' : 'bg-indigo-100/50 text-indigo-800'}`}>
                 Siklus 4 Thn
               </span>
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className={`text-xs font-bold leading-none ${activeKpiFilter === 'pangkat' ? 'text-indigo-200' : 'text-slate-500'}`}>
+              <h3 className={`text-xs font-bold leading-none transition ${activeKpiFilter === 'pangkat' ? 'text-indigo-200' : 'text-indigo-805'}`}>
                 Usul Golongan / Pangkat
               </h3>
-              <p className="text-3xl font-black font-display tracking-tight leading-none mt-1">
+              <p className={`text-3xl font-black font-display tracking-tight leading-none mt-1 transition ${activeKpiFilter === 'pangkat' ? 'text-white' : 'text-indigo-900'}`}>
                 {pangkat2026List.length} <span className="text-xs font-normal">Pegawai</span>
               </p>
-              <p className={`text-[10px] ${activeKpiFilter === 'pangkat' ? 'text-slate-300' : 'text-slate-400'} italic font-medium pt-1`}>
+              <p className={`text-[10px] transition ${activeKpiFilter === 'pangkat' ? 'text-indigo-300' : 'text-indigo-600/70'} italic font-medium pt-1`}>
                 {activeKpiFilter === 'pangkat' ? '✓ Sedang ditinjau' : 'Klik rincian pegawai'}
               </p>
             </div>
@@ -2100,26 +2100,26 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
             onClick={() => setActiveKpiFilter(activeKpiFilter === 'jafung' ? null : 'jafung')}
             className={`p-5 rounded-2xl transition-all duration-200 cursor-pointer border select-none ${
               activeKpiFilter === 'jafung' 
-                ? 'bg-gradient-to-br from-purple-950 to-slate-900 text-white border-purple-500 shadow-md scale-[1.01]' 
-                : 'bg-white text-slate-800 border-slate-200 hover:border-purple-300 hover:shadow-xs'
+                ? 'bg-gradient-to-br from-purple-900 to-slate-900 text-white border-purple-500 shadow-md scale-[1.01]' 
+                : 'bg-purple-50/30 text-purple-950 border-purple-100 hover:bg-purple-50/70 hover:border-purple-300 hover:shadow-xs'
             }`}
           >
             <div className="flex justify-between items-start">
-              <div className={`p-2 rounded-xl ${activeKpiFilter === 'jafung' ? 'bg-purple-900 border border-purple-750 text-purple-200' : 'bg-purple-50 text-purple-600'}`}>
+              <div className={`p-2 rounded-xl transition ${activeKpiFilter === 'jafung' ? 'bg-purple-800 border border-purple-500 text-purple-200' : 'bg-purple-100 text-purple-700'}`}>
                 <FileText size={20} />
               </div>
-              <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded ${activeKpiFilter === 'jafung' ? 'bg-purple-805 text-purple-200' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded transition ${activeKpiFilter === 'jafung' ? 'bg-purple-950 text-purple-200 border border-purple-800' : 'bg-purple-100/50 text-purple-800'}`}>
                 Jafung
               </span>
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className={`text-xs font-bold leading-none ${activeKpiFilter === 'jafung' ? 'text-purple-200' : 'text-slate-500'}`}>
+              <h3 className={`text-xs font-bold leading-none transition ${activeKpiFilter === 'jafung' ? 'text-purple-200' : 'text-purple-805'}`}>
                 Usul Jabatan (Jafung)
               </h3>
-              <p className="text-3xl font-black font-display tracking-tight leading-none mt-1">
+              <p className={`text-3xl font-black font-display tracking-tight leading-none mt-1 transition ${activeKpiFilter === 'jafung' ? 'text-white' : 'text-purple-900'}`}>
                 {jafung2026List.length} <span className="text-xs font-normal">Pegawai</span>
               </p>
-              <p className={`text-[10px] ${activeKpiFilter === 'jafung' ? 'text-slate-300' : 'text-slate-400'} italic font-medium pt-1`}>
+              <p className={`text-[10px] transition ${activeKpiFilter === 'jafung' ? 'text-purple-300' : 'text-purple-600/70'} italic font-medium pt-1`}>
                 {activeKpiFilter === 'jafung' ? '✓ Sedang ditinjau' : 'Klik rincian pegawai'}
               </p>
             </div>
@@ -2130,26 +2130,26 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
             onClick={() => setActiveKpiFilter(activeKpiFilter === 'kgb' ? null : 'kgb')}
             className={`p-5 rounded-2xl transition-all duration-200 cursor-pointer border select-none ${
               activeKpiFilter === 'kgb' 
-                ? 'bg-gradient-to-br from-teal-950 to-slate-900 text-white border-teal-500 shadow-md scale-[1.01]' 
-                : 'bg-white text-slate-800 border-slate-200 hover:border-teal-300 hover:shadow-xs'
+                ? 'bg-gradient-to-br from-teal-900 to-slate-900 text-white border-teal-500 shadow-md scale-[1.01]' 
+                : 'bg-teal-50/30 text-teal-950 border-teal-100 hover:bg-teal-50/70 hover:border-teal-300 hover:shadow-xs'
             }`}
           >
             <div className="flex justify-between items-start">
-              <div className={`p-2 rounded-xl ${activeKpiFilter === 'kgb' ? 'bg-teal-900 border border-teal-750 text-teal-200' : 'bg-teal-50 text-teal-600'}`}>
+              <div className={`p-2 rounded-xl transition ${activeKpiFilter === 'kgb' ? 'bg-teal-800 border border-teal-500 text-teal-200' : 'bg-teal-100 text-teal-700'}`}>
                 <Clock size={20} />
               </div>
-              <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded ${activeKpiFilter === 'kgb' ? 'bg-teal-805 text-teal-200' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded transition ${activeKpiFilter === 'kgb' ? 'bg-teal-950 text-teal-200 border border-teal-800' : 'bg-teal-100/50 text-teal-800'}`}>
                 Siklus 2 Thn
               </span>
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className={`text-xs font-bold leading-none ${activeKpiFilter === 'kgb' ? 'text-teal-200' : 'text-slate-500'}`}>
+              <h3 className={`text-xs font-bold leading-none transition ${activeKpiFilter === 'kgb' ? 'text-teal-200' : 'text-teal-805'}`}>
                 Gaji Berkala (KGB)
               </h3>
-              <p className="text-3xl font-black font-display tracking-tight leading-none mt-1">
+              <p className={`text-3xl font-black font-display tracking-tight leading-none mt-1 transition ${activeKpiFilter === 'kgb' ? 'text-white' : 'text-teal-900'}`}>
                 {kgb2026List.length} <span className="text-xs font-normal">Pegawai</span>
               </p>
-              <p className={`text-[10px] ${activeKpiFilter === 'kgb' ? 'text-slate-300' : 'text-slate-400'} italic font-medium pt-1`}>
+              <p className={`text-[10px] transition ${activeKpiFilter === 'kgb' ? 'text-teal-300' : 'text-teal-600/70'} italic font-medium pt-1`}>
                 {activeKpiFilter === 'kgb' ? '✓ Sedang ditinjau' : 'Klik rincian pegawai'}
               </p>
             </div>
@@ -2160,26 +2160,26 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
             onClick={() => setActiveKpiFilter(activeKpiFilter === 'cuti' ? null : 'cuti')}
             className={`p-5 rounded-2xl transition-all duration-200 cursor-pointer border select-none ${
               activeKpiFilter === 'cuti' 
-                ? 'bg-gradient-to-br from-amber-950 to-slate-900 text-white border-amber-500 shadow-md scale-[1.01]' 
-                : 'bg-white text-slate-800 border-slate-200 hover:border-amber-300 hover:shadow-xs'
+                ? 'bg-gradient-to-br from-amber-900 to-slate-900 text-white border-amber-500 shadow-md scale-[1.01]' 
+                : 'bg-amber-50/30 text-amber-950 border-amber-100 hover:bg-amber-50/70 hover:border-amber-300 hover:shadow-xs'
             }`}
           >
             <div className="flex justify-between items-start">
-              <div className={`p-2 rounded-xl ${activeKpiFilter === 'cuti' ? 'bg-amber-900 border border-amber-750 text-amber-200' : 'bg-amber-50 text-amber-600'}`}>
+              <div className={`p-2 rounded-xl transition ${activeKpiFilter === 'cuti' ? 'bg-amber-800 border border-amber-500 text-amber-200' : 'bg-amber-100 text-amber-700'}`}>
                 <Calendar size={20} />
               </div>
-              <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded ${activeKpiFilter === 'cuti' ? 'bg-amber-805 text-amber-200' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded transition ${activeKpiFilter === 'cuti' ? 'bg-amber-950 text-amber-200 border border-amber-800' : 'bg-amber-100/50 text-amber-800'}`}>
                 Hak Tahunan
               </span>
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className={`text-xs font-bold leading-none ${activeKpiFilter === 'cuti' ? 'text-amber-200' : 'text-slate-500'}`}>
+              <h3 className={`text-xs font-bold leading-none transition ${activeKpiFilter === 'cuti' ? 'text-amber-200' : 'text-amber-805'}`}>
                 Sisa Cuti Tahunan
               </h3>
-              <p className="text-3xl font-black font-display tracking-tight leading-none mt-1">
+              <p className={`text-3xl font-black font-display tracking-tight leading-none mt-1 transition ${activeKpiFilter === 'cuti' ? 'text-white' : 'text-amber-900'}`}>
                 {cuti2026List.length} <span className="text-xs font-normal">Pegawai</span>
               </p>
-              <p className={`text-[10px] ${activeKpiFilter === 'cuti' ? 'text-slate-300' : 'text-slate-400'} italic font-medium pt-1`}>
+              <p className={`text-[10px] transition ${activeKpiFilter === 'cuti' ? 'text-amber-300' : 'text-amber-600/70'} italic font-medium pt-1`}>
                 {activeKpiFilter === 'cuti' ? '✓ Sedang ditinjau' : 'Klik rincian pegawai'}
               </p>
             </div>
