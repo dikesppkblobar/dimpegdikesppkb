@@ -25,7 +25,11 @@ import {
   Copy,
   Globe,
   CheckSquare,
-  MessageSquare
+  MessageSquare,
+  QrCode,
+  Wifi,
+  WifiOff,
+  Loader2
 } from 'lucide-react';
 import { 
   Puskesmas, 
@@ -91,6 +95,72 @@ export default function DinkesManagement({
   const [inputFonnteToken, setInputFonnteToken] = useState(() => localStorage.getItem('fonnte_token') || 'FaRp7B4ZtDZxFP3Ck2pT');
   const [inputFonnteAccount, setInputFonnteAccount] = useState(() => localStorage.getItem('fonnte_account') || '142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN');
   const [whatsappMode, setWhatsappMode] = useState(() => localStorage.getItem('whatsapp_mode') || 'auto');
+
+  // Baileys WhatsApp Gateway states
+  const [baileysStatus, setBaileysStatus] = useState<{
+    connected: boolean;
+    status: 'disconnected' | 'connecting' | 'connected' | 'qr';
+    qr: string | null;
+    phone: string | null;
+  }>({
+    connected: false,
+    status: 'disconnected',
+    qr: null,
+    phone: null
+  });
+  const [baileysLoading, setBaileysLoading] = useState(false);
+
+  const fetchBaileysStatus = async () => {
+    try {
+      const res = await fetch('/api/baileys/status');
+      if (res.ok) {
+        const data = await res.json();
+        setBaileysStatus(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch Baileys status:', err);
+    }
+  };
+
+  const handleBaileysConnect = async () => {
+    setBaileysLoading(true);
+    try {
+      const res = await fetch('/api/baileys/connect', { method: 'POST' });
+      if (res.ok) {
+        await fetchBaileysStatus();
+      }
+    } catch (err) {
+      console.error('Error connecting Baileys:', err);
+    } finally {
+      setBaileysLoading(false);
+    }
+  };
+
+  const handleBaileysDisconnect = async () => {
+    if (!window.confirm('Apakah Anda yakin ingin mematikan WhatsApp Gateway (Baileys) dan menghapus sesi scan QR?')) {
+      return;
+    }
+    setBaileysLoading(true);
+    try {
+      const res = await fetch('/api/baileys/disconnect', { method: 'POST' });
+      if (res.ok) {
+        await fetchBaileysStatus();
+        alert('✓ WhatsApp Gateway berhasil diputus dan sesi dihapus.');
+      }
+    } catch (err) {
+      console.error('Error disconnecting Baileys:', err);
+    } finally {
+      setBaileysLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBaileysStatus();
+    const interval = setInterval(() => {
+      fetchBaileysStatus();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (activeMgtTab === 'supabase') {
@@ -1904,7 +1974,34 @@ export default function DinkesManagement({
               <label className="text-xs font-bold text-slate-700 block mb-2">
                 Pilih Mode Pengiriman Pesan WhatsApp:
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* 1. Baileys Gateway (Internal) */}
+                <div 
+                  onClick={() => setWhatsappMode('baileys')}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition flex flex-col justify-between ${whatsappMode === 'baileys' ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-200 hover:border-slate-300'}`}
+                >
+                  <div className="flex items-center space-x-2 mb-1">
+                    <input 
+                      type="radio" 
+                      name="wa_mode" 
+                      checked={whatsappMode === 'baileys'} 
+                      onChange={() => setWhatsappMode('baileys')}
+                      className="text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                      <span>Gateway Internal (Baileys)</span>
+                      <span className="text-[9px] bg-emerald-600 text-white px-1 py-0.2 rounded font-mono uppercase font-bold">Gratis & Mandiri</span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed pl-5">
+                    Sistem bertindak langsung sebagai WhatsApp gateway dengan menghubungkan nomor HP Anda sendiri via QR code.
+                  </p>
+                  <span className="text-[10px] text-emerald-600 pl-5 mt-1 block font-semibold">
+                    ✓ DIJAMIN MASUK ke nomor mana saja tanpa perlu bayar Fonnte atau mendaftarkan nomor tester!
+                  </span>
+                </div>
+
+                {/* 2. Fonnte Gateway */}
                 <div 
                   onClick={() => setWhatsappMode('auto')}
                   className={`p-3.5 rounded-xl border-2 cursor-pointer transition flex flex-col justify-between ${whatsappMode === 'auto' ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-200 hover:border-slate-300'}`}
@@ -1917,16 +2014,17 @@ export default function DinkesManagement({
                       onChange={() => setWhatsappMode('auto')}
                       className="text-emerald-600 focus:ring-emerald-500"
                     />
-                    <span className="text-xs font-bold text-slate-900">Mode Otomatis (Rekomendasi Premium)</span>
+                    <span className="text-xs font-bold text-slate-900">Fonnte API Gateway (Premium)</span>
                   </div>
                   <p className="text-[11px] text-slate-500 leading-relaxed pl-5">
-                    Mencoba mengirim secara langsung via API Fonnte. Jika server offline atau error, sistem otomatis mengalihkan dengan membuka tautan WhatsApp Web di tab baru.
+                    Mengirimkan pesan otomatis menggunakan token API dari Fonnte.
                   </p>
                   <span className="text-[10px] text-amber-600 pl-5 mt-1 block">
-                    ⚠️ Jika Anda memakai <strong>Akun Fonnte Gratis / Trial</strong>, pesan ke nomor selain nomor tester terdaftar tidak akan pernah masuk ke WhatsApp penerima karena limitasi Fonnte.
+                    ⚠️ Paket Fonnte gratis/trial hanya mengizinkan kirim ke nomor Anda sendiri & tester yang didaftarkan.
                   </span>
                 </div>
 
+                {/* 3. WhatsApp Web */}
                 <div 
                   onClick={() => setWhatsappMode('wa_web')}
                   className={`p-3.5 rounded-xl border-2 cursor-pointer transition flex flex-col justify-between ${whatsappMode === 'wa_web' ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-200 hover:border-slate-300'}`}
@@ -1939,17 +2037,168 @@ export default function DinkesManagement({
                       onChange={() => setWhatsappMode('wa_web')}
                       className="text-emerald-600 focus:ring-emerald-500"
                     />
-                    <span className="text-xs font-bold text-slate-900">Selalu Gunakan WhatsApp Web (100% Gratis & Bebas Limit)</span>
+                    <span className="text-xs font-bold text-slate-900">Manual via WhatsApp Web</span>
                   </div>
                   <p className="text-[11px] text-slate-500 leading-relaxed pl-5">
-                    Sistem akan selalu membuka draf pesan & nomor penerima secara instan di WhatsApp Web (atau aplikasi WA HP). Anda tinggal menekan tombol Kirim (Enter).
+                    Sistem akan membuka draf pesan di tab baru (WhatsApp Web atau aplikasi WA HP).
                   </p>
-                  <span className="text-[10px] text-emerald-600 pl-5 mt-1 block font-semibold">
-                    ✓ DIJAMIN MASUK ke nomor mana saja tanpa perlu bayar Fonnte API Premium atau mendaftarkan nomor tester!
+                  <span className="text-[10px] text-slate-500 pl-5 mt-1 block">
+                    ✓ Aman dan gratis ke nomor mana pun, namun harus menekan tombol Kirim secara manual di WhatsApp.
                   </span>
                 </div>
               </div>
             </div>
+
+            {/* Baileys Connection Dashboard */}
+            {whatsappMode === 'baileys' && (
+              <div className="mb-6 p-5 border border-emerald-100 bg-emerald-50/10 rounded-2xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 mb-4 gap-2">
+                  <div className="flex items-center space-x-2">
+                    <QrCode size={18} className="text-emerald-600 animate-pulse" />
+                    <span className="text-xs font-bold text-slate-900 font-display">
+                      Panel Koneksi Gateway Internal (Baileys)
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 text-xs">
+                    <span className="text-slate-500">Status:</span>
+                    {baileysStatus.connected ? (
+                      <span className="px-2.5 py-0.5 font-bold text-[10px] bg-emerald-100 text-emerald-800 rounded-full flex items-center gap-1">
+                        <Wifi size={10} />
+                        <span>Terhubung ({baileysStatus.phone})</span>
+                      </span>
+                    ) : baileysStatus.status === 'connecting' ? (
+                      <span className="px-2.5 py-0.5 font-bold text-[10px] bg-amber-100 text-amber-800 rounded-full flex items-center gap-1 animate-pulse">
+                        <Loader2 size={10} className="animate-spin" />
+                        <span>Menghubungkan...</span>
+                      </span>
+                    ) : baileysStatus.status === 'qr' ? (
+                      <span className="px-2.5 py-0.5 font-bold text-[10px] bg-indigo-100 text-indigo-800 rounded-full flex items-center gap-1">
+                        <QrCode size={10} />
+                        <span>Menunggu Scan QR</span>
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 font-bold text-[10px] bg-slate-100 text-slate-800 rounded-full flex items-center gap-1">
+                        <WifiOff size={10} />
+                        <span>Offline</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center gap-5">
+                  {/* Left: QR Code display */}
+                  <div className="w-full md:w-1/3 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-200 pb-5 md:pb-0 md:pr-5">
+                    {baileysStatus.connected ? (
+                      <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-center flex flex-col items-center justify-center aspect-square w-48">
+                        <div className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center text-white text-lg font-bold mb-2">
+                          ✓
+                        </div>
+                        <span className="text-xs font-bold text-emerald-950">Terhubung Aktif!</span>
+                        <span className="text-[10px] text-emerald-600 font-mono mt-1">WA: {baileysStatus.phone}</span>
+                      </div>
+                    ) : baileysStatus.status === 'qr' && baileysStatus.qr ? (
+                      <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm">
+                        <img 
+                          src={baileysStatus.qr} 
+                          alt="WhatsApp Gateway QR Code" 
+                          className="w-44 h-44 object-contain"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    ) : baileysStatus.status === 'connecting' ? (
+                      <div className="p-4 bg-slate-100 border border-slate-200 rounded-2xl text-center flex flex-col items-center justify-center aspect-square w-48 animate-pulse">
+                        <Loader2 className="w-8 h-8 text-slate-400 animate-spin mb-2" />
+                        <span className="text-xs text-slate-500">Mempersiapkan QR...</span>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-slate-50 border border-slate-200 border-dashed rounded-2xl text-center flex flex-col items-center justify-center aspect-square w-48">
+                        <WifiOff className="w-8 h-8 text-slate-300 mb-2" />
+                        <span className="text-xs text-slate-500">Gateway belum diaktifkan</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right: Actions and Instructions */}
+                  <div className="w-full md:w-2/3 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-800">Petunjuk Penggunaan:</h4>
+                    
+                    {!baileysStatus.connected && baileysStatus.status !== 'qr' && baileysStatus.status !== 'connecting' ? (
+                      <div>
+                        <p className="text-[11px] text-slate-500 leading-relaxed mb-3">
+                          Klik tombol di bawah untuk mengaktifkan WhatsApp Gateway internal di server aplikasi. Sistem akan menginisialisasi modul dan memunculkan kode QR untuk dipindai.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleBaileysConnect}
+                          disabled={baileysLoading}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition shadow cursor-pointer flex items-center space-x-1"
+                        >
+                          {baileysLoading ? <Loader2 size={13} className="animate-spin animate-spin-slow" /> : <Wifi size={13} />}
+                          <span>Mulai / Aktifkan Gateway</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5 text-[11px] text-slate-600 leading-relaxed">
+                        {baileysStatus.connected ? (
+                          <>
+                            <p className="text-emerald-950 font-medium">
+                              🎉 Selamat! Server aplikasi SAPA Pegawai sekarang bertindak langsung sebagai WhatsApp gateway mandiri menggunakan nomor HP Anda. Semua notifikasi otomatis akan dikirim gratis tanpa batas.
+                            </p>
+                            <p className="text-slate-500 text-[10px]">
+                              Jika Anda ingin mengganti nomor WhatsApp gateway yang digunakan, ketuk tombol <strong>"Putuskan Hubungan / Logout"</strong> di bawah lalu hubungkan kembali nomor baru.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-indigo-950">Langkah penyandingan perangkat:</p>
+                            <ol className="list-decimal pl-4 space-y-1 text-slate-600 text-[10px]">
+                              <li>Buka aplikasi <strong>WhatsApp</strong> di HP Anda.</li>
+                              <li>Ketuk menu <strong>Titik Tiga (Android)</strong> atau <strong>Pengaturan (iPhone)</strong>.</li>
+                              <li>Pilih <strong>Perangkat Tertaut (Linked Devices)</strong>, kemudian ketuk **Tautkan Perangkat**.</li>
+                              <li>Arahkan kamera HP Anda ke **Kode QR** yang tampil di samping.</li>
+                            </ol>
+                          </>
+                        )}
+
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                          {baileysStatus.connected ? (
+                            <button
+                              type="button"
+                              onClick={handleBaileysDisconnect}
+                              disabled={baileysLoading}
+                              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold rounded-lg transition border border-rose-200 cursor-pointer flex items-center space-x-1"
+                            >
+                              <WifiOff size={11} />
+                              <span>Putuskan Hubungan / Logout</span>
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={handleBaileysConnect}
+                                disabled={baileysLoading}
+                                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-md transition border border-indigo-200 cursor-pointer flex items-center space-x-1"
+                              >
+                                <RefreshCw size={10} className={baileysLoading ? 'animate-spin' : ''} />
+                                <span>Muat Ulang QR Code</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleBaileysDisconnect}
+                                disabled={baileysLoading}
+                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded-md transition cursor-pointer flex items-center space-x-1"
+                              >
+                                <span>Reset Sesi</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
               <div>
@@ -1962,10 +2211,10 @@ export default function DinkesManagement({
                   onChange={(e) => setInputFonnteToken(e.target.value)}
                   placeholder="Masukkan API Token Fonnte..."
                   className="w-full text-xs font-mono p-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50"
-                  disabled={whatsappMode === 'wa_web'}
+                  disabled={whatsappMode !== 'auto'}
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  Token autentikasi perangkat Anda dari menu list device di dashboard Fonnte. (Dinonaktifkan jika memilih mode WhatsApp Web).
+                  Token autentikasi perangkat Anda dari menu list device di dashboard Fonnte. (Hanya digunakan jika memilih mode Fonnte).
                 </span>
               </div>
 
@@ -1979,17 +2228,17 @@ export default function DinkesManagement({
                   onChange={(e) => setInputFonnteAccount(e.target.value)}
                   placeholder="Masukkan Account Token..."
                   className="w-full text-xs font-mono p-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50"
-                  disabled={whatsappMode === 'wa_web'}
+                  disabled={whatsappMode !== 'auto'}
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  Gunakan jika akun Fonnte Anda memerlukan parameter akun tambahan untuk pengiriman. (Dinonaktifkan jika memilih mode WhatsApp Web).
+                  Gunakan jika akun Fonnte Anda memerlukan parameter akun tambahan untuk pengiriman. (Hanya digunakan jika memilih mode Fonnte).
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl">
               <div className="text-xs text-emerald-950 leading-relaxed max-w-xl">
-                <strong>💡 Info Masalah Pesan Tidak Masuk:</strong> Akun Fonnte dengan paket <strong>Trial / Gratis</strong> hanya diperbolehkan mengirim pesan langsung ke nomor WhatsApp pendaftar akun itu sendiri & nomor tester yang Anda setujui di dashboard Fonnte. Bila Anda mengirim ke nomor umum lainnya, Fonnte API akan tetap merespons sukses tetapi pesan tidak akan pernah diteruskan ke HP target. Untuk mengatasinya tanpa biaya, silakan pilih opsi <strong>"Selalu Gunakan WhatsApp Web"</strong> di atas.
+                <strong>💡 Info Masalah Pesan Tidak Masuk:</strong> Akun Fonnte dengan paket <strong>Trial / Gratis</strong> hanya diperbolehkan mengirim pesan langsung ke nomor WhatsApp pendaftar akun itu sendiri & nomor tester yang Anda setujui di dashboard Fonnte. Bila Anda mengirim ke nomor umum lainnya, Fonnte API akan tetap merespons sukses tetapi pesan tidak akan pernah diteruskan ke HP target. Untuk mengatasinya tanpa biaya, silakan pilih opsi <strong>"Gateway Internal (Baileys)"</strong> di atas dan scan kode QR!
               </div>
               
               <div className="flex items-center space-x-2 shrink-0">
@@ -2011,8 +2260,8 @@ export default function DinkesManagement({
                 <button
                   type="button"
                   onClick={() => {
-                    if (whatsappMode !== 'wa_web' && !inputFonnteToken.trim()) {
-                      alert('⚠️ Fonnte API Token tidak boleh kosong');
+                    if (whatsappMode === 'auto' && !inputFonnteToken.trim()) {
+                      alert('⚠️ Fonnte API Token tidak boleh kosong saat menggunakan mode Fonnte API Gateway.');
                       return;
                     }
                     localStorage.setItem('whatsapp_mode', whatsappMode);
