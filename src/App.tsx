@@ -54,7 +54,7 @@ import DinkesManagement from './lib/components/DinkesManagement';
 import ArsipKepegawaianView from './lib/components/ArsipKepegawaianView';
 import DashboardKP4 from './lib/components/DashboardKP4';
 import LoginView from './lib/components/LoginView';
-import { pushClientDataToSupabase, pullCloudDataFromSupabase, testSupabaseConnection } from './lib/supabase';
+import { pushClientDataToSupabase, pullCloudDataFromSupabase, testSupabaseConnection, supabase } from './lib/supabase';
 import { formatDate, addYearsToDateString, normalizeIndonesianPhoneNumber } from './utils';
 
 const GOLONGAN_TO_PANGKAT: Record<string, string> = {
@@ -165,6 +165,108 @@ export default function App() {
     fetchDirectlyOnStartup();
   }, []);
 
+  const syncChannelRef = useRef<any>(null);
+
+  // Helper to broadcast data changes to other active devices
+  const broadcastDataChanged = (keys: string[]) => {
+    try {
+      if (syncChannelRef.current) {
+        syncChannelRef.current.send({
+          type: 'broadcast',
+          event: 'data-changed',
+          payload: { keys, timestamp: Date.now() }
+        });
+        console.log('📤 [Realtime Broadcast] Mengirim notifikasi perubahan data:', keys);
+      }
+    } catch (err) {
+      console.warn("[Realtime Broadcast] Gagal mengirim broadcast:", err);
+    }
+  };
+
+  // Real-time synchronization subscription using Supabase Broadcast channel
+  useEffect(() => {
+    const channel = supabase.channel('sapa-sync-channel', {
+      config: {
+        broadcast: { self: false } // We don't want to receive our own broadcasts
+      }
+    });
+
+    channel
+      .on('broadcast', { event: 'data-changed' }, async (payload) => {
+        console.log('🔄 [Realtime Broadcast] Terdeteksi perubahan data dari perangkat lain:', payload);
+        try {
+          const res = await pullCloudDataFromSupabase();
+          if (res.success && res.data) {
+            setDbState(res.data);
+            saveDB(res.data);
+            setSuccessToast("⚡ Data disinkronkan otomatis secara real-time!");
+          }
+        } catch (err) {
+          console.warn("[Realtime Broadcast] Gagal menarik data baru:", err);
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [Realtime Broadcast] Berhasil berlangganan ke saluran sapa-sync-channel.');
+        }
+      });
+
+    syncChannelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Fallback Polling & Tab Focus Synchronization
+  useEffect(() => {
+    // 1. Sync on tab focus
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ [Sync on Focus] Pengguna kembali ke tab. Memperbarui data dari cloud...');
+        try {
+          const res = await pullCloudDataFromSupabase();
+          if (res.success && res.data) {
+            setDbState(res.data);
+            saveDB(res.data);
+          }
+        } catch (err) {
+          console.warn("[Sync on Focus] Gagal memperbarui data:", err);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    // 2. Periodic Polling every 15 seconds (frequent enough for fast sync, slow enough to avoid rate limits)
+    const intervalId = setInterval(async () => {
+      console.log('⏰ [Sync Polling] Mengecek pembaruan data secara berkala...');
+      try {
+        const res = await pullCloudDataFromSupabase();
+        if (res.success && res.data) {
+          setDbState(prev => {
+            // Check if there is actual difference
+            if (JSON.stringify(prev) !== JSON.stringify(res.data)) {
+              console.log('🔄 [Sync Polling] Menemukan perubahan data baru di cloud. Memperbarui UI...');
+              saveDB(res.data);
+              return res.data;
+            }
+            return prev;
+          });
+        }
+      } catch (err) {
+        console.warn("[Sync Polling] Gagal mengecek data baru:", err);
+      }
+    }, 15000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+      clearInterval(intervalId);
+    };
+  }, []);
+
   // Custom unified save and sync mechanism that updates memory and pushes directly to Supabase
   const saveAndSync = async (changedState: Partial<typeof dbState> & Record<string, any>) => {
     // 1. Persist locally to localStorage immediately (safety offline backup)
@@ -180,9 +282,15 @@ export default function App() {
 
     // 3. Directly push ONLY updated records to Supabase in the background (reading synchronously from the updated localStorage)
     const keysToSync = Object.keys(changedState);
-    pushClientDataToSupabase(null, keysToSync).catch(e => {
-      console.warn("Kesalahan sinkronisasi data ke Supabase (menggunakan offline mode):", e);
-    });
+    pushClientDataToSupabase(null, keysToSync)
+      .then((res) => {
+        if (res && res.success) {
+          broadcastDataChanged(keysToSync);
+        }
+      })
+      .catch(e => {
+        console.warn("Kesalahan sinkronisasi data ke Supabase (menggunakan offline mode):", e);
+      });
   };
 
   const [activeTab, setActiveTab] = useState<string>('dasbor');
