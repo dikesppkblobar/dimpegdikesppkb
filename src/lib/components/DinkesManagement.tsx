@@ -102,11 +102,13 @@ export default function DinkesManagement({
     status: 'disconnected' | 'connecting' | 'connected' | 'qr';
     qr: string | null;
     phone: string | null;
+    error?: string | null;
   }>({
     connected: false,
     status: 'disconnected',
     qr: null,
-    phone: null
+    phone: null,
+    error: null
   });
   const [baileysLoading, setBaileysLoading] = useState(false);
 
@@ -128,9 +130,13 @@ export default function DinkesManagement({
       const res = await fetch('/api/baileys/connect', { method: 'POST' });
       if (res.ok) {
         await fetchBaileysStatus();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`❌ Gagal terhubung ke API Server: ${errorData.error || 'Kesalahan server internal'}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error connecting Baileys:', err);
+      alert(`❌ Gagal menghubungi server: ${err.message || err}`);
     } finally {
       setBaileysLoading(false);
     }
@@ -2120,6 +2126,15 @@ export default function DinkesManagement({
 
                   {/* Right: Actions and Instructions */}
                   <div className="w-full md:w-2/3 space-y-3">
+                    {baileysStatus.error && (
+                      <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-mono whitespace-pre-wrap mb-2">
+                        <strong className="text-rose-950 block mb-1">⚠️ Gagal Mengaktifkan Gateway:</strong>
+                        {baileysStatus.error}
+                        <div className="mt-2 text-[10px] text-rose-700 font-sans">
+                          Tips: Jika error terus terjadi, coba klik tombol <strong>"Reset Sesi"</strong> di bawah lalu aktifkan kembali.
+                        </div>
+                      </div>
+                    )}
                     <h4 className="text-xs font-bold text-slate-800">Petunjuk Penggunaan:</h4>
                     
                     {!baileysStatus.connected && baileysStatus.status !== 'qr' && baileysStatus.status !== 'connecting' ? (
