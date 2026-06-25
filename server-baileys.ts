@@ -1,0 +1,156 @@
+import pkgBaileys from '@whiskeysockets/baileys';
+import pino from 'pino';
+import QRCode from 'qrcode';
+import fs from 'fs';
+import path from 'path';
+
+// Handle both ES Module and CommonJS bundler variants safely
+const makeWASocket = (pkgBaileys as any).default || pkgBaileys;
+const useMultiFileAuthState = (pkgBaileys as any).useMultiFileAuthState || (pkgBaileys as any).default?.useMultiFileAuthState;
+const DisconnectReason = (pkgBaileys as any).DisconnectReason || (pkgBaileys as any).default?.DisconnectReason;
+
+const authFolder = path.join(process.cwd(), 'auth_info_baileys');
+
+let sock: any = null;
+let qrCodeDataUrl: string | null = null;
+let connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'qr' = 'disconnected';
+let myPhone: string | null = null;
+let isInitializing = false;
+
+export async function getBaileysStatus() {
+  return {
+    connected: connectionStatus === 'connected',
+    status: connectionStatus,
+    qr: qrCodeDataUrl,
+    phone: myPhone
+  };
+}
+
+export async function initBaileys(forceRestart = false) {
+  if (isInitializing) return;
+  
+  if (sock && !forceRestart) {
+    if (connectionStatus === 'connected') {
+      return;
+    }
+  }
+
+  isInitializing = true;
+  connectionStatus = 'connecting';
+  
+  try {
+    console.log('[Baileys] Initializing WhatsApp socket...');
+    const { state, saveCreds } = await useMultiFileAuthState(authFolder);
+    
+    // Create silent logger to prevent huge logs
+    const logger = pino({ level: 'silent' });
+    
+    sock = makeWASocket({
+      auth: state,
+      printQRInTerminal: true,
+      logger,
+      defaultQueryTimeoutMs: 60000,
+    });
+    
+    sock.ev.on('creds.update', saveCreds);
+    
+    sock.ev.on('connection.update', async (update: any) => {
+      const { connection, lastDisconnect, qr } = update;
+      
+      if (qr) {
+        connectionStatus = 'qr';
+        try {
+          qrCodeDataUrl = await QRCode.toDataURL(qr);
+          console.log('[Baileys] New QR Code generated successfully.');
+        } catch (err) {
+          console.error('[Baileys] Failed to generate QR data URL:', err);
+        }
+      }
+      
+      if (connection === 'close') {
+        const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
+        const shouldReconnect = statusCode !== DisconnectReason?.loggedOut;
+        
+        console.log(`[Baileys] Connection closed. Status Code: ${statusCode}. Reconnecting: ${shouldReconnect}`);
+        
+        connectionStatus = 'disconnected';
+        qrCodeDataUrl = null;
+        myPhone = null;
+        sock = null;
+        
+        if (shouldReconnect) {
+          setTimeout(() => {
+            initBaileys(true);
+          }, 5000);
+        }
+      } else if (connection === 'open') {
+        connectionStatus = 'connected';
+        qrCodeDataUrl = null;
+        const user = sock.user;
+        myPhone = user ? user.id.split(':')[0] : null;
+        console.log('[Baileys] Connection opened! Logged in as:', myPhone);
+      }
+    });
+  } catch (error) {
+    console.error('[Baileys] Error initializing Baileys:', error);
+    connectionStatus = 'disconnected';
+    qrCodeDataUrl = null;
+    myPhone = null;
+    sock = null;
+  } finally {
+    isInitializing = false;
+  }
+}
+
+export async function logoutBaileys() {
+  console.log('[Baileys] Logging out and deleting session...');
+  if (sock) {
+    try {
+      await sock.logout();
+    } catch (e) {
+      // Ignore
+    }
+    try {
+      sock.end(undefined);
+    } catch (e) {
+      // Ignore
+    }
+    sock = null;
+  }
+  
+  connectionStatus = 'disconnected';
+  qrCodeDataUrl = null;
+  myPhone = null;
+
+  if (fs.existsSync(authFolder)) {
+    try {
+      fs.rmSync(authFolder, { recursive: true, force: true });
+      console.log('[Baileys] Auth session folder deleted.');
+    } catch (err) {
+      console.error('[Baileys] Failed to delete auth folder:', err);
+    }
+  }
+}
+
+export async function sendBaileysMessage(phone: string, message: string) {
+  if (connectionStatus !== 'connected' || !sock) {
+    throw new Error('WhatsApp is not connected yet. Please link your device via QR code first.');
+  }
+  
+  let cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (cleanPhone.startsWith('0')) {
+    cleanPhone = '62' + cleanPhone.slice(1);
+  }
+  
+  const jid = `${cleanPhone}@s.whatsapp.net`;
+  console.log(`[Baileys] Sending message to ${jid}: ${message.substring(0, 50)}...`);
+  
+  const result = await sock.sendMessage(jid, { text: message });
+  return result;
+}
+
+// Auto-start Baileys if session already exists
+if (fs.existsSync(authFolder) && fs.readdirSync(authFolder).length > 0) {
+  console.log('[Baileys] Existing auth session found. Auto-reconnecting...');
+  initBaileys();
+}
