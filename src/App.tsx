@@ -55,7 +55,7 @@ import ArsipKepegawaianView from './lib/components/ArsipKepegawaianView';
 import DashboardKP4 from './lib/components/DashboardKP4';
 import LoginView from './lib/components/LoginView';
 import { pushClientDataToSupabase, pullCloudDataFromSupabase, testSupabaseConnection } from './lib/supabase';
-import { formatDate, addYearsToDateString } from './utils';
+import { formatDate, addYearsToDateString, normalizeIndonesianPhoneNumber } from './utils';
 
 const GOLONGAN_TO_PANGKAT: Record<string, string> = {
   "I/a": "Juru Muda",
@@ -1248,19 +1248,7 @@ export default function App() {
               const id_profesi = foundProfesi ? foundProfesi.id : 1;
 
               let rawWa = row[8] ? String(row[8]).trim() : '';
-              if (!rawWa.startsWith('+62')) {
-                rawWa = rawWa.replace(/\D/g, '');
-                if (rawWa.startsWith('62')) {
-                  rawWa = '+' + rawWa;
-                } else if (rawWa.startsWith('0')) {
-                  rawWa = '+62' + rawWa.substring(1);
-                } else if (rawWa) {
-                  rawWa = '+62' + rawWa;
-                } else {
-                  rawWa = '+62';
-                }
-              }
-              const nomor_wa = rawWa;
+              const nomor_wa = normalizeIndonesianPhoneNumber(rawWa, true) || '+628123456781';
               
               const golongan_ruang = status_pegawai_detail === 'Non_ASN' ? '-' : (row[9] ? String(row[9]).trim() : 'III/a');
               const tanggal_lahir = row[10] ? String(row[10]).trim() : '1991-05-15';
@@ -2222,8 +2210,8 @@ export default function App() {
                             placeholder="81234567890"
                             value={newNomorWa.startsWith('+62') ? newNomorWa.substring(3) : newNomorWa}
                             onChange={(e) => {
-                              const digitsOnly = e.target.value.replace(/\D/g, '');
-                              setNewNomorWa('+62' + digitsOnly);
+                              const normalized = normalizeIndonesianPhoneNumber(e.target.value, true);
+                              setNewNomorWa(normalized);
                             }}
                             className="flex-1 p-2 bg-[#16161a] text-white outline-none focus:ring-1 focus:ring-emerald-500 text-sm font-semibold font-mono"
                           />
@@ -3498,8 +3486,8 @@ export default function App() {
                           placeholder="81234567890"
                           value={editingAsn.nomor_wa && editingAsn.nomor_wa.startsWith('+62') ? editingAsn.nomor_wa.substring(3) : (editingAsn.nomor_wa || '').replace(/^\+?6?2?/, '')}
                           onChange={(e) => {
-                            const digitsOnly = e.target.value.replace(/\D/g, '');
-                            setEditingAsn({ ...editingAsn, nomor_wa: '+62' + digitsOnly });
+                            const normalized = normalizeIndonesianPhoneNumber(e.target.value, true);
+                            setEditingAsn({ ...editingAsn, nomor_wa: normalized });
                           }}
                           className="flex-1 p-2 bg-white text-slate-900 outline-none focus:ring-1 focus:ring-teal-500 text-sm font-semibold font-mono"
                         />
