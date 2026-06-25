@@ -2009,10 +2009,10 @@ Informasi ini dikirim langsung dari Dashboard SAPA pegawai Dikes PPKB (Sistem Ar
                 onClick={async () => {
                   try {
                     const result = await sendWhatsAppMessage(waRecipientPhone, waDraftMessage);
-                    if (result.method === 'fonnte') {
-                      alert(`✓ Berhasil mengirim pesan via Fonnte API secara langsung.`);
+                    if (result.method === 'fonnte' || result.method === 'baileys') {
+                      alert(`✓ Berhasil mengirim pesan via WhatsApp Gateway (${result.method}) secara langsung.`);
                     } else {
-                      alert(`⚠️ Gagal mengirim via API Fonnte: "${result.error || 'Terbatas/Error'}"\nPesan dialihkan via WhatsApp Web.`);
+                      alert(`⚠️ Pesan tidak dapat dikirim secara langsung.\nNotifikasi dialihkan via WhatsApp Web.`);
                     }
                   } catch (err: any) {
                     alert(`❌ Gagal mengirim: ${err.message || err}`);
