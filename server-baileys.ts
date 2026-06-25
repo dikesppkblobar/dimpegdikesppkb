@@ -1,27 +1,8 @@
-import pkgBaileys from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
-
-// Handle all possible import formats (ESM, CJS, default wrapped, etc.)
-let makeWASocket = pkgBaileys;
-if ((pkgBaileys as any).default) {
-  makeWASocket = (pkgBaileys as any).default;
-}
-if (typeof makeWASocket !== 'function' && (pkgBaileys as any).makeWASocket) {
-  makeWASocket = (pkgBaileys as any).makeWASocket;
-}
-
-let useMultiFileAuthState = (pkgBaileys as any).useMultiFileAuthState;
-if (!useMultiFileAuthState && (pkgBaileys as any).default) {
-  useMultiFileAuthState = (pkgBaileys as any).default.useMultiFileAuthState;
-}
-
-let DisconnectReason = (pkgBaileys as any).DisconnectReason;
-if (!DisconnectReason && (pkgBaileys as any).default) {
-  DisconnectReason = (pkgBaileys as any).default.DisconnectReason;
-}
 
 const authFolder = path.join(process.cwd(), 'auth_info_baileys');
 
@@ -40,7 +21,7 @@ export async function getBaileysStatus() {
     phone: myPhone,
     error: lastError,
     helpers: {
-      hasPkg: !!pkgBaileys,
+      hasPkg: true,
       hasMakeWASocket: typeof makeWASocket === 'function',
       hasUseState: typeof useMultiFileAuthState === 'function',
     }
@@ -64,7 +45,7 @@ export async function initBaileys(forceRestart = false) {
     console.log('[Baileys] Initializing WhatsApp socket...');
     
     if (typeof useMultiFileAuthState !== 'function') {
-      throw new Error(`useMultiFileAuthState is not a function. pkgBaileys structure: ${Object.keys(pkgBaileys || {}).join(', ')}`);
+      throw new Error(`useMultiFileAuthState is not a function.`);
     }
     
     const { state, saveCreds } = await useMultiFileAuthState(authFolder);
