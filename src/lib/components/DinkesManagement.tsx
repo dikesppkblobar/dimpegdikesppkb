@@ -24,7 +24,8 @@ import {
   Terminal,
   Copy,
   Globe,
-  CheckSquare
+  CheckSquare,
+  MessageSquare
 } from 'lucide-react';
 import { 
   Puskesmas, 
@@ -85,6 +86,10 @@ export default function DinkesManagement({
   const [supabaseLogs, setSupabaseLogs] = useState<string[]>(['Sistem monitoring Supabase Lombok Barat siap digunakan...']);
   const [copydone, setCopydone] = useState(false);
   const [sqlTab, setSqlTab] = useState<'patch' | 'migration'>('patch');
+
+  // Fonnte WhatsApp Gateway states
+  const [inputFonnteToken, setInputFonnteToken] = useState(() => localStorage.getItem('fonnte_token') || 'FaRp7B4ZtDZxFP3Ck2pT');
+  const [inputFonnteAccount, setInputFonnteAccount] = useState(() => localStorage.getItem('fonnte_account') || '142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN');
 
   useEffect(() => {
     if (activeMgtTab === 'supabase') {
@@ -1874,6 +1879,95 @@ export default function DinkesManagement({
                   {log}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* ======================= WHATSAPP GATEWAY (FONNTE API) CONFIGURATION ======================= */}
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm text-left">
+            <div className="flex items-center space-x-2 border-b border-slate-100 pb-4 mb-4">
+              <div className="p-1.5 bg-emerald-50 rounded-lg text-emerald-600">
+                <MessageSquare size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 font-display">
+                  Konfigurasi WhatsApp Gateway (Fonnte API)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Sesuaikan kredensial pengiriman notifikasi WhatsApp otomatis untuk Pegawai & Admin Dinkes Lombok Barat
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Fonnte API Token / Device Key
+                </label>
+                <input
+                  type="text"
+                  value={inputFonnteToken}
+                  onChange={(e) => setInputFonnteToken(e.target.value)}
+                  placeholder="Masukkan API Token Fonnte..."
+                  className="w-full text-xs font-mono p-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Token autentikasi perangkat Anda dari menu list device di dashboard Fonnte.
+                </span>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Device ID / Account Token (Opsional)
+                </label>
+                <input
+                  type="text"
+                  value={inputFonnteAccount}
+                  onChange={(e) => setInputFonnteAccount(e.target.value)}
+                  placeholder="Masukkan Account Token..."
+                  className="w-full text-xs font-mono p-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Gunakan jika akun Fonnte Anda memerlukan parameter akun tambahan untuk pengiriman.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl">
+              <div className="text-xs text-emerald-950 leading-relaxed max-w-xl">
+                <strong>💡 Catatan Penting:</strong> Pastikan perangkat WhatsApp Anda di dashboard Fonnte berada dalam status <strong>Connected (Aktif)</strong>. Jika perangkat Anda mati atau token tidak valid, sistem secara otomatis akan beralih mengirimkan draf notifikasi via <strong>WhatsApp Web</strong> agar pengiriman pesan tetap dapat dilakukan.
+              </div>
+              
+              <div className="flex items-center space-x-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputFonnteToken('FaRp7B4ZtDZxFP3Ck2pT');
+                    setInputFonnteAccount('142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN');
+                    localStorage.removeItem('fonnte_token');
+                    localStorage.removeItem('fonnte_account');
+                    alert('✓ Kredensial WhatsApp Gateway di-reset ke nilai default bawaan.');
+                  }}
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition cursor-pointer"
+                >
+                  Reset ke Default
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!inputFonnteToken.trim()) {
+                      alert('⚠️ Fonnte API Token tidak boleh kosong');
+                      return;
+                    }
+                    localStorage.setItem('fonnte_token', inputFonnteToken.trim());
+                    localStorage.setItem('fonnte_account', inputFonnteAccount.trim());
+                    alert('✓ Kredensial WhatsApp Gateway berhasil disimpan secara lokal dan akan digunakan untuk pengiriman pesan.');
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow cursor-pointer flex items-center space-x-1"
+                >
+                  <Check size={13} />
+                  <span>Simpan Perubahan</span>
+                </button>
+              </div>
             </div>
           </div>
 
