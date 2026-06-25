@@ -84,6 +84,7 @@ export default function DinkesManagement({
   const [supabaseTestResult, setSupabaseTestResult] = useState<{ success: boolean; message: string; mode: string } | null>(null);
   const [supabaseLogs, setSupabaseLogs] = useState<string[]>(['Sistem monitoring Supabase Lombok Barat siap digunakan...']);
   const [copydone, setCopydone] = useState(false);
+  const [sqlTab, setSqlTab] = useState<'patch' | 'migration'>('patch');
 
   useEffect(() => {
     if (activeMgtTab === 'supabase') {
@@ -1878,52 +1879,75 @@ export default function DinkesManagement({
 
           {/* Manual Copyable SQL Deployment Instructions */}
           <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm text-left space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
                 <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-widest font-display flex items-center space-x-1.5">
                   <span className="w-1.5 h-3.5 bg-sky-500 rounded-full inline-block"></span>
-                  <span>Script SQL Setup & Migrasi Supabase Console</span>
+                  <span>Script SQL Setup & Patch Database Supabase</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Gunakan script di bawah untuk menghapus tabel usang (Clean Slate) dan membuat tabel baru yang mendukung penuh SIMPEG
+                  {sqlTab === 'patch' 
+                    ? "Rekomendasi Aman: Menambahkan kolom baru tanpa menghapus data pegawai yang sudah ada." 
+                    : "Clean Reset: Menghapus seluruh tabel dan membuat ulang dari awal (Dinkes & Puskesmas)."
+                  }
                 </p>
               </div>
 
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(sqlTab === 'patch' ? DATABASE_PATCH_SQL_SCRIPT : DATABASE_MIGRATION_SQL_SCRIPT);
+                    setCopydone(true);
+                    setTimeout(() => setCopydone(false), 3000);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-sm cursor-pointer border ${copydone ? 'bg-emerald-50 text-emerald-600 border-emerald-300' : 'bg-slate-900 hover:bg-slate-850 text-white border-transparent'}`}
+                >
+                  <Copy size={13} />
+                  <span>{copydone ? "Tersalin!" : "Salin Script SQL"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Selector Tabs */}
+            <div className="flex space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(DATABASE_MIGRATION_SQL_SCRIPT);
-                  setCopydone(true);
-                  setTimeout(() => setCopydone(false), 3000);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-sm cursor-pointer border ${copydone ? 'bg-emerald-50 text-emerald-600 border-emerald-300' : 'bg-slate-900 hover:bg-slate-850 text-white border-transparent'}`}
+                onClick={() => setSqlTab('patch')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${sqlTab === 'patch' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-800'}`}
               >
-                <Copy size={13} />
-                <span>{copydone ? "Tersalin!" : "Salin Script SQL"}</span>
+                1. SCRIPT PATCH AMAN (Tambahkan Kolom Kurang, Tanpa Hapus Data)
+              </button>
+              <button
+                onClick={() => setSqlTab('migration')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${sqlTab === 'migration' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                2. SCRIPT CLEAN RESET (Hapus &amp; Buat Ulang Semua)
               </button>
             </div>
 
             {/* Instruction list */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-              <div className="text-xs font-bold text-slate-800">Langkah-Langkah Setup Database Baru:</div>
+              <div className="text-xs font-bold text-slate-800">
+                {sqlTab === 'patch' ? "Langkah-Langkah Menjalankan Patch Kolom (Mengatasi Error Missing Column):" : "Langkah-Langkah Setup Database Baru:"}
+              </div>
               <ol className="list-decimal pl-4 text-xs text-slate-600 space-y-1">
-                <li>Buka Dashboard akun <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline font-semibold">Supabase.com</a> dan buka Project Anda.</li>
+                <li>Buka Dashboard akun <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline font-semibold">Supabase.com</a> dan masuk ke Project Anda.</li>
                 <li>Pilih menu <span className="font-semibold text-slate-800">SQL Editor</span> di sidebar kiri dashboard Supabase Anda.</li>
-                <li>Klik tombol <span className="font-semibold text-slate-800">+ New Query</span> untuk membuka lembar kerja kosong.</li>
+                <li>Klik tombol <span className="font-semibold text-slate-800">+ New Query</span> untuk membuka tab query baru.</li>
                 <li>Klik tombol <span className="font-semibold text-sky-600">"Salin Script SQL"</span> di kanan atas panel ini.</li>
-                <li>Tempel (Paste / Ctrl+V) seluruh script tersebut di dalam jendela SQL Editor Supabase Anda.</li>
-                <li>Klik tombol <span className="font-semibold text-slate-800">Run (Ctrl+Enter)</span> di kanan bawah untuk mengeksekusi migrasi.</li>
-                <li>Setelah berhasil, kembali ke tab ini dan klik tombol <span className="font-semibold text-emerald-600">"Kirim Data ke Supabase Cloud"</span> di atas untuk mentransfer seluruh database lokal Anda ke cloud.</li>
+                <li>Tempel (Paste / Ctrl+V) seluruh script tersebut di dalam SQL Editor Supabase Anda.</li>
+                <li>Klik tombol <span className="font-semibold text-slate-800">Run (atau tekan Ctrl+Enter)</span> untuk mengeksekusi script.</li>
+                <li>Setelah berhasil, kembali ke aplikasi ini, <strong>REFRESH / RE-LOAD halaman browser Anda</strong>, lalu coba lakukan penyimpanan data kembali.</li>
               </ol>
             </div>
 
             {/* Code Box container */}
             <div className="relative">
               <div className="absolute top-2 right-2 bg-slate-105 border border-slate-200 text-[10px] text-slate-400 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider pointer-events-none select-none">
-                PostgreSql Script
+                {sqlTab === 'patch' ? 'patch_update.sql' : 'full_migration.sql'}
               </div>
               <textarea
                 readOnly
-                value={DATABASE_MIGRATION_SQL_SCRIPT}
+                value={sqlTab === 'patch' ? DATABASE_PATCH_SQL_SCRIPT : DATABASE_MIGRATION_SQL_SCRIPT}
                 className="w-full h-48 bg-[#0f172a] text-[#38bdf8] p-4 rounded-xl font-mono text-[10px] leading-relaxed border border-slate-800 shadow-inner select-all resize-none focus:outline-none"
               />
             </div>
@@ -2038,6 +2062,107 @@ function supabaseTestingOrCheckedState(loading: boolean, result: { success: bool
     </span>
   );
 }
+
+const DATABASE_PATCH_SQL_SCRIPT = `-- SCRIPT PATCH AMAN: TAMBAH KOLOM BARU PADA TABEL YANG ADA (TANPA MENGHAPUS DATA PEGAWAI)
+-- Jalankan script ini di SQL Editor Supabase jika Anda mendapatkan error terkait kolom baru tidak ditemukan (schema cache mismatch)
+-- Setelah mengeksekusi script ini di Supabase, silakan REFRESH / MUAT ULANG halaman aplikasi ini.
+
+-- 1. Penyesuaian Tabel asn_profiles (Pegawai)
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS gelar_belakang VARCHAR(50);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS jenis_pegawai VARCHAR(50) DEFAULT 'Staf_Umum';
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS jenjang_jafung VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS ak_integrasi_2022 NUMERIC(10, 2) DEFAULT 0;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS sisa_cuti_tahunan INT DEFAULT 12;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS jenis_kelamin VARCHAR(5) DEFAULT 'L';
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS status_pegawai_detail VARCHAR(100) DEFAULT 'PNS';
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS nomor_wa VARCHAR(50);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS nik VARCHAR(50);
+
+-- PNS Details
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pangkat_nama VARCHAR(150);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_jenis_kenaikan_pangkat VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_masa_kerja_golongan VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_tmt_golongan DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_no_pertek_bkn VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_tgl_pertek_bkn DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_no_sk VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_tgl_sk DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_nama_jabatan VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_jenis_jabatan VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_jenis_mutasi VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_tmt_jabatan DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_instansi_kerja VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_instansi_induk VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_satker VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_satker_induk VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_unor VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_unor_induk VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_no_sk_jabatan VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_tgl_sk_jabatan DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pns_instansi_pembina VARCHAR(255);
+
+-- PPPK Details
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_ni VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_no_perjanjian VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_tgl_perjanjian DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_tmt_perjanjian_mulai DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_tmt_perjanjian_selesai DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_tmt_golongan DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_no_sk VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_tgl_sk DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_instansi_kerja VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_instansi_induk VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_satker VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_unor VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_jabatan VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppk_golongan VARCHAR(50);
+
+-- PKWT / Non ASN
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pkwt_tmt_sk DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pkwt_no_sk_kontrak VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pkwt_tgl_sk_kontrak DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pkwt_masa_kerja VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pkwt_pembiayaan VARCHAR(20);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pkwt_jabatan VARCHAR(255);
+
+-- PPPK Paruh Waktu
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppw_jumlah_jam_kerja_per_minggu INT;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS pppw_surat_kesepakatan_file TEXT;
+
+-- STR & SIP
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS no_str VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS tanggal_terbit_str DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS tanggal_akhir_str DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS is_str_seumur_hidup BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS no_sip VARCHAR(100);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS tanggal_terbit_sip DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS tanggal_akhir_sip DATE;
+
+-- KP4 / Model DK
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_status_pernikahan VARCHAR(50);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_nik_pasangan VARCHAR(50);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_nama_pasangan VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_pasangan_asn BOOLEAN;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_pasangan_nip VARCHAR(50);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_pasangan_kerja_instansi VARCHAR(255);
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_pasangan_tunjangan_diklaim BOOLEAN;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_tahun_validasi INT;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_tanggal_validasi DATE;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_berkas_file_name TEXT;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_berkas_file_path TEXT;
+ALTER TABLE public.asn_profiles ADD COLUMN IF NOT EXISTS kp4_daftar_anak TEXT;
+
+-- 2. Penyesuaian Tabel arsip_kepegawaian
+ALTER TABLE public.arsip_kepegawaian ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'Upload Kerja';
+ALTER TABLE public.arsip_kepegawaian ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE public.arsip_kepegawaian ADD COLUMN IF NOT EXISTS str_expired_date DATE;
+ALTER TABLE public.arsip_kepegawaian ADD COLUMN IF NOT EXISTS pkwt_tahun INT;
+
+-- 3. Penyesuaian Tabel users
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS username VARCHAR(100);
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password VARCHAR(255);
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS nomor_wa VARCHAR(50);
+`;
 
 const DATABASE_MIGRATION_SQL_SCRIPT = `-- UNIFIED CLEAN RESET & INSTALLATION SCRIPT FOR SIMPEG SUPABASE LOMBOK BARAT
 
