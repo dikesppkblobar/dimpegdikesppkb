@@ -366,87 +366,35 @@ ON CONFLICT DO NOTHING;
 let cachedOfflineStatus: boolean | null = null;
 
 export async function isSupabaseOffline(): Promise<boolean> {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    cachedOfflineStatus = true;
-    return true;
-  }
-
-  if (cachedOfflineStatus !== null) {
-    return cachedOfflineStatus;
-  }
-  
-  // Quick test connection with a tight 1000ms timeout to prevent hanging the browser or UI on refresh
-  const checkPromise = (async () => {
-    try {
-      const { error } = await supabase.from('puskesmas').select('id').limit(1);
-      if (error && (error.message.includes("Failed to fetch") || error.message.includes("fetch"))) {
-        return true; // isolated/offline
-      }
-      return false; // online
-    } catch (_) {
-      return true; // offline
-    }
-  })();
-
-  const timeoutPromise = new Promise<boolean>((resolve) => {
-    setTimeout(() => {
-      resolve(true); // Treat as offline if it takes more than 1 second
-    }, 1000);
-  });
-
-  try {
-    const result = await Promise.race([checkPromise, timeoutPromise]);
-    cachedOfflineStatus = result;
-    return result;
-  } catch (_) {
-    cachedOfflineStatus = true;
-    return true;
-  }
+  // Always prioritize real direct Supabase connection and disable mock offline/virtual-link fallback
+  return false;
 }
 
 export async function testSupabaseConnection(): Promise<{ success: boolean; message: string; mode: string }> {
-  const offline = await isSupabaseOffline();
-  if (offline) {
-    return { 
-      success: true, 
-      message: "Sukses Terkoneksi via Supabase Virtual-Link! Sistem Monitoring Lombok Barat Aktif & Siap Digunakan.",
-      mode: "LIVE"
-    };
-  }
-
   try {
+    // Check connection with a reliable 5000ms timeout
     const checkPromise = supabase.from('puskesmas').select('id', { count: 'exact', head: true });
-    const timeoutPromise = new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 1000));
+    const timeoutPromise = new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000));
     
     const res = await Promise.race([checkPromise, timeoutPromise]);
     const error = res?.error;
     if (error) {
-      if (error.message && (error.message.includes("Failed to fetch") || error.message.includes("fetch"))) {
-        cachedOfflineStatus = true;
-        return { 
-          success: true, 
-          message: "Sukses Terkoneksi via Supabase Virtual-Link! Sistem Monitoring Lombok Barat Aktif & Siap Digunakan.",
-          mode: "LIVE"
-        };
-      }
       return { 
         success: false, 
         message: `Koneksi gagal: ${error.message} (Kemungkinan tabel database kosong / belum terbuat. Gunakan SQL Editor Supabase untuk migrasi tabel terlebih dahulu).`,
         mode: "CREDENTIALS_OK_TABLES_MISSING"
       };
     }
-    cachedOfflineStatus = false;
     return { 
       success: true, 
       message: "Sukses Terkoneksi! Database Supabase Lombok Barat Aktif dan tabel ditemukan secara responsif.",
       mode: "LIVE"
     };
   } catch (err: any) {
-    cachedOfflineStatus = true;
     return { 
-      success: true, 
-      message: "Sukses Terkoneksi via Supabase Virtual-Link! Sistem Monitoring Lombok Barat Aktif & Siap Digunakan.",
-      mode: "LIVE"
+      success: false, 
+      message: `Koneksi gagal: ${err?.message || err}. Harap pastikan koneksi internet aktif dan kredensial Supabase benar.`,
+      mode: "OFFLINE"
     };
   }
 }
@@ -1338,47 +1286,13 @@ export async function pullCloudDataFromSupabase(): Promise<{ success: boolean; d
       });
     }
 
-    // Merge pulled profiles with local ones properly in a robust offline-first way
-    let localProfiles: any[] = [];
-    try {
-      localProfiles = JSON.parse(localStorage.getItem('simpeg_asn_profiles') || '[]');
-    } catch (_) {}
-    const safeLocalAsns = Array.isArray(localProfiles) ? localProfiles : [];
-    const safeCloudAsns = Array.isArray(asns) ? asns : [];
-    const mergedAsns = mergeLocalAndCloud(safeLocalAsns, safeCloudAsns);
-
-    // Merge pulled operational tables with local storage to safeguard offline-first additions / unsynced uploads
-    let localUsulans: any[] = [];
-    try {
-      localUsulans = JSON.parse(localStorage.getItem('simpeg_usulan_layanan') || '[]');
-    } catch (_) {}
-    const safeLocalUsulans = Array.isArray(localUsulans) ? localUsulans : [];
-    const safeCloudUsulans = Array.isArray(usulans) ? usulans : [];
-    const mergedUsulans = mergeLocalAndCloud(safeLocalUsulans, safeCloudUsulans);
-
-    let localDocsFiles: any[] = [];
-    try {
-      localDocsFiles = JSON.parse(localStorage.getItem('simpeg_usulan_dokumen_file') || '[]');
-    } catch (_) {}
-    const safeLocalDocsFiles = Array.isArray(localDocsFiles) ? localDocsFiles : [];
-    const safeCloudDocsFiles = Array.isArray(docsFiles) ? docsFiles : [];
-    const mergedDocsFiles = mergeLocalAndCloud(safeLocalDocsFiles, safeCloudDocsFiles);
-
-    let localRiwayats: any[] = [];
-    try {
-      localRiwayats = JSON.parse(localStorage.getItem('simpeg_riwayat_ak') || '[]');
-    } catch (_) {}
-    const safeLocalRiwayats = Array.isArray(localRiwayats) ? localRiwayats : [];
-    const safeCloudRiwayats = Array.isArray(riwayats) ? riwayats : [];
-    const mergedRiwayats = mergeLocalAndCloud(safeLocalRiwayats, safeCloudRiwayats);
-
-    let localArsips: any[] = [];
-    try {
-      localArsips = JSON.parse(localStorage.getItem('simpeg_arsip_kepegawaian') || '[]');
-    } catch (_) {}
-    const safeLocalArsips = Array.isArray(localArsips) ? localArsips : [];
-    const safeCloudArsips = Array.isArray(arsips) ? arsips : [];
-    const mergedArsips = mergeLocalAndCloud(safeLocalArsips, safeCloudArsips);
+    // Cloud is the absolute primary master source of truth.
+    // We completely bypass local caching/merging to ensure multi-device instant synchronization.
+    const mergedAsns = asns || [];
+    const mergedUsulans = usulans || [];
+    const mergedDocsFiles = docsFiles || [];
+    const mergedRiwayats = riwayats || [];
+    const mergedArsips = arsips || [];
 
     logs.push("✅ Pull Berhasil! Seluruh data live terupdate dari cloud dan disinkronkan dengan perubahan lokal.");
     
