@@ -271,12 +271,12 @@ export function normalizeIndonesianPhoneNumber(phone: string, withPlus: boolean 
 }
 
 /**
- * Sends a WhatsApp message using Fonnte API with a fallback to opening a WhatsApp Web link.
+ * Sends a WhatsApp message using Fonnte API or Baileys Gateway with a fallback to opening a WhatsApp Web link.
  * @param phone Recipient phone number (handles standard phone digits, e.g. "08...", "+62...")
  * @param message Message body text
- * @returns Promise<{ success: boolean; method: 'fonnte' | 'wa_web'; error?: string }>
+ * @returns Promise<{ success: boolean; method: 'fonnte' | 'wa_web' | 'baileys'; error?: string }>
  */
-export async function sendWhatsAppMessage(phone: string, message: string): Promise<{ success: boolean; method: 'fonnte' | 'wa_web'; error?: string }> {
+export async function sendWhatsAppMessage(phone: string, message: string): Promise<{ success: boolean; method: 'fonnte' | 'wa_web' | 'baileys'; error?: string }> {
   // Clean phone number:
   // Fonnte expects country code (e.g., 628...). Let's clean and format
   const cleanPhone = normalizeIndonesianPhoneNumber(phone, false);
@@ -319,6 +319,7 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
         message: message,
         token: tokenFonnte,
         account: accountToken,
+        mode: whatsappMode, // pass preferred mode if configured
       }),
     });
 
@@ -333,7 +334,7 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
       );
 
       if (isSuccess) {
-        return { success: true, method: 'fonnte' };
+        return { success: true, method: result.method || 'fonnte' };
       } else {
         const msg = result?.reason || result?.message || JSON.stringify(result);
         throw new Error(msg || 'API returned failure status');
