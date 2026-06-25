@@ -693,10 +693,10 @@ _Notifikasi ini dikirim via Dashboard Terintegrasi SAPA pegawai Dikes PPKB Kab. 
       if (cleanPhone) {
         try {
           const result = await sendWhatsAppMessage(cleanPhone, editUsulanWaMessage);
-          if (result.method === 'fonnte') {
-            alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan dan notifikasi berhasil terkirim via Fonnte API secara langsung.`);
+          if (result.method === 'fonnte' || result.method === 'baileys') {
+            alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan dan notifikasi berhasil terkirim via WhatsApp Gateway (${result.method}) secara langsung.`);
           } else {
-            alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan.\n⚠️ Fonnte API Error: "${result.error || 'Terbatas/Error'}"\nNotifikasi dialihkan ke WhatsApp Web.`);
+            alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan.\n⚠️ Notifikasi langsung tidak tersedia, draf dialihkan ke WhatsApp Web.`);
           }
         } catch (err: any) {
           alert(`✓ Perubahan Usulan #${editingUsulan.id} disimpan.\n❌ Gagal mengirim notifikasi: ${err.message || err}`);
@@ -1402,10 +1402,10 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SAPA pegawai Dikes 
                 onClick={async () => {
                   try {
                     const result = await sendWhatsAppMessage(waRecipientPhone, waDraftMessage);
-                    if (result.method === 'fonnte') {
-                      alert(`✓ Berhasil mengirim pesan via Fonnte API secara langsung.`);
+                    if (result.method === 'fonnte' || result.method === 'baileys') {
+                      alert(`✓ Berhasil mengirim pesan via WhatsApp Gateway (${result.method}) secara langsung.`);
                     } else {
-                      alert(`⚠️ Gagal mengirim via API Fonnte: "${result.error || 'Terbatas/Error'}"\nPesan dialihkan via WhatsApp Web.`);
+                      alert(`⚠️ Pesan tidak dapat dikirim secara langsung.\nNotifikasi dialihkan via WhatsApp Web.`);
                     }
                   } catch (err: any) {
                     alert(`❌ Gagal mengirim: ${err.message || err}`);
@@ -1893,10 +1893,10 @@ _Notifikasi ini dikirim via Pemberkasan Digital Dual-Channel SAPA pegawai Dikes 
                             );
                             try {
                               const result = await sendWhatsAppMessage(cleanPhone, editedWaMessage);
-                              if (result.method === 'fonnte') {
-                                alert(`✓ Notifikasi berhasil terkirim via Fonnte API secara langsung.`);
+                              if (result.method === 'fonnte' || result.method === 'baileys') {
+                                alert(`✓ Notifikasi berhasil terkirim via WhatsApp Gateway (${result.method}) secara langsung.`);
                               } else {
-                                alert(`⚠️ Fonnte API Error: "${result.error || 'Terbatas/Error'}"\nNotifikasi dialihkan ke WhatsApp Web.`);
+                                alert(`⚠️ Notifikasi langsung tidak tersedia, draf dialihkan ke WhatsApp Web.`);
                               }
                             } catch (err: any) {
                               alert(`❌ Gagal mengirim notifikasi WA: ${err.message || err}`);
