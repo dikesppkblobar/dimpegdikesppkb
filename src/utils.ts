@@ -285,6 +285,25 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
     throw new Error('Nomor telepon tidak valid');
   }
 
+  const whatsappMode = localStorage.getItem('whatsapp_mode') || 'auto';
+
+  // Helper to open WhatsApp Web
+  const openWhatsAppWebLink = () => {
+    const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
+    const encoded = encodeURIComponent(message);
+    const targetUrl = isMobileOrTablet 
+      ? `whatsapp://send?phone=${cleanPhone}&text=${encoded}`
+      : `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`;
+    
+    window.open(targetUrl, 'whatsapp_window');
+  };
+
+  // If user explicitly chose to ALWAYS use WhatsApp Web (e.g., because they are using a trial Fonnte account)
+  if (whatsappMode === 'wa_web') {
+    openWhatsAppWebLink();
+    return { success: true, method: 'wa_web' };
+  }
+
   const tokenFonnte = localStorage.getItem('fonnte_token') || 'FaRp7B4ZtDZxFP3Ck2pT';
   const accountToken = localStorage.getItem('fonnte_account') || '142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN';
 
@@ -365,13 +384,7 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
       console.error('[WhatsApp] Both Server Proxy and Direct Browser attempts failed:', directErr);
 
       // 3. Path C: Interactive Falling back to WhatsApp Web link integration (Ultimate backup)
-      const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && navigator.platform === 'MacIntel');
-      const encoded = encodeURIComponent(message);
-      const targetUrl = isMobileOrTablet 
-        ? `whatsapp://send?phone=${cleanPhone}&text=${encoded}`
-        : `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`;
-      
-      window.open(targetUrl, 'whatsapp_window');
+      openWhatsAppWebLink();
       
       let friendlyError = 'Fonnte Hub/Device limit';
       if (is404) {
