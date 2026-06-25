@@ -4,10 +4,24 @@ import QRCode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
 
-// Handle both ES Module and CommonJS bundler variants safely
-const makeWASocket = (pkgBaileys as any).default || pkgBaileys;
-const useMultiFileAuthState = (pkgBaileys as any).useMultiFileAuthState || (pkgBaileys as any).default?.useMultiFileAuthState;
-const DisconnectReason = (pkgBaileys as any).DisconnectReason || (pkgBaileys as any).default?.DisconnectReason;
+// Handle all possible import formats (ESM, CJS, default wrapped, etc.)
+let makeWASocket = pkgBaileys;
+if ((pkgBaileys as any).default) {
+  makeWASocket = (pkgBaileys as any).default;
+}
+if (typeof makeWASocket !== 'function' && (pkgBaileys as any).makeWASocket) {
+  makeWASocket = (pkgBaileys as any).makeWASocket;
+}
+
+let useMultiFileAuthState = (pkgBaileys as any).useMultiFileAuthState;
+if (!useMultiFileAuthState && (pkgBaileys as any).default) {
+  useMultiFileAuthState = (pkgBaileys as any).default.useMultiFileAuthState;
+}
+
+let DisconnectReason = (pkgBaileys as any).DisconnectReason;
+if (!DisconnectReason && (pkgBaileys as any).default) {
+  DisconnectReason = (pkgBaileys as any).default.DisconnectReason;
+}
 
 const authFolder = path.join(process.cwd(), 'auth_info_baileys');
 
@@ -16,13 +30,20 @@ let qrCodeDataUrl: string | null = null;
 let connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'qr' = 'disconnected';
 let myPhone: string | null = null;
 let isInitializing = false;
+let lastError: string | null = null;
 
 export async function getBaileysStatus() {
   return {
     connected: connectionStatus === 'connected',
     status: connectionStatus,
     qr: qrCodeDataUrl,
-    phone: myPhone
+    phone: myPhone,
+    error: lastError,
+    helpers: {
+      hasPkg: !!pkgBaileys,
+      hasMakeWASocket: typeof makeWASocket === 'function',
+      hasUseState: typeof useMultiFileAuthState === 'function',
+    }
   };
 }
 
@@ -37,14 +58,24 @@ export async function initBaileys(forceRestart = false) {
 
   isInitializing = true;
   connectionStatus = 'connecting';
+  lastError = null;
   
   try {
     console.log('[Baileys] Initializing WhatsApp socket...');
+    
+    if (typeof useMultiFileAuthState !== 'function') {
+      throw new Error(`useMultiFileAuthState is not a function. pkgBaileys structure: ${Object.keys(pkgBaileys || {}).join(', ')}`);
+    }
+    
     const { state, saveCreds } = await useMultiFileAuthState(authFolder);
     
     // Create silent logger to prevent huge logs
     const logger = pino({ level: 'silent' });
     
+    if (typeof makeWASocket !== 'function') {
+      throw new Error(`makeWASocket is not a function.`);
+    }
+
     sock = makeWASocket({
       auth: state,
       printQRInTerminal: true,
@@ -91,8 +122,9 @@ export async function initBaileys(forceRestart = false) {
         console.log('[Baileys] Connection opened! Logged in as:', myPhone);
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Baileys] Error initializing Baileys:', error);
+    lastError = error?.message || String(error);
     connectionStatus = 'disconnected';
     qrCodeDataUrl = null;
     myPhone = null;
