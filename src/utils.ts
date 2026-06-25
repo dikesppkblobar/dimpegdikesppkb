@@ -245,6 +245,32 @@ export function addYearsToDateString(dateString: string | undefined | null, year
 }
 
 /**
+ * Normalizes any variation of an Indonesian phone number to standard country-coded digits (e.g. "628...")
+ * and optionally to standard storage format (e.g. "+628...")
+ */
+export function normalizeIndonesianPhoneNumber(phone: string, withPlus: boolean = false): string {
+  if (!phone) return '';
+  // Remove all non-digits
+  let digits = phone.replace(/\D/g, '');
+  
+  // If it starts with 62, normalize by stripping 62 temporarily
+  if (digits.startsWith('62')) {
+    digits = digits.substring(2);
+  }
+  
+  // Strip any leading zeros
+  while (digits.startsWith('0')) {
+    digits = digits.substring(1);
+  }
+  
+  // If digits are empty, return empty
+  if (!digits) return '';
+  
+  // Return either "+62..." or "62..."
+  return withPlus ? '+62' + digits : '62' + digits;
+}
+
+/**
  * Sends a WhatsApp message using Fonnte API with a fallback to opening a WhatsApp Web link.
  * @param phone Recipient phone number (handles standard phone digits, e.g. "08...", "+62...")
  * @param message Message body text
@@ -253,12 +279,7 @@ export function addYearsToDateString(dateString: string | undefined | null, year
 export async function sendWhatsAppMessage(phone: string, message: string): Promise<{ success: boolean; method: 'fonnte' | 'wa_web'; error?: string }> {
   // Clean phone number:
   // Fonnte expects country code (e.g., 628...). Let's clean and format
-  let cleanPhone = phone.replace(/[^0-9]/g, '');
-  if (cleanPhone.startsWith('0')) {
-    cleanPhone = '62' + cleanPhone.substring(1);
-  } else if (cleanPhone.startsWith('8')) {
-    cleanPhone = '62' + cleanPhone;
-  }
+  const cleanPhone = normalizeIndonesianPhoneNumber(phone, false);
   
   if (!cleanPhone) {
     throw new Error('Nomor telepon tidak valid');
