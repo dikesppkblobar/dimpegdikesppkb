@@ -29,7 +29,10 @@ async function startServer() {
   // WhatsApp Gateway connect / initialize endpoint
   app.post("/api/baileys/connect", async (req, res) => {
     try {
-      await initBaileys(true);
+      // Run the initialization in the background so the HTTP response is instantaneous
+      initBaileys(true).catch(err => {
+        console.error("Background Baileys init error:", err);
+      });
       return res.json({ success: true, status: "initializing" });
     } catch (err: any) {
       return res.status(500).json({ error: err.message || "Failed to connect Baileys" });
