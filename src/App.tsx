@@ -314,8 +314,16 @@ export default function App() {
           const errors = res?.log?.filter(l => l.startsWith('❌')) || [];
           console.error("🔴 [Supabase Sync Failed]:", res?.log);
           
+          const isSchemaError = res?.log?.some(l => 
+            l.includes('column') || l.includes('relation') || l.includes('schema cache') || l.includes('not found')
+          );
+          let schemaHelpMsg = "";
+          if (isSchemaError) {
+            schemaHelpMsg = "\n\n💡 SOLUSI CEPAT:\nSupabase Anda memerlukan penambahan kolom baru di tabel 'asn_profiles'. Anda bisa mengatasinya secara aman tanpa menghapus data pegawai yang ada:\n1. Buka menu 'Manajemen Dinkes' -> Tab 'Koneksi & Setup Supabase'\n2. Salin 'SCRIPT PATCH AMAN (Tambah Kolom Kurang)'\n3. Jalankan di SQL Editor Supabase Anda, lalu muat ulang (refresh) halaman ini.";
+          }
+          
           // Revert back or alert user with clear explanation
-          alert(`⚠️ Gagal Menyimpan ke Cloud Supabase!\n\nPerubahan Anda berhasil disimpan secara lokal di browser ini, namun GAGAL terkirim ke database cloud Supabase. Jika Anda membuka di device lain atau me-refresh halaman, data Anda dapat kembali seperti semula.\n\nDetail Error:\n${errors.join('\n') || 'Koneksi ditolak atau schema mismatch.'}`);
+          alert(`⚠️ Gagal Menyimpan ke Cloud Supabase!\n\nPerubahan Anda berhasil disimpan secara lokal di browser ini, namun GAGAL terkirim ke database cloud Supabase. Jika Anda membuka di device lain atau me-refresh halaman, data Anda dapat kembali seperti semula.\n\nDetail Error:\n${errors.join('\n') || 'Koneksi ditolak atau schema mismatch.'}${schemaHelpMsg}`);
         }
       })
       .catch(e => {
