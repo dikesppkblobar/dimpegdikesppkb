@@ -4,7 +4,35 @@ import QRCode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
 
-const authFolder = path.join(process.cwd(), 'auth_info_baileys');
+const oldAuthFolder = path.join(process.cwd(), 'auth_info_baileys');
+const authFolder = path.join('/tmp', 'auth_info_baileys');
+
+// Migrasi folder sesi autentikasi dari workspace ke /tmp agar tidak men-trigger file watcher restart
+if (fs.existsSync(oldAuthFolder)) {
+  try {
+    if (!fs.existsSync(authFolder)) {
+      fs.mkdirSync(authFolder, { recursive: true });
+    }
+    const files = fs.readdirSync(oldAuthFolder);
+    for (const file of files) {
+      const oldPath = path.join(oldAuthFolder, file);
+      const newPath = path.join(authFolder, file);
+      const stat = fs.statSync(oldPath);
+      if (stat.isFile()) {
+        fs.copyFileSync(oldPath, newPath);
+        fs.unlinkSync(oldPath);
+      }
+    }
+    try {
+      fs.rmSync(oldAuthFolder, { recursive: true, force: true });
+    } catch (e) {
+      // Ignore if folder itself can't be deleted immediately
+    }
+    console.log('[Baileys] Successfully migrated session from workspace to /tmp/auth_info_baileys');
+  } catch (migrateErr) {
+    console.error('[Baileys] Failed to migrate session folder:', migrateErr);
+  }
+}
 
 let sock: any = null;
 let qrCodeDataUrl: string | null = null;
