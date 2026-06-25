@@ -13,13 +13,13 @@ async function startServer() {
   // API Proxy to send WhatsApp messages safely from the server side (bypassing CORS)
   app.post("/api/send-whatsapp", async (req, res) => {
     try {
-      const { phone, message } = req.body;
+      const { phone, message, token, account } = req.body;
       if (!phone || !message) {
         return res.status(400).json({ status: false, reason: "Nomor telepon dan pesan harus diisi" });
       }
 
-      const tokenFonnte = 'FaRp7B4ZtDZxFP3Ck2pT';
-      const accountToken = '142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN';
+      const tokenFonnte = token || 'FaRp7B4ZtDZxFP3Ck2pT';
+      const accountToken = account || '142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN';
 
       // Send via urlencoded body (standard and fully trusted by Fonnte)
       const params = new URLSearchParams();
