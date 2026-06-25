@@ -1,6 +1,12 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import { 
+  getBaileysStatus, 
+  initBaileys, 
+  logoutBaileys, 
+  sendBaileysMessage 
+} from "./server-baileys";
 
 async function startServer() {
   const app = express();
@@ -10,12 +16,57 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // WhatsApp Gateway status endpoint
+  app.get("/api/baileys/status", async (req, res) => {
+    try {
+      const status = await getBaileysStatus();
+      return res.json(status);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || "Failed to get Baileys status" });
+    }
+  });
+
+  // WhatsApp Gateway connect / initialize endpoint
+  app.post("/api/baileys/connect", async (req, res) => {
+    try {
+      await initBaileys(true);
+      return res.json({ success: true, status: "initializing" });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || "Failed to connect Baileys" });
+    }
+  });
+
+  // WhatsApp Gateway disconnect / logout endpoint
+  app.post("/api/baileys/disconnect", async (req, res) => {
+    try {
+      await logoutBaileys();
+      return res.json({ success: true, status: "disconnected" });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || "Failed to disconnect Baileys" });
+    }
+  });
+
   // API Proxy to send WhatsApp messages safely from the server side (bypassing CORS)
   app.post("/api/send-whatsapp", async (req, res) => {
     try {
-      const { phone, message, token, account } = req.body;
+      const { phone, message, token, account, mode } = req.body;
       if (!phone || !message) {
         return res.status(400).json({ status: false, reason: "Nomor telepon dan pesan harus diisi" });
+      }
+
+      // Check if Baileys is connected and we should use it
+      const status = await getBaileysStatus();
+      const preferBaileys = mode === "baileys" || status.connected;
+
+      if (preferBaileys && status.connected) {
+        console.log(`[Proxy] Sending WhatsApp message to ${phone} via Baileys API directly.`);
+        try {
+          await sendBaileysMessage(phone, message);
+          return res.json({ status: true, method: "baileys", message: "Sent via Baileys successfully" });
+        } catch (baileysErr: any) {
+          console.error("[Proxy] Baileys dispatch failed, falling back to Fonnte:", baileysErr);
+          // fall through to Fonnte if specified
+        }
       }
 
       const tokenFonnte = token || 'FaRp7B4ZtDZxFP3Ck2pT';
