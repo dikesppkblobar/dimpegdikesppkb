@@ -197,8 +197,13 @@ export default function App() {
         try {
           const res = await pullCloudDataFromSupabase();
           if (res.success && res.data) {
-            setDbState(res.data);
-            saveDB(res.data);
+            setDbState(prev => {
+              saveDB(res.data);
+              return {
+                ...prev,
+                ...res.data
+              };
+            });
             setSuccessToast("⚡ Data disinkronkan otomatis secara real-time!");
           }
         } catch (err) {
@@ -227,8 +232,13 @@ export default function App() {
         try {
           const res = await pullCloudDataFromSupabase();
           if (res.success && res.data) {
-            setDbState(res.data);
-            saveDB(res.data);
+            setDbState(prev => {
+              saveDB(res.data);
+              return {
+                ...prev,
+                ...res.data
+              };
+            });
           }
         } catch (err) {
           console.warn("[Sync on Focus] Gagal memperbarui data:", err);
@@ -246,11 +256,24 @@ export default function App() {
         const res = await pullCloudDataFromSupabase();
         if (res.success && res.data) {
           setDbState(prev => {
-            // Check if there is actual difference
-            if (JSON.stringify(prev) !== JSON.stringify(res.data)) {
-              console.log('🔄 [Sync Polling] Menemukan perubahan data baru di cloud. Memperbarui UI...');
+            // Check if there is actual difference in any of the returned tables
+            let hasChanges = false;
+            const updatedKeys: string[] = [];
+            
+            Object.keys(res.data).forEach(key => {
+              if (JSON.stringify(prev[key]) !== JSON.stringify(res.data[key])) {
+                hasChanges = true;
+                updatedKeys.push(key);
+              }
+            });
+            
+            if (hasChanges) {
+              console.log(`🔄 [Sync Polling] Menemukan perubahan data baru di cloud untuk: ${updatedKeys.join(', ')}. Memperbarui UI...`);
               saveDB(res.data);
-              return res.data;
+              return {
+                ...prev,
+                ...res.data
+              };
             }
             return prev;
           });
@@ -285,11 +308,19 @@ export default function App() {
     pushClientDataToSupabase(null, keysToSync)
       .then((res) => {
         if (res && res.success) {
+          console.log(`✅ [Supabase Sync] Berhasil menyinkronkan data: ${keysToSync.join(', ')}`);
           broadcastDataChanged(keysToSync);
+        } else {
+          const errors = res?.log?.filter(l => l.startsWith('❌')) || [];
+          console.error("🔴 [Supabase Sync Failed]:", res?.log);
+          
+          // Revert back or alert user with clear explanation
+          alert(`⚠️ Gagal Menyimpan ke Cloud Supabase!\n\nPerubahan Anda berhasil disimpan secara lokal di browser ini, namun GAGAL terkirim ke database cloud Supabase. Jika Anda membuka di device lain atau me-refresh halaman, data Anda dapat kembali seperti semula.\n\nDetail Error:\n${errors.join('\n') || 'Koneksi ditolak atau schema mismatch.'}`);
         }
       })
       .catch(e => {
-        console.warn("Kesalahan sinkronisasi data ke Supabase (menggunakan offline mode):", e);
+        console.error("🔴 Kesalahan tidak terduga saat sinkronisasi data ke Supabase:", e);
+        alert(`⚠️ Kesalahan Sistem saat sinkronisasi: ${e?.message || e}`);
       });
   };
 
