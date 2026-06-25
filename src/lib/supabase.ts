@@ -848,8 +848,9 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
         logs.push(`✅ Biografi pegawai SAPA berhasil disatukan.`);
       } catch (err: any) {
         hasAnyFailure = true;
-        logs.push(`❌ Gagal sinkronisasi ASN Profiles: ${err.message}`);
-        console.warn("ASN Profiles sync failure:", err);
+        const errDetail = err?.message || err;
+        logs.push(`❌ Gagal sinkronisasi ASN Profiles: ${errDetail}`);
+        console.error("🔴🔴🔴 [Supabase Sync Error] Gagal Menyimpan ASN Profiles ke Supabase:", err);
       }
     }
 
