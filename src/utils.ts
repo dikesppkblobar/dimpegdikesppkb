@@ -285,8 +285,8 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
     throw new Error('Nomor telepon tidak valid');
   }
 
-  const tokenFonnte = 'FaRp7B4ZtDZxFP3Ck2pT';
-  const accountToken = '142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN';
+  const tokenFonnte = localStorage.getItem('fonnte_token') || 'FaRp7B4ZtDZxFP3Ck2pT';
+  const accountToken = localStorage.getItem('fonnte_account') || '142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN';
 
   // 1. Path A: Server-side API Proxy
   try {
@@ -298,6 +298,8 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
       body: JSON.stringify({
         phone: cleanPhone,
         message: message,
+        token: tokenFonnte,
+        account: accountToken,
       }),
     });
 
