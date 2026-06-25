@@ -90,6 +90,7 @@ export default function DinkesManagement({
   // Fonnte WhatsApp Gateway states
   const [inputFonnteToken, setInputFonnteToken] = useState(() => localStorage.getItem('fonnte_token') || 'FaRp7B4ZtDZxFP3Ck2pT');
   const [inputFonnteAccount, setInputFonnteAccount] = useState(() => localStorage.getItem('fonnte_account') || '142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN');
+  const [whatsappMode, setWhatsappMode] = useState(() => localStorage.getItem('whatsapp_mode') || 'auto');
 
   useEffect(() => {
     if (activeMgtTab === 'supabase') {
@@ -1893,8 +1894,60 @@ export default function DinkesManagement({
                   Konfigurasi WhatsApp Gateway (Fonnte API)
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Sesuaikan kredensial pengiriman notifikasi WhatsApp otomatis untuk Pegawai & Admin Dinkes Lombok Barat
+                  Sesuaikan mode pengiriman & kredensial notifikasi WhatsApp otomatis untuk Pegawai & Admin Dinkes Lombok Barat
                 </p>
+              </div>
+            </div>
+
+            {/* Mode Pengiriman Selector */}
+            <div className="mb-6">
+              <label className="text-xs font-bold text-slate-700 block mb-2">
+                Pilih Mode Pengiriman Pesan WhatsApp:
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div 
+                  onClick={() => setWhatsappMode('auto')}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition flex flex-col justify-between ${whatsappMode === 'auto' ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-200 hover:border-slate-300'}`}
+                >
+                  <div className="flex items-center space-x-2 mb-1">
+                    <input 
+                      type="radio" 
+                      name="wa_mode" 
+                      checked={whatsappMode === 'auto'} 
+                      onChange={() => setWhatsappMode('auto')}
+                      className="text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-xs font-bold text-slate-900">Mode Otomatis (Rekomendasi Premium)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed pl-5">
+                    Mencoba mengirim secara langsung via API Fonnte. Jika server offline atau error, sistem otomatis mengalihkan dengan membuka tautan WhatsApp Web di tab baru.
+                  </p>
+                  <span className="text-[10px] text-amber-600 pl-5 mt-1 block">
+                    ⚠️ Jika Anda memakai <strong>Akun Fonnte Gratis / Trial</strong>, pesan ke nomor selain nomor tester terdaftar tidak akan pernah masuk ke WhatsApp penerima karena limitasi Fonnte.
+                  </span>
+                </div>
+
+                <div 
+                  onClick={() => setWhatsappMode('wa_web')}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition flex flex-col justify-between ${whatsappMode === 'wa_web' ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-200 hover:border-slate-300'}`}
+                >
+                  <div className="flex items-center space-x-2 mb-1">
+                    <input 
+                      type="radio" 
+                      name="wa_mode" 
+                      checked={whatsappMode === 'wa_web'} 
+                      onChange={() => setWhatsappMode('wa_web')}
+                      className="text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-xs font-bold text-slate-900">Selalu Gunakan WhatsApp Web (100% Gratis & Bebas Limit)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed pl-5">
+                    Sistem akan selalu membuka draf pesan & nomor penerima secara instan di WhatsApp Web (atau aplikasi WA HP). Anda tinggal menekan tombol Kirim (Enter).
+                  </p>
+                  <span className="text-[10px] text-emerald-600 pl-5 mt-1 block font-semibold">
+                    ✓ DIJAMIN MASUK ke nomor mana saja tanpa perlu bayar Fonnte API Premium atau mendaftarkan nomor tester!
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1909,9 +1962,10 @@ export default function DinkesManagement({
                   onChange={(e) => setInputFonnteToken(e.target.value)}
                   placeholder="Masukkan API Token Fonnte..."
                   className="w-full text-xs font-mono p-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50"
+                  disabled={whatsappMode === 'wa_web'}
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  Token autentikasi perangkat Anda dari menu list device di dashboard Fonnte.
+                  Token autentikasi perangkat Anda dari menu list device di dashboard Fonnte. (Dinonaktifkan jika memilih mode WhatsApp Web).
                 </span>
               </div>
 
@@ -1925,16 +1979,17 @@ export default function DinkesManagement({
                   onChange={(e) => setInputFonnteAccount(e.target.value)}
                   placeholder="Masukkan Account Token..."
                   className="w-full text-xs font-mono p-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50"
+                  disabled={whatsappMode === 'wa_web'}
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  Gunakan jika akun Fonnte Anda memerlukan parameter akun tambahan untuk pengiriman.
+                  Gunakan jika akun Fonnte Anda memerlukan parameter akun tambahan untuk pengiriman. (Dinonaktifkan jika memilih mode WhatsApp Web).
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl">
               <div className="text-xs text-emerald-950 leading-relaxed max-w-xl">
-                <strong>💡 Catatan Penting:</strong> Pastikan perangkat WhatsApp Anda di dashboard Fonnte berada dalam status <strong>Connected (Aktif)</strong>. Jika perangkat Anda mati atau token tidak valid, sistem secara otomatis akan beralih mengirimkan draf notifikasi via <strong>WhatsApp Web</strong> agar pengiriman pesan tetap dapat dilakukan.
+                <strong>💡 Info Masalah Pesan Tidak Masuk:</strong> Akun Fonnte dengan paket <strong>Trial / Gratis</strong> hanya diperbolehkan mengirim pesan langsung ke nomor WhatsApp pendaftar akun itu sendiri & nomor tester yang Anda setujui di dashboard Fonnte. Bila Anda mengirim ke nomor umum lainnya, Fonnte API akan tetap merespons sukses tetapi pesan tidak akan pernah diteruskan ke HP target. Untuk mengatasinya tanpa biaya, silakan pilih opsi <strong>"Selalu Gunakan WhatsApp Web"</strong> di atas.
               </div>
               
               <div className="flex items-center space-x-2 shrink-0">
@@ -1943,9 +1998,11 @@ export default function DinkesManagement({
                   onClick={() => {
                     setInputFonnteToken('FaRp7B4ZtDZxFP3Ck2pT');
                     setInputFonnteAccount('142TamsyazYbMtkew74hocBQhh2BdUfF9LfbyKpgJg1S9AuN');
+                    setWhatsappMode('auto');
                     localStorage.removeItem('fonnte_token');
                     localStorage.removeItem('fonnte_account');
-                    alert('✓ Kredensial WhatsApp Gateway di-reset ke nilai default bawaan.');
+                    localStorage.removeItem('whatsapp_mode');
+                    alert('✓ Kredensial & mode pengiriman WhatsApp Gateway di-reset ke nilai default.');
                   }}
                   className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition cursor-pointer"
                 >
@@ -1954,13 +2011,14 @@ export default function DinkesManagement({
                 <button
                   type="button"
                   onClick={() => {
-                    if (!inputFonnteToken.trim()) {
+                    if (whatsappMode !== 'wa_web' && !inputFonnteToken.trim()) {
                       alert('⚠️ Fonnte API Token tidak boleh kosong');
                       return;
                     }
+                    localStorage.setItem('whatsapp_mode', whatsappMode);
                     localStorage.setItem('fonnte_token', inputFonnteToken.trim());
                     localStorage.setItem('fonnte_account', inputFonnteAccount.trim());
-                    alert('✓ Kredensial WhatsApp Gateway berhasil disimpan secara lokal dan akan digunakan untuk pengiriman pesan.');
+                    alert('✓ Kredensial & Mode Pengiriman WhatsApp Gateway berhasil disimpan secara lokal dan akan langsung aktif digunakan.');
                   }}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow cursor-pointer flex items-center space-x-1"
                 >
