@@ -1152,23 +1152,27 @@ export async function pushClientDataToSupabase(dbState: any, keysToSync?: string
  * Helper to robustly merge local list (changes, additions) with cloud list (master source)
  * for offline-first replication.
  */
-function mergeLocalAndCloud<T extends { id: number | string }>(localList: T[], cloudList: T[]): T[] {
-  console.log(`[mergeLocalAndCloud] MERGING arrays - localList:`, localList, `cloudList:`, cloudList);
+function mergeLocalAndCloud<T extends { id: number | string }>(localList: T[], cloudList: T[], cloudTakesPrecedence: boolean = true): T[] {
+  console.log(`[mergeLocalAndCloud] MERGING arrays - localList:`, localList, `cloudList:`, cloudList, `cloudTakesPrecedence:`, cloudTakesPrecedence);
   const localMap = new Map(localList.map(item => [String(item.id), item]));
   const cloudMap = new Map(cloudList.map(item => [String(item.id), item]));
 
   const merged: T[] = [];
 
-  // 1. Process items from the local list. If also present in cloud, merge them with local taking precedence.
-  // This preserves local modifications and offline updates.
+  // 1. Process items from the local list. If also present in cloud, merge them with proper precedence.
   localList.forEach(localItem => {
     const id = String(localItem.id);
     const cloudItem = cloudMap.get(id);
     if (cloudItem) {
-      const mergedItem = {
-        ...cloudItem,
-        ...localItem
-      };
+      const mergedItem = cloudTakesPrecedence
+        ? {
+            ...localItem,
+            ...cloudItem
+          }
+        : {
+            ...cloudItem,
+            ...localItem
+          };
       merged.push(mergedItem);
     } else {
       // Local-only item (new creations not yet in the cloud)
